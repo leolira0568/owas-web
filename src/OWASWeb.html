@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OWAS Web</title>
+<script>
+  // Tema claro u oscuro: el elegido por el usuario o, la primera vez, el del sistema
+  try{ document.documentElement.dataset.theme = localStorage.getItem('owasweb.theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); }
+  catch(e){ document.documentElement.dataset.theme = 'light'; }
+</script>
 <style>
 :root{
   --bg:#f3f2ef; --surface:#fcfcfb; --surface-2:#f7f6f3; --line:#dcdad3; --line-soft:#ebe9e3;
@@ -12,8 +17,27 @@
   --ok:#1b7d1b; --ok-hover:#156615;   /* verde de «Aceptar»: contraste 5,2:1 con texto blanco */
   --c1:#0ca30c; --c2:#fab219; --c3:#ec835a; --c4:#d03b3b;
   --c1-soft:#d8f0d8; --c2-soft:#fdeec9; --c3-soft:#fbe0d4; --c4-soft:#f5d3d3;
+  --field:#ffffff; --chip:#ffffff; --tabs-bg:#e6e4de; --figure-bg:#ffffff; --notice-line:#bcd6f5;
+  --danger:#c62828; --danger-bg:#fdecea; --danger-line:#f2b8b5;
+  --tag-ok-bg:#eef8ee; --tag-ok-line:#9bd29b; --tag-ok-ink:#185c18;
+  --tag-fix-bg:#fdf3e6; --tag-fix-line:#f1c48f; --tag-fix-ink:#7a4300;
   --radius:10px;
+  color-scheme:light;
 }
+/* Tema oscuro: se activa con el botón de la barra superior (o según el sistema la primera vez) */
+:root[data-theme="dark"]{
+  --bg:#141413; --surface:#1e1e1d; --surface-2:#262624; --line:#3b3a37; --line-soft:#2f2e2c;
+  --ink:#f0efec; --ink-2:#c3c2b7; --ink-3:#a5a49b;
+  --accent:#3987e5; --accent-ink:#ffffff; --accent-soft:#1c2f48;
+  --c1-soft:#1f3a1f; --c2-soft:#45370f; --c3-soft:#4a2b1f; --c4-soft:#4a2020;
+  --field:#151514; --chip:#242422; --tabs-bg:#1a1a19; --figure-bg:#1e1e1d; --notice-line:#2c4a70;
+  --danger:#ff8a80; --danger-bg:#3d1714; --danger-line:#7a2c27;
+  --tag-ok-bg:#16301a; --tag-ok-line:#2f6b35; --tag-ok-ink:#9be0a0;
+  --tag-fix-bg:#3a2a12; --tag-fix-line:#7a5420; --tag-fix-ink:#f5c27a;
+  color-scheme:dark;
+}
+/* En el tema oscuro, las tablas y figuras APA se muestran sobre «papel» blanco, como en la impresión */
+:root[data-theme="dark"] .apa,:root[data-theme="dark"] .apa-refs{background:#fff;border-radius:8px;padding:16px 20px}
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 html,body{margin:0}
@@ -36,7 +60,7 @@ button.btn,.top .actions button,.tabs button{display:inline-flex;align-items:cen
 td.postura{white-space:nowrap}
 
 /* Modos de observación, video y fotografías */
-.seg{display:inline-flex;background:#e6e4de;border-radius:10px;padding:4px;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--tabs-bg);border-radius:10px;padding:4px;gap:4px;margin-bottom:12px;flex-wrap:wrap}
 .seg button{border:0;background:none;border-radius:7px;padding:8px 14px;min-height:40px;display:inline-flex;align-items:center;gap:7px;color:var(--ink-2)}
 .seg button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .media-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
@@ -64,11 +88,11 @@ td.postura{white-space:nowrap}
 .thumb{padding:0;border:1px solid var(--line);border-radius:6px;background:#141414;min-height:0;display:block}
 .thumb img{display:block;width:76px;height:56px;object-fit:cover;border-radius:5px}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
-.gallery figure{margin:0;border:1px solid var(--line-soft);border-radius:8px;overflow:hidden;background:#fff;break-inside:avoid}
+.gallery figure{margin:0;border:1px solid var(--line-soft);border-radius:8px;overflow:hidden;background:var(--figure-bg);break-inside:avoid}
 .gallery button{display:block;width:100%;padding:0;border:0;background:#141414;min-height:0}
 .gallery img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain}
 .gallery figcaption{padding:7px 9px;font-size:13px;display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center}
-dialog#viewer{border:0;border-radius:12px;padding:14px;max-width:min(960px,94vw);width:auto}
+dialog#viewer{border:0;border-radius:12px;padding:14px;background:var(--surface);color:var(--ink);max-width:min(960px,94vw);width:auto}
 dialog#viewer::backdrop{background:rgba(0,0,0,.6)}
 #viewImg{display:block;max-width:100%;max-height:70vh;margin:0 auto 10px;border-radius:6px;background:#141414}
 
@@ -81,14 +105,14 @@ dialog#viewer::backdrop{background:rgba(0,0,0,.6)}
 .detect{border-top:1px solid var(--line-soft);margin-top:12px;padding-top:4px}
 .detect-status{margin:8px 0 4px;min-height:1.5em;display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center}
 .detect-status .chip{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:6px;padding:1px 7px;font-variant-numeric:tabular-nums}
-.detect-status .warn{color:#8a4b00}
+.detect-status .warn,.warn-box{color:var(--danger);background:var(--danger-bg);border:1px solid var(--danger-line);border-radius:6px;padding:2px 9px;font-weight:600}
 .detect details summary{cursor:pointer;color:var(--ink-2);padding:4px 0}
 .detect-cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 16px;margin:8px 0}
 .detect-cfg label{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .detect-cfg input[type=number]{width:80px;padding:5px 8px}
 .tag{display:inline-block;font-size:12px;border-radius:5px;padding:0 6px;margin-left:6px;border:1px solid var(--line);color:var(--ink-2);font-weight:500;vertical-align:middle}
-.tag.ok{border-color:#9bd29b;background:#eef8ee;color:#185c18}
-.tag.fix{border-color:#f1c48f;background:#fdf3e6;color:#7a4300}
+.tag.ok{border-color:var(--tag-ok-line);background:var(--tag-ok-bg);color:var(--tag-ok-ink)}
+.tag.fix{border-color:var(--tag-fix-line);background:var(--tag-fix-bg);color:var(--tag-fix-ink)}
 td.postura .pict{width:28px;height:28px}
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
 .muted{color:var(--ink-2)}
@@ -102,7 +126,7 @@ td.postura .pict{width:28px;height:28px}
 .top .actions{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
 .top .actions button{background:#2f3d4f;border:1px solid #435469;color:#fff;border-radius:8px;padding:6px 12px;min-height:40px}
 .top .actions button:hover{background:#3a4a5f}
-.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin;background:#e6e4de;padding:0 12px;border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin;background:var(--tabs-bg);padding:0 12px;border-bottom:1px solid var(--line)}
 .tabs button{background:none;border:0;padding:12px 14px;border-bottom:3px solid transparent;color:var(--ink-2);white-space:nowrap}
 .tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
 main{max-width:1180px;margin:0 auto;padding:16px}
@@ -122,11 +146,11 @@ section.tab.on{display:block}
 .foot{max-width:1180px;margin:8px auto 0;padding:16px;border-top:1px solid var(--line);color:var(--ink-2);font-size:13px;line-height:1.6;display:flex;flex-wrap:wrap;gap:4px 18px;justify-content:space-between}
 .foot a{color:var(--accent)}
 .foot p{margin:0}
-.btn.danger{color:var(--c4)}
+.btn.danger{color:var(--danger)}
 .btn:disabled{opacity:.45;cursor:default}
 label.field{display:block;margin-bottom:10px}
 label.field span{display:block;font-size:13px;color:var(--ink-2);margin-bottom:3px}
-input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--field)}
 .phase-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .phase-row .num{width:28px;color:var(--ink-3);text-align:right}
 .phase-row input{flex:1}
@@ -138,11 +162,11 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 @keyframes pulse{50%{opacity:.3}}
 .code-display{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .code-digits{display:flex;gap:4px}
-.code-digits span{display:inline-grid;place-items:center;width:40px;height:48px;border:2px solid var(--line);border-radius:8px;background:#fff;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.code-digits span{display:inline-grid;place-items:center;width:40px;height:48px;border:2px solid var(--line);border-radius:8px;background:var(--field);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
 .code-digits span.next{border-color:var(--accent)}
 .parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:14px}
 .part h3{display:flex;justify-content:space-between}
-.opt{display:flex;width:100%;text-align:left;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-bottom:6px;min-height:44px}
+.opt{display:flex;width:100%;text-align:left;gap:10px;align-items:center;background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-bottom:6px;min-height:44px}
 .opt:hover{border-color:var(--accent)}
 .opt.sel{background:var(--accent-soft);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .opt b{display:inline-grid;place-items:center;min-width:26px;height:26px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
@@ -186,8 +210,8 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .filter{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
 .filter select{width:auto;min-width:220px}
 .empty{padding:30px;text-align:center;color:var(--ink-2)}
-.notice{background:var(--accent-soft);border:1px solid #bcd6f5;border-radius:8px;padding:10px 12px;margin-bottom:16px;display:flex;justify-content:space-between;gap:10px;align-items:center}
-.kbd{display:inline-block;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;background:#fff;color:var(--ink)}
+.notice{background:var(--accent-soft);border:1px solid var(--notice-line);border-radius:8px;padding:10px 12px;margin-bottom:16px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.kbd{display:inline-block;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;background:var(--chip);color:var(--ink)}
 /* En los botones azules la tecla se ve en blanco sobre fondo translúcido, para que no parezca una casilla vacía */
 .btn.primary .kbd{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.6);color:#fff}
 #print{display:none}
@@ -224,6 +248,9 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .apa-refs p{padding-left:36px;text-indent:-36px;margin:0 0 6px}
 
 @media print{
+  :root[data-theme]{--bg:#fff;--surface:#fff;--surface-2:#f7f6f3;--line:#dcdad3;--line-soft:#ebe9e3;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#6b6962;
+    --c1-soft:#d8f0d8;--c2-soft:#fdeec9;--c3-soft:#fbe0d4;--c4-soft:#f5d3d3;--figure-bg:#fff;--tag-ok-bg:#eef8ee;--tag-ok-ink:#185c18;--tag-fix-bg:#fdf3e6;--tag-fix-ink:#7a4300;color-scheme:light}
+  :root[data-theme="dark"] .apa,:root[data-theme="dark"] .apa-refs{padding:0}
   body{background:#fff}
   .top,.tabs,main,.notice,.foot{display:none !important}
   #print{display:block;padding:0}
@@ -245,7 +272,8 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
     <button data-act="join" data-icon="join" title="Añadir las observaciones de otro archivo .OWS">Unir archivo…</button>
     <button data-act="save" data-icon="save" title="Guardar el archivo .OWS">Guardar</button>
     <button data-act="saveas" data-icon="saveas" title="Guardar con otro nombre">Guardar como…</button>
-    <button data-act="print" data-icon="print" title="Imprimir o guardar en PDF">Imprimir</button>
+    <button data-act="print" data-icon="print" title="Imprimir o guardar en PDF">Imprimir resultados</button>
+    <button data-act="theme" id="themeBtn" title="Cambiar entre tema claro y oscuro">Tema oscuro</button>
   </div>
 </header>
 <nav class="tabs" id="tabs">
@@ -353,7 +381,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
         </div>
       </div>
       <div class="obs-actions">
-        <button class="btn ok" id="accept" data-icon="check">Aceptar <span class="kbd">Enter</span></button>
+        <button class="btn ok" id="accept" data-icon="check">Aceptar postura <span class="kbd">Enter</span></button>
         <button class="btn" id="repeat" data-icon="repeat">Repetir anterior <span class="kbd">R</span></button>
         <button class="btn" id="takeback" data-icon="undo">Deshacer última <span class="kbd">Supr</span></button>
         <button class="btn" id="clearSel" data-icon="eraser">Limpiar <span class="kbd">Esc</span></button>
@@ -370,6 +398,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       <label><input type="checkbox" id="printBg" checked> Incluir información general al imprimir</label>
       <label><input type="checkbox" id="printImg" checked> Incluir imágenes al imprimir</label>
       <label><input type="checkbox" id="printApa" checked> Incluir tablas y figuras APA al imprimir</label>
+      <label><input type="checkbox" id="showAgree" autocomplete="off"> Mostrar concordancia con la detección automática</label>
       <button class="btn" id="copyBtn" data-icon="copy">Copiar resultados</button></div>
     <div id="results"></div>
   </section>
@@ -482,6 +511,8 @@ const ICONS = {
   chevsR:'<path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/>',
   skipB:'<path d="M19 20 9 12l10-8z"/><path d="M5 19V5"/>',
   skipF:'<path d="m5 4 10 8-10 8z"/><path d="M19 5v14"/>',
+  moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
   scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="7.5" r="1.5"/><path d="M8.5 11h7"/><path d="M12 9.5v4"/><path d="m9.5 17.5 2.5-4 2.5 4"/>'
 };
 // Pictogramas de postura: clave = parte + código (b1…b4, a1…a3, l1…l7, w1…w3)
@@ -992,7 +1023,7 @@ const pageParsed = new Promise(res => document.readyState === 'loading' ? docume
 async function embedded(id, file){
   await pageParsed;
   const txt = document.getElementById(id).textContent.trim();
-  // Sin compilar (src/OWAS-Web.html servido por HTTP): se leen los archivos de vendor/
+  // Sin compilar (src/OWASWeb.html servido por HTTP): se leen los archivos de vendor/
   if (txt.startsWith('@@')) return new Uint8Array(await (await fetch('../vendor/mediapipe/' + file)).arrayBuffer());
   const bin = atob(txt), out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
@@ -1245,7 +1276,7 @@ function resultsHTML(withGallery = true){
     `<div class="col"><h3>${catBadge(i+1)}</h3><div class="scroll"><table><tr><th>Postura</th><th class="n">Frec.</th><th class="n">%</th></tr>` +
     (rows.length ? rows.map(([k,f]) => `<tr><td title="${esc(describe(k))}">${k}</td><td class="n">${f}</td><td class="n">${pctFmt(f/n*100)}</td></tr>`).join('') : `<tr><td colspan="3" class="muted small">Ninguna</td></tr>`) +
     `</table></div></div>`).join('') + `</div><p class="small muted">Pase el puntero sobre un código para ver su descripción.</p></div>`;
-  h += agreementHTML(list);
+  if ($('#showAgree').checked) h += agreementHTML(list);
   if (withGallery) h += galleryHTML(list);
   return h;
 }
@@ -1428,7 +1459,7 @@ function apaSections(){
     `${base}. El color y la etiqueta indican la categoría de acción según el tiempo en la postura. Las barras grises corresponden a la carga, que no tiene esa clasificación.`);
 
   const d = list.filter(o => o.det);
-  if (d.length){
+  if (d.length && $('#showAgree').checked){
     const row = (name, fn) => { const ok = d.filter(fn).length; return {c: [name, ok, fmtP(ok / d.length * 100)]}; };
     body += apaTable(++t, 'Concordancia entre la propuesta automática y el código registrado',
       [{t: 'Parte del cuerpo'}, {t: 'Coincidencias (<i>n</i>)', n: 1}, {t: '%', n: 1}],
@@ -1490,6 +1521,7 @@ function copyResults(){
   });
 }
 $('#copyBtn').onclick = copyResults;
+$('#showAgree').addEventListener('change', () => { renderResults(); renderBodyParts(); });
 
 // ---- Ayuda ----
 $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
@@ -1497,9 +1529,9 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <h3>Pasos</h3>
 <ol><li>En <b>Datos generales</b>, rellene la información del estudio, el intervalo de observación y las fases de trabajo.</li>
 <li>En <b>Observar</b>, elija el modo:
-  <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar</b>.</li>
-  <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado.</li>
-  <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar</b>. La foto queda asociada a la observación.</li></ul></li>
+  <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar postura</b>.</li>
+  <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado.</li>
+  <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
 <li>En video y fotografías, <b>Detección automática de postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
 <li>Consulte <b>Categorías de acción</b> y <b>Por parte del cuerpo</b>. Puede filtrar por fase de trabajo.</li>
 <li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original, e <b>Imprimir</b> para imprimir o guardar en PDF.</li></ol>
@@ -1509,18 +1541,31 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 3.8 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 3.9 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
   const a = e.target.closest('[data-act]'); if (!a) return;
-  ({new:newFile, open:openFile, join:joinFile, save:() => saveFile(false), saveas:() => saveFile(true), print:doPrint})[a.dataset.act]();
+  ({new:newFile, open:openFile, join:joinFile, save:() => saveFile(false), saveas:() => saveFile(true), print:doPrint, theme:toggleTheme})[a.dataset.act]();
 });
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) showTab(b.dataset.tab); });
 $('#restoredClose').onclick = () => $('#restored').hidden = true;
 window.addEventListener('beforeunload', e => { if (dirty){ e.preventDefault(); e.returnValue = ''; } });
 $$('.top .actions button').forEach(el => { const t = el.textContent.trim(); el.setAttribute('aria-label', t); el.innerHTML = `<span class="lbl">${t}</span>`; });
 $$('[data-icon]').forEach(el => el.insertAdjacentHTML('afterbegin', ico(el.dataset.icon)));
+// Tema claro / oscuro: el botón muestra el tema al que se cambia
+function renderThemeBtn(){
+  const dark = document.documentElement.dataset.theme === 'dark', t = dark ? 'Tema claro' : 'Tema oscuro';
+  $('#themeBtn').innerHTML = ico(dark ? 'sun' : 'moon') + `<span class="lbl">${t}</span>`;
+  $('#themeBtn').setAttribute('aria-label', 'Cambiar a ' + t.toLowerCase());
+}
+function toggleTheme(){
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try{ localStorage.setItem('owasweb.theme', next); }catch(e){}
+  renderThemeBtn();
+}
+renderThemeBtn();
 function renderAll(){ renderHeader(); renderData(); fillPhaseFilters(); renderObserve(); renderResults(); renderBodyParts(); renderList(); }
 renderVideoUI();
 (async () => {
