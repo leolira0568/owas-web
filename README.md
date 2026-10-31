@@ -24,12 +24,12 @@ El WinOWAS original era un programa de Windows 3.x de 16 bits (Visual Basic 3) q
 - **Por parte del cuerpo**: porcentaje del tiempo en cada postura de espalda, brazos y piernas, comparado con los límites de cada categoría.
 - **Tablas y figuras en formato APA (7.ª edición)** *(nuevo en 3.1)*: número en negrita, título en cursiva, tablas solo con líneas horizontales, «Nota.» con el tamaño de la muestra y referencia a Karhu et al. (1977). Numeración correlativa en todo el informe:
   - *Categorías de acción*: distribución por categoría (tabla y figura), distribución por fase (tabla y figura, si hay varias fases) y frecuencia de los códigos de postura.
-  - *Por parte del cuerpo*: frecuencia de cada postura con su categoría (tabla y figura) y mediciones de la detección automática. La concordancia con la detección se muestra solo si se activa «Mostrar concordancia con la detección automática».
+  - *Por parte del cuerpo*: frecuencia de cada postura con su categoría (tabla y figura). Las tablas de concordancia y de mediciones de la detección automática se muestran solo si se activa «Mostrar tablas de la detección automática».
   - Se incluyen en la impresión con la casilla «Incluir tablas y figuras APA al imprimir».
 - **Archivos**: abrir, guardar, guardar como y unir archivos `.OWS` (solo datos, compatibles con el original) y proyectos `.owsp` (datos más imágenes).
 - **Imprimir o guardar en PDF**, y copiar los resultados al portapapeles (se pegan como tabla en Excel o Word).
 - **Autoguardado** en el navegador para no perder trabajo.
-- **Tema claro u oscuro** *(nuevo en 3.9)*: botón en la barra superior; la elección se recuerda en el navegador. La primera vez se usa el tema del sistema.
+- **Tema claro u oscuro** *(nuevo en 3.9)*: botón en la barra superior; la elección se recuerda en el navegador. Por defecto se usa el tema claro.
 
 ## Cómo usarlo sin internet
 
@@ -115,7 +115,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **3.9**: tema oscuro y claro a elección; archivo `OWASWeb.html`; concordancia con la detección automática oculta por defecto; botones «Aceptar postura» e «Imprimir resultados»; advertencias en rojo.
+- **3.10**: tema claro por defecto; encabezado gris neutro con «Imprimir resultados» en azul; las tablas de la detección automática (concordancia y mediciones) quedan ocultas por defecto.
+- **[3.9](https://github.com/leolira0568/owas-web/releases/tag/v3.9)**: tema oscuro y claro a elección; archivo `OWASWeb.html`; concordancia con la detección automática oculta por defecto; botones «Aceptar postura» e «Imprimir resultados»; advertencias en rojo.
 - **[3.8](https://github.com/leolira0568/owas-web/releases/tag/v3.8)**: botón «Aceptar» en verde; pie de página con el enlace a GitHub y las licencias; autor Leonardo Lira.
 - **[3.7](https://github.com/leolira0568/owas-web/releases/tag/v3.7)**: el modo Video es el que aparece seleccionado al abrir la aplicación.
 - **[3.6](https://github.com/leolira0568/owas-web/releases/tag/v3.6)**: en Observar, los modos aparecen en el orden Video, Fotografías y En vivo.

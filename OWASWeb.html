@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OWAS Web</title>
 <script>
-  // Tema claro u oscuro: el elegido por el usuario o, la primera vez, el del sistema
-  try{ document.documentElement.dataset.theme = localStorage.getItem('owasweb.theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); }
+  // Tema claro u oscuro: el último elegido por el usuario; por defecto, el claro
+  try{ document.documentElement.dataset.theme = localStorage.getItem('owasweb.theme') || 'light'; }
   catch(e){ document.documentElement.dataset.theme = 'light'; }
 </script>
 <style>
@@ -119,13 +119,16 @@ td.postura .pict{width:28px;height:28px}
 .small{font-size:13px}
 
 /* Barra superior */
-.top{position:sticky;top:0;z-index:5;background:#1f2a37;color:#fff;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 16px}
+.top{position:sticky;top:0;z-index:5;background:#3a3a3a;color:#fff;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 16px}
 .brand{font-weight:700;font-size:18px;letter-spacing:.2px}
 .brand .fname{font-weight:400;font-size:14px;opacity:.8;margin-left:8px}
 .brand .dirty{color:#fab219;margin-left:4px}
 .top .actions{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
-.top .actions button{background:#2f3d4f;border:1px solid #435469;color:#fff;border-radius:8px;padding:6px 12px;min-height:40px}
-.top .actions button:hover{background:#3a4a5f}
+.top .actions button{background:#4a4a4a;border:1px solid #626262;color:#fff;border-radius:8px;padding:6px 12px;min-height:40px}
+.top .actions button:hover{background:#575757}
+/* Encabezado en gris neutro; solo «Imprimir resultados» destaca en azul */
+.top .actions button[data-act="print"]{background:var(--accent);border-color:var(--accent);font-weight:600}
+.top .actions button[data-act="print"]:hover{background:var(--accent);filter:brightness(1.1)}
 .tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin;background:var(--tabs-bg);padding:0 12px;border-bottom:1px solid var(--line)}
 .tabs button{background:none;border:0;padding:12px 14px;border-bottom:3px solid transparent;color:var(--ink-2);white-space:nowrap}
 .tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
@@ -398,7 +401,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       <label><input type="checkbox" id="printBg" checked> Incluir información general al imprimir</label>
       <label><input type="checkbox" id="printImg" checked> Incluir imágenes al imprimir</label>
       <label><input type="checkbox" id="printApa" checked> Incluir tablas y figuras APA al imprimir</label>
-      <label><input type="checkbox" id="showAgree" autocomplete="off"> Mostrar concordancia con la detección automática</label>
+      <label><input type="checkbox" id="showAgree" autocomplete="off"> Mostrar tablas de la detección automática (concordancia y mediciones)</label>
       <button class="btn" id="copyBtn" data-icon="copy">Copiar resultados</button></div>
     <div id="results"></div>
   </section>
@@ -1467,7 +1470,7 @@ function apaSections(){
       `<i>N</i> = ${d.length} observaciones con propuesta automática de MediaPipe Pose. Una coincidencia indica que la propuesta se aceptó sin corregirla.`);
   }
   const dmList = list.map(o => [o, S.obs.indexOf(o)]).filter(([o]) => o.det && o.dm);
-  if (dmList.length){
+  if (dmList.length && $('#showAgree').checked){
     const v = x => x == null ? '—' : x;
     body += apaTable(++t, 'Mediciones de la detección automática en cada observación',
       [{t: 'Obs.', n: 1}, {t: 'Código registrado'}, {t: 'Propuesta'}, {t: 'Tronco (°)', n: 1}, {t: 'Giro (°)', n: 1}, {t: 'Lateral (°)', n: 1}, {t: 'Brazos sobre el hombro', n: 1}, {t: 'Rodilla izq. (°)', n: 1}, {t: 'Rodilla der. (°)', n: 1}],
@@ -1541,7 +1544,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 3.9 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 3.10 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
