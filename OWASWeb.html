@@ -111,7 +111,6 @@ dialog#exportDlg{border:0;border-radius:12px;padding:18px 20px;max-width:min(520
 .detect{border-bottom:1px solid var(--line-soft);margin-bottom:12px;padding-bottom:6px}
 .detect > .vctrl{margin-top:0}
 .detect-status{margin:8px 0 4px;display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center}
-.detect-status .chip{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:6px;padding:1px 7px;font-variant-numeric:tabular-nums}
 .detect-status .warn,.warn-box{color:var(--danger);background:var(--danger-bg);border:1px solid var(--danger-line);border-radius:6px;padding:2px 9px;font-weight:600}
 .detect details summary{cursor:pointer;color:var(--ink-2);padding:4px 0}
 .detect-opts{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}
@@ -1352,14 +1351,8 @@ async function detectPose(){
     if (r.l && !manual.l) sel.l = r.l;
     renderObserve();
     renderOverlay(lastDet);
-    const f = v => Math.round(v);
-    const chips = [`Tronco ${f(r.m.trunk)}°`, `Giro ${f(r.m.twist)}°`, `Lateral ${f(r.m.side)}°`, `Brazos arriba ${r.m.armsUp}`];
-    if (used > 1) chips.push(`Promedio de ${used} fotogramas`);
-    if (r.m.kneeL != null) chips.push(`Rodillas ${f(r.m.kneeL)}° / ${f(r.m.kneeR)}°`);
-    if (r.m.walk != null) chips.push(`Desplazamiento ${f(r.m.walk)} %`);
-    setDetectStatus(`<b>Propuesta: ${r.b} ${r.a} ${r.l || '?'}</b>` + chips.map(c => `<span class="chip">${c}</span>`).join('') +
-      (r.warn.length ? `<span class="warn">Atención: ${r.warn.join('; ')}.</span>` : '') +
-      (sel.w ? '' : '<span class="muted">Elija la carga y acepte.</span>'));
+    // Bajo «Aceptar postura» solo se avisa de los problemas de la detección (los ángulos van en los subtítulos)
+    setDetectStatus(r.warn.length ? `<span class="warn">Atención: ${r.warn.join('; ')}.</span>` : '');
   }catch(e){
     console.error(e);
     setDetectStatus('<span class="warn">No se pudo usar el detector de posturas en este navegador.</span>');
@@ -1793,7 +1786,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 3.16 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 3.17 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
