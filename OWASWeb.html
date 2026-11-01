@@ -104,7 +104,7 @@ dialog#viewer::backdrop{background:rgba(0,0,0,.6)}
 .gallery .det-cap{display:block;width:100%;font-size:12px;color:var(--ink-2);line-height:1.35}
 .detect{border-bottom:1px solid var(--line-soft);margin-bottom:12px;padding-bottom:6px}
 .detect > .vctrl{margin-top:0}
-.detect-status{margin:8px 0 4px;min-height:1.5em;display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center}
+.detect-status{margin:8px 0 4px;display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center}
 .detect-status .chip{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:6px;padding:1px 7px;font-variant-numeric:tabular-nums}
 .detect-status .warn,.warn-box{color:var(--danger);background:var(--danger-bg);border:1px solid var(--danger-line);border-radius:6px;padding:2px 9px;font-weight:600}
 .detect details summary{cursor:pointer;color:var(--ink-2);padding:4px 0}
@@ -153,6 +153,10 @@ section.tab.on{display:block}
 .foot a{color:var(--accent)}
 .foot p{margin:0}
 .btn.danger{color:var(--danger)}
+/* «Cargar video» y «Cargar fotografías» destacan en gris oscuro hasta que se carga algo */
+.btn.load{background:#3f3f3f;border-color:#3f3f3f;color:#fff;font-weight:600}
+.btn.load:hover{background:#2f2f2f;border-color:#2f2f2f}
+:root[data-theme="dark"] .btn.load{background:#5a5a5a;border-color:#6a6a6a}
 .btn:disabled{opacity:.45;cursor:default}
 label.field{display:block;margin-bottom:10px}
 label.field span{display:block;font-size:13px;color:var(--ink-2);margin-bottom:3px}
@@ -176,6 +180,7 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .opt:hover{border-color:var(--accent)}
 .opt.sel{background:var(--accent-soft);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .opt b{display:inline-grid;place-items:center;min-width:26px;height:26px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
+.task-warn{margin:10px 0 0}
 .obs-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .recent{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .recent span{font-variant-numeric:tabular-nums;padding:3px 8px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line-soft);font-size:13px}
@@ -320,7 +325,6 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
         <div class="vctrl">
           <button class="btn primary" id="detectBtn" data-icon="scan">Detectar postura <span class="kbd">D</span></button>
         </div>
-        <p class="small detect-status" id="detectStatus" role="status"></p>
         <details class="small">
           <summary>Ajustes de detección</summary>
           <div class="detect-opts">
@@ -341,7 +345,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       </div>
       <div id="videoPane">
         <div class="media-top">
-          <button class="btn" id="loadVideo" data-icon="video">Cargar video…</button>
+          <button class="btn load" id="loadVideo" data-icon="video">Cargar video</button>
           <span class="muted small" id="videoName">Ningún video cargado</span>
         </div>
         <div class="stage"><video id="vid" playsinline muted preload="auto"></video><canvas class="overlay" id="ovVideo" aria-hidden="true"></canvas><p class="stage-empty" id="vidEmpty">Cargue un video (MP4 o WebM) para revisarlo fotograma a fotograma.</p></div>
@@ -363,7 +367,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       </div>
       <div id="photoPane" hidden>
         <div class="media-top">
-          <button class="btn" id="loadPhotos" data-icon="image">Cargar fotografías…</button>
+          <button class="btn load" id="loadPhotos" data-icon="image">Cargar fotografías</button>
           <span class="muted small" id="photoInfo">Ninguna fotografía cargada</span>
         </div>
         <div class="stage"><img id="photo" alt=""><canvas class="overlay" id="ovPhoto" aria-hidden="true"></canvas><p class="stage-empty" id="photoEmpty">Cargue una o varias fotografías (JPG, PNG o WebP). Al aceptar, cada observación guarda su fotografía.</p></div>
@@ -388,6 +392,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
           <span id="liveCat"></span>
         </div>
       </div>
+      <p class="small task-warn" id="taskWarn"><span class="warn-box">Seleccione la tarea</span></p>
       <div class="obs-actions">
         <button class="btn ok" id="accept" data-icon="check">Aceptar postura <span class="kbd">Enter</span></button>
         <button class="btn" id="repeat" data-icon="repeat">Repetir anterior <span class="kbd">R</span></button>
@@ -395,10 +400,11 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
         <button class="btn" id="clearSel" data-icon="eraser">Limpiar <span class="kbd">Esc</span></button>
         <span class="muted small" style="align-self:center" id="obsCount"></span>
       </div>
+      <p class="small detect-status" id="detectStatus" role="status"></p>
       <div class="recent" id="recent"></div>
     </div>
     <div class="parts" id="parts"></div>
-    <p class="small muted">Atajo de teclado: escribe los dígitos del código en orden (espalda, brazos, piernas, carga y, si hay varias tareas, número de tarea) y pulsa <span class="kbd">Enter</span>. <span class="kbd">Retroceso</span> borra el último dígito. En modo video: <span class="kbd">Espacio</span> reproduce o pausa, <span class="kbd">←</span> <span class="kbd">→</span> cambian de fotograma, <span class="kbd">Mayús</span> + flecha salta 1 s y <span class="kbd">B</span> / <span class="kbd">N</span> van a la muestra anterior o siguiente.</p>
+    <p class="small muted">Atajo de teclado: escribe los dígitos del código en orden (espalda, brazos, piernas, carga y número de tarea) y pulsa <span class="kbd">Enter</span>. <span class="kbd">Retroceso</span> borra el último dígito. En modo video: <span class="kbd">Espacio</span> reproduce o pausa, <span class="kbd">←</span> <span class="kbd">→</span> cambian de fotograma, <span class="kbd">Mayús</span> + flecha salta 1 s y <span class="kbd">B</span> / <span class="kbd">N</span> van a la muestra anterior o siguiente.</p>
   </section>
 
   <section class="tab" id="tab-resultados">
@@ -639,6 +645,7 @@ function encode1252(str){ const out = new Uint8Array(str.length); for (let i = 0
 function confirmDiscard(){ return !dirty || confirm('¿Desea descartar los cambios sin guardar?'); }
 function loadState(st, name, handle){
   S = st; fileName = name; fileHandle = handle || null; dirty = false; phaseFilter = -1;
+  sel = {b:0, a:0, l:0, w:0, p:-1};
   $('#restored').hidden = true;
   persist(); renderAll();
 }
@@ -762,20 +769,21 @@ $('#phases').addEventListener('click', e => {
 });
 
 // ---- Observación ----
-let sel = {b:0,a:0,l:0,w:0,p:0};
+let sel = {b:0,a:0,l:0,w:0,p:-1};   // p = -1: ninguna tarea elegida todavía
 const needPhase = () => S.phases.length > 1;
 function nextField(){ for (const p of PARTS) if (!sel[p.key]) return p.key; return null; }
 function renderObserve(){
-  if (sel.p >= S.phases.length) sel.p = 0;
+  if (sel.p >= S.phases.length) sel.p = -1;
   let html = PARTS.map(p => `<div class="card part"><h3><span>${p.name}</span><span class="muted">${sel[p.key] || '–'}</span></h3>` +
     p.opts.map((o,i) => `<button class="opt${sel[p.key]===i+1?' sel':''}" data-k="${p.key}" data-v="${i+1}" aria-pressed="${sel[p.key]===i+1}"><b>${i+1}</b>${pict(p.key, i+1)}<span>${o}</span></button>`).join('') + '</div>').join('');
-  html += `<div class="card part"><h3><span>Tarea</span><span class="muted">${sel.p+1}</span></h3>` +
+  html += `<div class="card part"><h3><span>Tarea</span><span class="muted">${sel.p >= 0 ? sel.p + 1 : '–'}</span></h3>` +
     S.phases.map((p,i) => `<button class="opt${sel.p===i?' sel':''}" data-k="p" data-v="${i}" aria-pressed="${sel.p===i}"><b>${i+1}</b><span>${esc(phaseName(i))}</span></button>`).join('') + '</div>';
   $('#parts').innerHTML = html;
   const nf = nextField();
   $('#digits').innerHTML = PARTS.map(p => `<span class="${nf===p.key?'next':''}" title="${p.name}">${sel[p.key]||''}</span>`).join('');
   $('#liveCat').innerHTML = nf ? '<span class="muted small">Seleccione la postura</span>' : catBadge(catOf(sel));
-  $('#accept').disabled = !!nf;
+  $('#accept').disabled = !!nf || sel.p < 0;
+  $('#taskWarn').hidden = sel.p >= 0;
   $('#repeat').disabled = !S.obs.length;
   $('#takeback').disabled = !S.obs.length;
   $("#obsCount").textContent = S.obs.length === 1 ? "1 observación" : `${S.obs.length} observaciones`;
@@ -795,7 +803,7 @@ function addObs(code){
   if (mode === 'photo' && $('#pAuto').checked) nextPendingPhoto();
 }
 function accept(){
-  if (nextField()) return;
+  if (nextField() || sel.p < 0) return;
   addObs(sel); sel = {b:0, a:0, l:0, w: mode !== 'live' && $('#autoDetect').checked ? sel.w : 0, p:sel.p};
   renderObserve();
 }
@@ -826,7 +834,7 @@ document.addEventListener('keydown', e => {
     if (nf){
       const max = PARTS.find(p => p.key === nf).opts.length;
       if (+k <= max){ sel[nf] = +k; phaseDigitPending = needPhase() && !nextField(); renderObserve(); }
-    } else if (needPhase() && +k <= S.phases.length){ sel.p = +k - 1; phaseDigitPending = false; renderObserve(); }
+    } else if (+k <= S.phases.length){ sel.p = +k - 1; phaseDigitPending = false; renderObserve(); }
     e.preventDefault();
   } else if (k === 'Enter'){ accept(); e.preventDefault(); }
   else if (k === 'Backspace'){ for (const p of [...PARTS].reverse()) if (sel[p.key]){ sel[p.key] = 0; break; } renderObserve(); e.preventDefault(); }
@@ -963,13 +971,13 @@ $('#fileVideo').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   if (vid.src) URL.revokeObjectURL(vid.src);
   videoName = f.name; vid.src = URL.createObjectURL(f);
-  $('#videoName').textContent = f.name; $('#vidEmpty').hidden = true;
+  $('#videoName').textContent = f.name; $('#vidEmpty').hidden = true; $('#loadVideo').classList.remove('load');
 };
 vid.addEventListener('loadedmetadata', () => { renderVideoUI(); renderMarks(); });
 ['timeupdate', 'seeked', 'play', 'pause'].forEach(ev => vid.addEventListener(ev, renderVideoUI));
 vid.addEventListener('error', () => {
   alert('El navegador no puede reproducir este video. Use un archivo MP4 (H.264) o WebM.');
-  vid.removeAttribute('src'); videoName = ''; $('#videoName').textContent = 'Ningún video cargado'; $('#vidEmpty').hidden = false;
+  vid.removeAttribute('src'); videoName = ''; $('#videoName').textContent = 'Ningún video cargado'; $('#vidEmpty').hidden = false; $('#loadVideo').classList.add('load');
 });
 vid.addEventListener('click', togglePlay);
 $('#seek').addEventListener('input', e => setVideoTime(+e.target.value));
@@ -1004,7 +1012,7 @@ $('#filePhotos').onchange = e => {
   if (!files.length) return;
   photos.forEach(ph => URL.revokeObjectURL(ph.url));
   photos = files.map(f => ({name: f.name, url: URL.createObjectURL(f)}));
-  $('#photoEmpty').hidden = true; showPhoto(0);
+  $('#photoEmpty').hidden = true; $('#loadPhotos').classList.remove('load'); showPhoto(0);
 };
 $('#pPrev').onclick = () => showPhoto(pi - 1); $('#pNext').onclick = () => showPhoto(pi + 1);
 
@@ -1307,11 +1315,11 @@ function agreementHTML(list){
     </table></div></div>`;
 }
 // Imágenes de las observaciones, de la categoría más grave a la menos grave
-function galleryHTML(list){
+function galleryHTML(list, lazy = true){
   const items = list.map(o => [o, S.obs.indexOf(o)]).filter(([o]) => o.img).sort((x, y) => catOf(y[0]) - catOf(x[0]) || x[1] - y[1]);
   if (!items.length) return '';
   return `<div class="card"><h2>${ico('image')}Imágenes de las observaciones</h2><p class="small muted" style="margin-top:-6px">${items.length === 1 ? "1 imagen." : items.length + " imágenes, ordenadas de mayor a menor riesgo."}</p><div class="gallery">` +
-    items.map(([o, i]) => `<figure><button data-view="${i}" aria-label="Ampliar la imagen de la observación ${i+1}"><img src="${o.img}" alt="" loading="lazy"></button>
+    items.map(([o, i]) => `<figure><button data-view="${i}" aria-label="Ampliar la imagen de la observación ${i+1}"><img src="${o.img}" alt=""${lazy ? ' loading="lazy"' : ''}></button>
       <figcaption>${catBadge(catOf(o), false)}<b>${codeStr(o)}</b><span class="muted">Obs. ${i+1} · ${esc(phaseName(o.p))}${o.t != null ? ' · ' + fmtTime(o.t) : ''}</span>${o.det && o.dm ? `<span class="det-cap">Detección automática: ${esc(detLines(o.det, o.dm).join(' · '))}${detTag(o)}</span>` : ''}</figcaption></figure>`).join('') + '</div></div>';
 }
 function describe(k){ return PARTS.map((p,i) => `${p.name}: ${p.opts[k[i]-1]}`).join(' · '); }
@@ -1507,12 +1515,15 @@ $('#obsTable').addEventListener('click', e => {
 $('#clearAll').onclick = () => { if (S.obs.length && confirm(`¿Eliminar las ${S.obs.length} observaciones?`)){ S.obs = []; changed(); renderList(); } };
 
 // ---- Imprimir y copiar ----
-function doPrint(){
+async function doPrint(){
   const title = `<h1>OWAS Web — ${esc(fileName || 'Estudio OWAS')}</h1><p class="muted" style="margin-top:0">${esc(S.bg[2]||'')}</p>`;
   const apa = $('#printApa').checked ? apaSections() : null;
   $('#print').innerHTML = title + ($('#printBg').checked ? bgBlock() : '') + resultsHTML(false) + bodyHTML() +
     (apa && (apa.cat || apa.body) ? `<div class="card"><h2>Tablas y figuras</h2>${apa.cat}${apa.body}${apaRefs()}</div>` : '') +
-    ($('#printImg').checked ? galleryHTML(filtered()) : '');
+    ($('#printImg').checked ? galleryHTML(filtered(), false) : '');
+  // Las imágenes deben estar cargadas y decodificadas antes de abrir el diálogo de impresión
+  await Promise.all([...$('#print').querySelectorAll('img')].map(img =>
+    (img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })).then(() => img.decode ? img.decode().catch(() => {}) : null)));
   window.print();
 }
 function copyResults(){
@@ -1549,7 +1560,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 3.12 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 3.13 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
