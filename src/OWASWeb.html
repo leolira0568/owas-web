@@ -196,6 +196,9 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .opt.sel{background:var(--accent-soft);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .opt b{display:inline-grid;place-items:center;min-width:26px;height:26px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
 .task-warn{margin:10px 0 0}
+#loadWarn + #taskWarn{margin-top:4px}
+#detWarn{display:flex;gap:6px;flex-wrap:wrap}
+#detWarn:empty,#detectStatus:empty{display:none}
 .obs-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 /* Aviso sobre la detección automática y avisos suaves */
 .accept-wrap{position:relative;display:inline-flex}
@@ -420,6 +423,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
           <span id="liveCat"></span>
         </div>
       </div>
+      <p class="small task-warn" id="loadWarn"><span class="warn-box">Seleccione la carga</span></p>
       <p class="small task-warn" id="taskWarn"><span class="warn-box">Seleccione la tarea</span></p>
       <p class="small task-warn" id="dupWarn" hidden></p>
       <div class="obs-actions">
@@ -430,6 +434,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
         <span class="muted small" style="align-self:center" id="obsCount"></span>
       </div>
       <p class="small detect-status" id="detectStatus" role="status"></p>
+      <p class="small detect-status" id="detWarn" role="status"></p>
     </div>
     <div class="parts" id="parts"></div>
     <p class="small muted">Atajo de teclado: escribe los dígitos del código en orden (espalda, brazos, piernas, carga y número de tarea) y pulsa <span class="kbd">Enter</span>. <span class="kbd">Retroceso</span> borra el último dígito. En modo video: <span class="kbd">Espacio</span> reproduce o pausa, <span class="kbd">←</span> <span class="kbd">→</span> cambian de fotograma, <span class="kbd">Mayús</span> + flecha salta 1 s y <span class="kbd">B</span> / <span class="kbd">N</span> van a la muestra anterior o siguiente.</p>
@@ -839,7 +844,9 @@ function renderObserve(){
   $('#liveCat').innerHTML = nf ? '<span class="muted small">Seleccione la postura</span>' : catBadge(catOf(sel));
   $('#accept').disabled = !!nf || sel.p < 0;
   setReady(!nf && sel.p >= 0);
+  $('#loadWarn').hidden = !!sel.w;
   $('#taskWarn').hidden = sel.p >= 0;
+  renderDetWarn();
   renderDup();
   $('#repeat').disabled = !S.obs.length;
   $('#takeback').disabled = !S.obs.length;
@@ -873,7 +880,7 @@ function addObs(code){
 }
 function accept(){
   if (nextField() || sel.p < 0) return;
-  addObs(sel); sel = {b:0, a:0, l:0, w: mode !== 'live' && $('#autoDetect').checked ? sel.w : 0, p:sel.p};
+  addObs(sel); sel = {b:0, a:0, l:0, w:0, p:sel.p};   // la carga no se arrastra: se elige en cada observación
   resetManual(); renderObserve(); flashSaved();
 }
 function repeatLast(){ if (!S.obs.length) return; addObs(S.obs[S.obs.length-1]); renderObserve(); flashSaved(); }
@@ -1195,7 +1202,7 @@ function classifyOWAS(W, N){
   const up = [0, -s, 0], h = p => V.dot([p.x, p.y, p.z], up);
   const S2 = V.mid(W[11], W[12]), H2 = V.mid(W[23], W[24]);
   const trunk = V.sub(S2, H2), hipLine = V.unit(V.sub(W[24], W[23])), shLine = V.sub(W[12], W[11]);
-  if ([11,12,23,24].some(i => vis(i) < 0.5)) warn.push('tronco poco visible');
+  if ([11,12,23,24].some(i => vis(i) < 0.5)) warn.push({k: 'b', t: 'Espalda poco visible: revise el código de la espalda.'});
 
   // Espalda: flexión en el plano sagital, inclinación lateral y giro de hombros respecto a caderas
   m.trunk = V.ang(V.rej(trunk, hipLine), up);
@@ -1205,13 +1212,14 @@ function classifyOWAS(W, N){
   const b = bent ? (twisted ? 4 : 2) : (twisted ? 3 : 1);
 
   // Brazos: cuántos codos o muñecas quedan por encima de su hombro
+  if ([13,14,15,16].some(i => vis(i) < 0.4)) warn.push({k: 'a', t: 'Brazos poco visibles: revise el código de los brazos.'});
   m.armsUp = [0, 1].filter(k => vis(P.sh[k]) >= 0.3 && Math.max(h(W[P.el[k]]), h(W[P.wr[k]])) > h(W[P.sh[k]])).length;
   const a = 1 + m.armsUp;
 
   // Piernas
   let l = 0;
   const legVis = [...P.knee, ...P.ank].every(i => vis(i) >= 0.4);
-  if (!legVis) warn.push('piernas no visibles: elija las piernas a mano');
+  if (!legVis) warn.push({k: 'l', t: 'Piernas no visibles: elija el código de las piernas.'});
   else {
     const knee = k => V.ang(V.sub(W[P.hip[k]], W[P.knee[k]]), V.sub(W[P.ank[k]], W[P.knee[k]]));
     m.kneeL = knee(0); m.kneeR = knee(1);
@@ -1257,6 +1265,7 @@ function overlayEl(){ return mode === 'video' ? $('#ovVideo') : $('#ovPhoto'); }
 function clearOverlay(){
   for (const c of [$('#ovVideo'), $('#ovPhoto')]) c.getContext('2d').clearRect(0, 0, c.width, c.height);
   $('#subsVideo').hidden = $('#subsPhoto').hidden = true;
+  detWarn = []; renderDetWarn();
 }
 // Texto de los subtítulos: postura propuesta de cada parte y los ángulos medidos
 function detLines(code, m){
@@ -1352,7 +1361,7 @@ async function detectPose(){
     renderObserve();
     renderOverlay(lastDet);
     // Bajo «Aceptar postura» solo se avisa de los problemas de la detección (los ángulos van en los subtítulos)
-    setDetectStatus(r.warn.length ? `<span class="warn">Atención: ${r.warn.join('; ')}.</span>` : '');
+    setDetectStatus(''); detWarn = r.warn; renderDetWarn();
   }catch(e){
     console.error(e);
     setDetectStatus('<span class="warn">No se pudo usar el detector de posturas en este navegador.</span>');
@@ -1363,6 +1372,12 @@ async function detectPose(){
   }
 }
 function setDetectStatus(html){ $('#detectStatus').innerHTML = html; }
+// Avisos de la detección para el fotograma actual: cada uno desaparece al elegir a mano el código de su parte
+let detWarn = [];
+function renderDetWarn(){
+  const pending = detWarn.filter(w => !manual[w.k]);
+  $('#detWarn').innerHTML = pending.map(w => `<span class="warn">Atención: ${w.t}</span>`).join('');
+}
 $('#detectBtn').onclick = detectPose;
 // La propuesta deja de valer al cambiar de fotograma o de foto
 vid.addEventListener('seeking', () => { if (!detecting){ clearOverlay(); resetManual(); if (lastDet) setDetectStatus(''); } });
@@ -1786,7 +1801,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 3.17 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 3.18 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
