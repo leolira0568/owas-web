@@ -67,6 +67,8 @@ Se usan los 33 puntos 3D que estima MediaPipe Pose (en metros, con origen entre 
 | Brazos | Número de brazos con el codo o la muñeca por encima del hombro, más uno. |
 | Piernas | **Arrodillado** si una rodilla está cerca del suelo. **Sentado** si ambos muslos están casi horizontales y la cadera está baja. **Una pierna** si un pie está levantado al menos un 10 % de la longitud de la pierna; con la rodilla de apoyo por debajo de 150°, flexionada. **Ambas piernas** con alguna rodilla por debajo de 150°: flexionadas. **Caminando** (solo video) si la cadera se desplaza al menos un 25 % del tronco en 0,5 s. |
 
+En video, los puntos del cuerpo se promedian entre el fotograma elegido y sus vecinos a ±0,1 s (se puede desactivar). Las partes que el usuario elige a mano en un fotograma no se cambian con la detección.
+
 La detección es una ayuda y no reemplaza el criterio de quien observa. Funciona mejor con una sola persona de cuerpo entero, vista de lado o en diagonal. El giro de la espalda es la medida menos fiable desde una sola cámara.
 
 ## Formato de archivo `.OWS`
@@ -116,7 +118,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **3.14**: la detección se activa al pausar el video o al elegir un fotograma; botón «Exportar resultados» (Word y PDF); la lista de posturas aceptadas muestra el número y el riesgo y lleva a su fotograma; mensaje «Postura guardada» al aceptar.
+- **3.15**: detección promediada de 3 fotogramas cercanos; la detección ya no cambia las partes elegidas a mano; códigos y tareas en filas; las observaciones aparecen en la línea de tiempo bajo su fotograma; aviso de fotograma repetido y de revisión profesional; «Aceptar postura» parpadea cuando todo está elegido; «Nuevo proyecto» y «Abrir proyecto».
+- **[3.14](https://github.com/leolira0568/owas-web/releases/tag/v3.14)**: la detección se activa al pausar el video o al elegir un fotograma; botón «Exportar resultados» (Word y PDF); la lista de posturas aceptadas muestra el número y el riesgo y lleva a su fotograma; mensaje «Postura guardada» al aceptar.
 - **[3.13](https://github.com/leolira0568/owas-web/releases/tag/v3.13)**: todas las imágenes aparecen al imprimir; «Cargar video» y «Cargar fotografías» en gris oscuro hasta cargar; las advertencias se muestran junto a «Aceptar postura»; ninguna tarea elegida al empezar, con el aviso «Seleccione la tarea».
 - **[3.12](https://github.com/leolira0568/owas-web/releases/tag/v3.12)**: las casillas de detección (detectar al llegar, subtítulos y grabar en la imagen) quedan dentro de «Ajustes de detección», ocultas por defecto y activadas.
 - **[3.11](https://github.com/leolira0568/owas-web/releases/tag/v3.11)**: las fases de trabajo pasan a llamarse tareas; botón «Detectar postura»; la detección y sus ajustes se muestran encima del video o la foto.
