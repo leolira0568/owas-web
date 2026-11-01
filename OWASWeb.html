@@ -84,7 +84,6 @@ td.postura{white-space:nowrap}
 .thumbs img{display:block;height:60px;border-radius:5px}
 .thumbs .done{position:absolute;right:3px;bottom:3px;width:18px;height:18px;border-radius:50%;background:var(--c1);color:#fff;display:grid;place-items:center}
 .thumbs .done .ico{width:12px;height:12px;stroke-width:3}
-.recent img{height:22px;border-radius:3px;vertical-align:middle;margin-right:5px}
 .thumb{padding:0;border:1px solid var(--line);border-radius:6px;background:#141414;min-height:0;display:block}
 .thumb img{display:block;width:76px;height:56px;object-fit:cover;border-radius:5px}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
@@ -93,7 +92,11 @@ td.postura{white-space:nowrap}
 .gallery img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain}
 .gallery figcaption{padding:7px 9px;font-size:13px;display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center}
 dialog#viewer{border:0;border-radius:12px;padding:14px;background:var(--surface);color:var(--ink);max-width:min(960px,94vw);width:auto}
-dialog#viewer::backdrop{background:rgba(0,0,0,.6)}
+dialog#viewer::backdrop,dialog#exportDlg::backdrop{background:rgba(0,0,0,.6)}
+dialog#exportDlg{border:0;border-radius:12px;padding:18px 20px;max-width:min(520px,94vw);background:var(--surface);color:var(--ink)}
+.export-opt{display:grid;grid-template-columns:160px 1fr;gap:12px;align-items:center;margin:12px 0}
+.export-opt p{margin:0}
+@media (max-width:520px){.export-opt{grid-template-columns:1fr}}
 #viewImg{display:block;max-width:100%;max-height:70vh;margin:0 auto 10px;border-radius:6px;background:#141414}
 
 /* Detección automática de postura */
@@ -130,8 +133,8 @@ td.postura .pict{width:28px;height:28px}
 .top .actions button{background:#4a4a4a;border:1px solid #626262;color:#fff;border-radius:8px;padding:6px 12px;min-height:40px}
 .top .actions button:hover{background:#575757}
 /* Encabezado en gris neutro; solo «Imprimir resultados» destaca en azul */
-.top .actions button[data-act="print"]{background:var(--accent);border-color:var(--accent);font-weight:600}
-.top .actions button[data-act="print"]:hover{background:var(--accent);filter:brightness(1.1)}
+.top .actions button[data-act="print"],.top .actions button[data-act="export"]{background:var(--accent);border-color:var(--accent);font-weight:600}
+.top .actions button[data-act="print"]:hover,.top .actions button[data-act="export"]:hover{background:var(--accent);filter:brightness(1.1)}
 .tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin;background:var(--tabs-bg);padding:0 12px;border-bottom:1px solid var(--line)}
 .tabs button{background:none;border:0;padding:12px 14px;border-bottom:3px solid transparent;color:var(--ink-2);white-space:nowrap}
 .tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
@@ -146,6 +149,7 @@ section.tab.on{display:block}
 .btn.primary:hover{filter:brightness(1.08)}
 .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
 .btn.ok:hover{background:var(--ok-hover);border-color:var(--ok-hover)}
+.btn.ok.saved,.btn.ok.saved:disabled{opacity:1;cursor:default;box-shadow:0 0 0 3px rgba(27,125,27,.3)}
 .btn.ok .kbd{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.6);color:#fff}
 
 /* Pie de página: enlace al proyecto y licencias */
@@ -183,7 +187,9 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .task-warn{margin:10px 0 0}
 .obs-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .recent{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.recent span{font-variant-numeric:tabular-nums;padding:3px 8px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line-soft);font-size:13px}
+.recent .rec{display:inline-flex;align-items:center;gap:6px;padding:3px 5px 3px 9px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line-soft);font-size:13px;min-height:32px}
+.recent .rec:hover{border-color:var(--accent)}
+.recent .rec-n{font-variant-numeric:tabular-nums;font-weight:600}
 
 /* Categorías */
 .cat{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
@@ -284,6 +290,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
     <button data-act="save" data-icon="save" title="Guardar el archivo .OWS">Guardar</button>
     <button data-act="saveas" data-icon="saveas" title="Guardar con otro nombre">Guardar como…</button>
     <button data-act="print" data-icon="print" title="Imprimir o guardar en PDF">Imprimir resultados</button>
+    <button data-act="export" data-icon="download" title="Exportar los resultados a PDF o Word">Exportar resultados</button>
     <button data-act="theme" id="themeBtn" title="Cambiar entre tema claro y oscuro">Tema oscuro</button>
   </div>
 </header>
@@ -394,7 +401,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       </div>
       <p class="small task-warn" id="taskWarn"><span class="warn-box">Seleccione la tarea</span></p>
       <div class="obs-actions">
-        <button class="btn ok" id="accept" data-icon="check">Aceptar postura <span class="kbd">Enter</span></button>
+        <button class="btn ok" id="accept" data-icon="check">Aceptar postura <span class="kbd">Enter</span></button><span class="sr" id="saveLive" aria-live="polite"></span>
         <button class="btn" id="repeat" data-icon="repeat">Repetir anterior <span class="kbd">R</span></button>
         <button class="btn" id="takeback" data-icon="undo">Deshacer última <span class="kbd">Supr</span></button>
         <button class="btn" id="clearSel" data-icon="eraser">Limpiar <span class="kbd">Esc</span></button>
@@ -445,6 +452,20 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 <input type="file" id="fileJoin" accept=".ows,.OWS,.owsp" hidden>
 <input type="file" id="fileVideo" accept="video/*" hidden>
 <input type="file" id="filePhotos" accept="image/*" multiple hidden>
+<dialog id="exportDlg" aria-labelledby="exportTitle">
+  <h2 id="exportTitle">Exportar resultados</h2>
+  <p class="small muted" style="margin-top:-4px">Se exporta el mismo informe que al imprimir, según las casillas de la pestaña «Categorías de acción».</p>
+  <div class="export-opt">
+    <button class="btn primary" id="expWord" data-icon="fileText">Word (.doc)</button>
+    <p class="small muted">Descarga un documento para Microsoft Word con la información general, las tablas y figuras APA y las imágenes de las observaciones. Desde Word puede guardarse como .docx.</p>
+  </div>
+  <div class="export-opt">
+    <button class="btn primary" id="expPdf" data-icon="print">PDF</button>
+    <p class="small muted">Abre el diálogo de impresión: elija «Guardar como PDF» como destino.</p>
+  </div>
+  <p class="small" id="expStatus" role="status"></p>
+  <div class="vctrl"><button class="btn" id="expClose" data-icon="close">Cerrar</button></div>
+</dialog>
 <dialog id="viewer" aria-label="Imagen de la observación">
   <img id="viewImg" alt="">
   <div id="viewInfo"></div>
@@ -525,6 +546,8 @@ const ICONS = {
   chevsR:'<path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/>',
   skipB:'<path d="M19 20 9 12l10-8z"/><path d="M5 19V5"/>',
   skipF:'<path d="m5 4 10 8-10 8z"/><path d="M19 5v14"/>',
+  download:'<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
+  fileText:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
   moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
   scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="7.5" r="1.5"/><path d="M8.5 11h7"/><path d="M12 9.5v4"/><path d="m9.5 17.5 2.5-4 2.5 4"/>'
@@ -787,7 +810,8 @@ function renderObserve(){
   $('#repeat').disabled = !S.obs.length;
   $('#takeback').disabled = !S.obs.length;
   $("#obsCount").textContent = S.obs.length === 1 ? "1 observación" : `${S.obs.length} observaciones`;
-  $('#recent').innerHTML = S.obs.slice(-12).reverse().map(o => `<span title="${esc(phaseName(o.p))}">${o.img ? `<img src="${o.img}" alt="">` : ''}${codeStr(o)} · cat. ${catOf(o)}</span>`).join('');
+  $('#recent').innerHTML = S.obs.map((o, i) => [o, i]).slice(-20).reverse().map(([o, i]) =>
+    `<button class="rec" data-go="${i}" title="Obs. ${i+1}: ${codeStr(o)} · ${esc(phaseName(o.p))}${o.t != null ? ' · ' + fmtTime(o.t) : ''}" aria-label="Observación ${i+1}, categoría ${catOf(o)}"><span class="rec-n">${i+1}</span>${catBadge(catOf(o), false)}</button>`).join('');
   renderMarks(); renderThumbs();
 }
 $('#parts').addEventListener('click', e => {
@@ -805,9 +829,30 @@ function addObs(code){
 function accept(){
   if (nextField() || sel.p < 0) return;
   addObs(sel); sel = {b:0, a:0, l:0, w: mode !== 'live' && $('#autoDetect').checked ? sel.w : 0, p:sel.p};
-  renderObserve();
+  renderObserve(); flashSaved();
 }
-function repeatLast(){ if (!S.obs.length) return; addObs(S.obs[S.obs.length-1]); renderObserve(); }
+function repeatLast(){ if (!S.obs.length) return; addObs(S.obs[S.obs.length-1]); renderObserve(); flashSaved(); }
+// Al pulsar una observación de la lista se va a su fotograma o a su fotografía
+function goToObs(i){
+  const o = S.obs[i]; if (!o) return;
+  if (o.t != null && o.src && o.src === videoName && vid.src){ setMode('video'); setVideoTime(o.t); return; }
+  const k = photos.findIndex(ph => ph.name === o.src);
+  if (k >= 0){ setMode('photo'); showPhoto(k); return; }
+  if (o.img) openViewer(i);
+}
+$('#recent').addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) goToObs(+b.dataset.go); });
+// Mensaje temporal «Postura guardada» en el propio botón
+let savedTimer = null;
+function flashSaved(){
+  const b = $('#accept');
+  clearTimeout(savedTimer);
+  b.classList.add('saved'); b.innerHTML = ico('check') + 'Postura guardada';
+  $('#saveLive').textContent = 'Postura guardada';
+  savedTimer = setTimeout(() => {
+    b.classList.remove('saved'); b.innerHTML = ico('check') + 'Aceptar postura <span class="kbd">Enter</span>';
+    $('#saveLive').textContent = '';
+  }, 1500);
+}
 function takeBack(){ if (!S.obs.length) return; S.obs.pop(); changed(); renderObserve(); }
 function clearSel(){ sel = {b:0,a:0,l:0,w:0,p:sel.p}; renderObserve(); }
 $('#accept').onclick = accept; $('#repeat').onclick = repeatLast; $('#takeback').onclick = takeBack; $('#clearSel').onclick = clearSel;
@@ -1181,7 +1226,7 @@ function renderOverlay(det){
 }
 // Clave del fotograma o la foto actual, para saber si la detección sigue vigente
 const mediaKey = () => mode === 'video' ? `${videoName}@${vid.currentTime.toFixed(3)}` : (photos[pi] ? photos[pi].name : '');
-let lastDet = null, detecting = false;
+let lastDet = null, detecting = false, triedKey = '';
 const seekTo = t => new Promise(res => { vid.addEventListener('seeked', res, {once: true}); vid.currentTime = t; });
 
 async function detectPose(){
@@ -1190,7 +1235,7 @@ async function detectPose(){
   if (mode === 'live' || !(mode === 'video' ? vid.src && vid.readyState >= 2 : photos[pi] && el.complete && el.naturalWidth)){
     setDetectStatus('Cargue primero un video o una fotografía.'); return;
   }
-  detecting = true;
+  detecting = true; triedKey = mediaKey();
   try{
     vid.pause();
     if (!POSE.lm) setDetectStatus('Preparando el detector de posturas (solo la primera vez, unos segundos)…');
@@ -1236,15 +1281,27 @@ async function detectPose(){
   }catch(e){
     console.error(e);
     setDetectStatus('<span class="warn">No se pudo usar el detector de posturas en este navegador.</span>');
-  }finally{ detecting = false; }
+  }finally{
+    detecting = false;
+    // Si mientras tanto se cambió de fotograma, se detecta el nuevo
+    if (mode === 'video' && vid.paused && mediaKey() !== triedKey) scheduleAutoDetect();
+  }
 }
 function setDetectStatus(html){ $('#detectStatus').innerHTML = html; }
 $('#detectBtn').onclick = detectPose;
 // La propuesta deja de valer al cambiar de fotograma o de foto
 vid.addEventListener('seeking', () => { if (!detecting){ clearOverlay(); if (lastDet) setDetectStatus(''); } });
 vid.addEventListener('play', () => { clearOverlay(); setDetectStatus(''); });
-let autoPending = false;
-vid.addEventListener('seeked', () => { if (autoPending && !detecting){ autoPending = false; if ($('#autoDetect').checked) detectPose(); } });
+// Detecta al pausar el video o al llegar a un fotograma con el video en pausa;
+// espera un instante para no detectar en cada paso cuando se avanza rápido
+let autoPending = false, autoTimer = null;
+function scheduleAutoDetect(){
+  if (!$('#autoDetect').checked || mode !== 'video' || !vid.src || detecting) return;
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => { if (vid.paused && !vid.seeking && !detecting) detectPose(); }, 250);
+}
+vid.addEventListener('seeked', () => { autoPending = false; if (vid.paused && !detecting) scheduleAutoDetect(); });
+vid.addEventListener('pause', () => { if (!detecting && !vid.seeking) scheduleAutoDetect(); });
 // Primera muestra: al terminar de cargar un video nuevo
 vid.addEventListener('loadeddata', () => { if ($('#autoDetect').checked && mode === 'video' && !detecting) detectPose(); });
 $('#photo').addEventListener('load', () => { clearOverlay(); setDetectStatus(''); if ($('#autoDetect').checked && mode === 'photo') detectPose(); });
@@ -1540,6 +1597,99 @@ function copyResults(){
   });
 }
 $('#copyBtn').onclick = copyResults;
+
+// ---- Exportar a Word: documento MHTML (.doc) con el HTML y sus imágenes ----
+$('#expClose').onclick = () => $('#exportDlg').close();
+$('#expPdf').onclick = () => { $('#exportDlg').close(); doPrint(); };
+$('#expWord').onclick = () => exportWord();
+function downloadBlob(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+// Figura SVG → PNG (Word no muestra SVG incrustado)
+function svgToPng(svg, scale = 2){
+  const vb = (svg.getAttribute('viewBox') || '0 0 640 360').split(/\s+/).map(Number), w = vb[2], h = vb[3];
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); clone.setAttribute('width', w); clone.setAttribute('height', h);
+  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], {type: 'image/svg+xml'}));
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => {
+      const c = document.createElement('canvas'); c.width = w * scale; c.height = h * scale;
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res({b64: c.toDataURL('image/png').split(',')[1], w, h});
+    };
+    im.onerror = rej; im.src = url;
+  });
+}
+const imgSize = src => new Promise(res => { const im = new Image(); im.onload = () => res([im.naturalWidth, im.naturalHeight]); im.onerror = () => res([4, 3]); im.src = src; });
+// Codificación quoted-printable (la que usa Word para el HTML de un .mht)
+function quotedPrintable(str){
+  const bytes = new TextEncoder().encode(str.replace(/\r?\n/g, '\r\n'));
+  let out = '', line = '';
+  const push = t => { if (line.length + t.length > 75){ out += line + '=\r\n'; line = ''; } line += t; };
+  for (let i = 0; i < bytes.length; i++){
+    const b = bytes[i];
+    if (b === 13 && bytes[i + 1] === 10){ out += line + '\r\n'; line = ''; i++; continue; }
+    push((b >= 33 && b <= 126 && b !== 61) || b === 32 ? String.fromCharCode(b) : '=' + b.toString(16).toUpperCase().padStart(2, '0'));
+  }
+  return out + line;
+}
+const WORD_CSS = `body{font-family:"Times New Roman",serif;font-size:12pt}
+h1{font-size:16pt;margin:0 0 4pt} h2{font-size:14pt;margin:18pt 0 6pt} p{margin:0 0 6pt}
+table{border-collapse:collapse;margin:0 0 4pt} th,td{padding:2pt 7pt;vertical-align:top;font-size:11pt}
+.apa th{font-weight:normal;text-align:center;border-top:1.5pt solid #000;border-bottom:1pt solid #000}
+.apa th:first-child{text-align:left} .apa td.n{text-align:right} .apa tr.total td{border-top:1pt solid #000}
+.apa-num{font-weight:bold;margin:14pt 0 0} .apa-title{font-style:italic;margin:0 0 6pt} .apa-note{margin:4pt 0 12pt}
+.apa-refs h3{text-align:center;font-size:12pt;margin:18pt 0 6pt} .apa-refs p{margin-left:36pt;text-indent:-36pt}
+.bg th{text-align:left;padding-right:14pt;font-weight:bold} .cap{font-size:10pt;margin:2pt 0 12pt}`;
+async function exportWord(){
+  const btn = $('#expWord'); btn.disabled = true; $('#expStatus').textContent = 'Preparando el documento…';
+  try{
+    const parts = [];
+    const addPart = (type, b64) => { const loc = `file:///C:/owasweb/img${parts.length + 1}.${type === 'image/png' ? 'png' : 'jpg'}`; parts.push({loc, type, b64}); return loc; };
+    const list = filtered(), apa = apaSections();
+    let html = `<h1>OWAS Web — ${esc(fileName || 'Estudio OWAS')}</h1><p>${esc(S.bg[2] || '')}</p>`;
+    if ($('#printBg').checked) html += `<h2>Información general</h2><table class="bg">` + BG_LABELS.map((l, i) => `<tr><th>${l}</th><td>${esc(S.bg[i] || '')}</td></tr>`).join('') + `<tr><th>Intervalo de tiempo</th><td>${S.interval} s</td></tr></table>`;
+    if (apa.cat || apa.body) html += `<h2>Tablas y figuras</h2>${apa.cat}${apa.body}${apaRefs()}`;
+    // Documento inerte: el navegador no intenta cargar las rutas de imagen del .doc
+    const inert = document.implementation.createHTMLDocument(''), box = inert.createElement('div'); box.innerHTML = html;
+    // Bordes que Word no aplica con :last-child
+    box.querySelectorAll('.apa tbody tr:last-child td').forEach(td => td.style.borderBottom = '1.5pt solid #000');
+    for (const svg of [...box.querySelectorAll('svg')]){
+      const png = await svgToPng(svg), img = inert.createElement('img');
+      img.src = addPart('image/png', png.b64); img.width = 600; img.height = Math.round(600 * png.h / png.w);
+      svg.replaceWith(img);
+    }
+    if ($('#printImg').checked){
+      const items = list.map(o => [o, S.obs.indexOf(o)]).filter(([o]) => o.img).sort((x, y) => catOf(y[0]) - catOf(x[0]) || x[1] - y[1]);
+      if (items.length){
+        let g = '<h2>Imágenes de las observaciones</h2>';
+        for (const [o, i] of items){
+          const [w, h] = await imgSize(o.img), W = 380, H = Math.round(W * h / w), k = catOf(o);
+          g += `<p><img src="${addPart('image/jpeg', o.img.split(',')[1])}" width="${W}" height="${H}"></p>` +
+            `<p class="cap"><b>Observación ${i + 1}</b> · código ${codeStr(o)} · categoría ${k} (${esc(CATS[k - 1].t.toLowerCase())}) · ${esc(phaseName(o.p))}${o.t != null ? ' · ' + fmtTime(o.t) : ''}` +
+            (o.det && o.dm ? `<br>Detección automática: ${esc(detLines(o.det, o.dm).join(' · '))}` : '') + '</p>';
+        }
+        box.insertAdjacentHTML('beforeend', g);
+      }
+    }
+    const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>OWAS Web</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>${WORD_CSS}</style></head><body>${box.innerHTML}</body></html>`;
+    const B = '----=_OWASWeb_' + Date.now(), wrap = b64 => b64.replace(/.{76}/g, '$&\r\n');
+    let mht = `MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="${B}"; type="text/html"\r\n\r\n` +
+      `--${B}\r\nContent-Type: text/html; charset="utf-8"\r\nContent-Transfer-Encoding: quoted-printable\r\nContent-Location: file:///C:/owasweb/resultados.htm\r\n\r\n${quotedPrintable(doc)}\r\n`;
+    for (const p of parts) mht += `--${B}\r\nContent-Type: ${p.type}\r\nContent-Transfer-Encoding: base64\r\nContent-Location: ${p.loc}\r\n\r\n${wrap(p.b64)}\r\n`;
+    mht += `--${B}--\r\n`;
+    downloadBlob(new Blob([mht], {type: 'application/msword'}), (fileName || 'estudio').replace(/\.(ows|owsp)$/i, '') + ' - resultados.doc');
+    $('#expStatus').textContent = 'Documento descargado.';
+  }catch(e){
+    console.error(e); $('#expStatus').innerHTML = '<span class="warn-box">No se pudo crear el documento de Word.</span>';
+  }finally{ btn.disabled = false; }
+}
 $('#showAgree').addEventListener('change', () => { renderResults(); renderBodyParts(); });
 
 // ---- Ayuda ----
@@ -1560,12 +1710,12 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 3.13 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 3.14 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
   const a = e.target.closest('[data-act]'); if (!a) return;
-  ({new:newFile, open:openFile, join:joinFile, save:() => saveFile(false), saveas:() => saveFile(true), print:doPrint, theme:toggleTheme})[a.dataset.act]();
+  ({new:newFile, open:openFile, join:joinFile, save:() => saveFile(false), saveas:() => saveFile(true), print:doPrint, export:() => { $('#expStatus').textContent = ''; $('#exportDlg').showModal(); }, theme:toggleTheme})[a.dataset.act]();
 });
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) showTab(b.dataset.tab); });
 $('#restoredClose').onclick = () => $('#restored').hidden = true;

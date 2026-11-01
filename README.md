@@ -28,6 +28,7 @@ El WinOWAS original era un programa de Windows 3.x de 16 bits (Visual Basic 3) q
   - Se incluyen en la impresión con la casilla «Incluir tablas y figuras APA al imprimir».
 - **Archivos**: abrir, guardar, guardar como y unir archivos `.OWS` (solo datos, compatibles con el original) y proyectos `.owsp` (datos más imágenes).
 - **Imprimir o guardar en PDF**, y copiar los resultados al portapapeles (se pegan como tabla en Excel o Word).
+- **Exportar resultados** *(nuevo en 3.14)*: a **Word** (`.doc`, con la información general, las tablas y figuras APA y las imágenes de las observaciones; desde Word puede guardarse como `.docx`) o a **PDF** (mediante «Guardar como PDF» en el diálogo de impresión).
 - **Autoguardado** en el navegador para no perder trabajo.
 - **Tema claro u oscuro** *(nuevo en 3.9)*: botón en la barra superior; la elección se recuerda en el navegador. Por defecto se usa el tema claro.
 
@@ -115,7 +116,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **3.13**: todas las imágenes aparecen al imprimir; «Cargar video» y «Cargar fotografías» en gris oscuro hasta cargar; las advertencias se muestran junto a «Aceptar postura»; ninguna tarea elegida al empezar, con el aviso «Seleccione la tarea».
+- **3.14**: la detección se activa al pausar el video o al elegir un fotograma; botón «Exportar resultados» (Word y PDF); la lista de posturas aceptadas muestra el número y el riesgo y lleva a su fotograma; mensaje «Postura guardada» al aceptar.
+- **[3.13](https://github.com/leolira0568/owas-web/releases/tag/v3.13)**: todas las imágenes aparecen al imprimir; «Cargar video» y «Cargar fotografías» en gris oscuro hasta cargar; las advertencias se muestran junto a «Aceptar postura»; ninguna tarea elegida al empezar, con el aviso «Seleccione la tarea».
 - **[3.12](https://github.com/leolira0568/owas-web/releases/tag/v3.12)**: las casillas de detección (detectar al llegar, subtítulos y grabar en la imagen) quedan dentro de «Ajustes de detección», ocultas por defecto y activadas.
 - **[3.11](https://github.com/leolira0568/owas-web/releases/tag/v3.11)**: las fases de trabajo pasan a llamarse tareas; botón «Detectar postura»; la detección y sus ajustes se muestran encima del video o la foto.
 - **[3.10](https://github.com/leolira0568/owas-web/releases/tag/v3.10)**: tema claro por defecto; encabezado gris neutro con «Imprimir resultados» en azul; las tablas de la detección automática (concordancia y mediciones) quedan ocultas por defecto.
