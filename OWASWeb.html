@@ -71,9 +71,9 @@ td.postura{white-space:nowrap}
 .stage-empty{color:#cfcdc6;text-align:center;padding:24px;margin:0;max-width:420px}
 .timeline{position:relative;margin-top:10px}
 .timeline input{width:100%;margin:0}
-.marks{position:relative;margin:6px 8px 0;height:0}
-.marks button{position:absolute;transform:translateX(-50%);display:inline-flex;align-items:center;gap:3px;padding:1px 2px 1px 5px;border:1px solid var(--line);border-radius:5px;background:var(--surface);font-size:12px;min-height:0;line-height:1.2;white-space:nowrap}
-.marks button:hover{border-color:var(--accent)}
+.marks{position:relative;margin:7px 8px 0;height:0}
+.marks button{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;width:22px;padding:2px 0;border:1px solid var(--line);border-radius:5px;background:var(--surface);font-size:11px;min-height:0;line-height:1}
+.marks button:hover,.marks button:focus-visible{border-color:var(--accent);z-index:2}
 .marks button::before{content:'';position:absolute;left:50%;top:-6px;height:5px;border-left:1px solid var(--ink-3)}
 .marks .cat i{width:16px;height:16px;font-size:11px;border-radius:4px}
 .vctrl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
@@ -135,6 +135,9 @@ td.postura .pict{width:28px;height:28px}
 .top .actions{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
 .top .actions button{background:#4a4a4a;border:1px solid #626262;color:#fff;border-radius:8px;padding:6px 12px;min-height:40px}
 .top .actions button:hover{background:#575757}
+/* Botones de archivo y de tema: solo icono (el nombre aparece al pasar el puntero) */
+.top .actions button.ico-btn{min-width:40px;padding:6px 9px}
+.top .actions button.ico-btn .lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 /* Encabezado en gris neutro; solo «Imprimir resultados» destaca en azul */
 .top .actions button[data-act="print"],.top .actions button[data-act="export"]{background:var(--accent);border-color:var(--accent);font-weight:600}
 .top .actions button[data-act="print"]:hover,.top .actions button[data-act="export"]:hover{background:var(--accent);filter:brightness(1.1)}
@@ -152,7 +155,8 @@ section.tab.on{display:block}
 .btn.primary:hover{filter:brightness(1.08)}
 .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
 .btn.ok:hover{background:var(--ok-hover);border-color:var(--ok-hover)}
-.btn.ok.saved,.btn.ok.saved:disabled{opacity:1;cursor:default;box-shadow:0 0 0 3px rgba(27,125,27,.3)}
+/* «Postura guardada» se muestra en azul y luego el botón vuelve a verde */
+.btn.ok.saved,.btn.ok.saved:disabled{opacity:1;cursor:default;background:var(--accent);border-color:var(--accent);box-shadow:none}
 .btn.ok .kbd{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.6);color:#fff}
 
 /* Pie de página: enlace al proyecto y licencias */
@@ -195,14 +199,18 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .task-warn{margin:10px 0 0}
 .obs-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 /* Aviso sobre la detección automática y avisos suaves */
-.ai-note{margin:10px 0 0;padding:6px 10px;border-radius:6px;background:#fff4cc;border:1px solid #f0c64a;border-left:4px solid var(--danger);color:#8a1c12;font-weight:600;font-size:13px}
-:root[data-theme="dark"] .ai-note{background:#3a3010;border-color:#7a6420;color:#ffb4a8}
+.accept-wrap{position:relative;display:inline-flex}
+.accept-wrap .tip{position:absolute;left:0;bottom:calc(100% + 8px);z-index:6;width:max-content;max-width:min(320px,80vw);padding:6px 10px;border-radius:6px;background:#fff4cc;border:1px solid #f0c64a;border-left:4px solid var(--danger);color:#8a1c12;font-weight:600;font-size:13px;line-height:1.35;box-shadow:0 2px 8px rgba(0,0,0,.18);visibility:hidden;pointer-events:none}
+.accept-wrap:hover .tip,.accept-wrap:focus-within .tip{visibility:visible}
+.accept-wrap.no-tip .tip{display:none}
+:root[data-theme="dark"] .accept-wrap .tip{background:#3a3010;border-color:#7a6420;color:#ffb4a8}
 .warn-soft{display:inline-block;background:#fff4cc;border:1px solid #f0c64a;color:#6b4d00;border-radius:6px;padding:2px 9px;font-weight:600}
 :root[data-theme="dark"] .warn-soft{background:#3a3010;border-color:#7a6420;color:#f5d27a}
 /* «Aceptar postura» parpadea cuando la postura y la tarea están completas */
-.btn.ok.ready{animation:readyPulse 1.1s ease-in-out infinite}
-@keyframes readyPulse{50%{box-shadow:0 0 0 6px rgba(27,125,27,.35);filter:brightness(1.18)}}
-@media (prefers-reduced-motion:reduce){.btn.ok.ready{box-shadow:0 0 0 4px rgba(27,125,27,.45)}}
+/* Lista para guardar: aro amarillo fijo y destello que alterna cada 0,6 s (con JavaScript, para que funcione
+   aunque Windows tenga las animaciones desactivadas; solo cambia el color, sin movimiento) */
+.btn.ok.ready{box-shadow:0 0 0 3px #ffd23f}
+.btn.ok.ready.flash{background:#24942b;border-color:#24942b;box-shadow:0 0 0 6px #ffd23f}
 
 /* Categorías */
 .cat{display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
@@ -297,14 +305,14 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 <header class="top">
   <div class="brand">OWAS Web<span class="fname" id="fname"></span><span class="dirty" id="dirty"></span></div>
   <div class="actions">
-    <button data-act="new" data-icon="new" title="Empezar un estudio nuevo">Nuevo proyecto</button>
-    <button data-act="open" data-icon="open" title="Abrir un proyecto (.owsp) o un archivo .OWS">Abrir proyecto</button>
-    <button data-act="join" data-icon="join" title="Añadir las observaciones de otro archivo .OWS">Unir archivo…</button>
-    <button data-act="save" data-icon="save" title="Guardar el archivo .OWS">Guardar</button>
-    <button data-act="saveas" data-icon="saveas" title="Guardar con otro nombre">Guardar como…</button>
+    <button class="ico-btn" data-act="new" data-icon="new" title="Nuevo proyecto">Nuevo proyecto</button>
+    <button class="ico-btn" data-act="open" data-icon="open" title="Abrir proyecto (.owsp u .OWS)">Abrir proyecto</button>
+    <button class="ico-btn" data-act="join" data-icon="join" title="Unir archivo: añadir las observaciones de otro archivo">Unir archivo</button>
+    <button class="ico-btn" data-act="save" data-icon="save" title="Guardar">Guardar</button>
+    <button class="ico-btn" data-act="saveas" data-icon="saveas" title="Guardar como">Guardar como</button>
     <button data-act="print" data-icon="print" title="Imprimir o guardar en PDF">Imprimir resultados</button>
     <button data-act="export" data-icon="download" title="Exportar los resultados a PDF o Word">Exportar resultados</button>
-    <button data-act="theme" id="themeBtn" title="Cambiar entre tema claro y oscuro">Tema oscuro</button>
+    <button class="ico-btn" data-act="theme" id="themeBtn" title="Tema oscuro">Tema oscuro</button>
   </div>
 </header>
 <nav class="tabs" id="tabs">
@@ -413,11 +421,10 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
           <span id="liveCat"></span>
         </div>
       </div>
-      <p class="ai-note" id="aiNote" hidden>La detección automática puede tener errores y debe ser revisada por un profesional.</p>
       <p class="small task-warn" id="taskWarn"><span class="warn-box">Seleccione la tarea</span></p>
       <p class="small task-warn" id="dupWarn" hidden></p>
       <div class="obs-actions">
-        <button class="btn ok" id="accept" data-icon="check">Aceptar postura <span class="kbd">Enter</span></button><span class="sr" id="saveLive" aria-live="polite"></span>
+        <span class="accept-wrap" id="acceptWrap"><button class="btn ok" id="accept" data-icon="check" aria-describedby="acceptTip">Aceptar postura <span class="kbd">Enter</span></button><span class="tip" id="acceptTip" role="tooltip">La detección automática puede tener errores y debe ser revisada por un profesional.</span></span><span class="sr" id="saveLive" aria-live="polite"></span>
         <button class="btn icon-only" id="repeat" data-icon="repeat" title="Repetir la postura anterior (R)" aria-label="Repetir la postura anterior"></button>
         <button class="btn icon-only" id="takeback" data-icon="undo" title="Deshacer la última observación (Supr)" aria-label="Deshacer la última observación"></button>
         <button class="btn icon-only" id="clearSel" data-icon="eraser" title="Limpiar la selección (Esc)" aria-label="Limpiar la selección"></button>
@@ -832,7 +839,7 @@ function renderObserve(){
   $('#digits').innerHTML = PARTS.map(p => `<span class="${nf===p.key?'next':''}" title="${p.name}">${sel[p.key]||''}</span>`).join('');
   $('#liveCat').innerHTML = nf ? '<span class="muted small">Seleccione la postura</span>' : catBadge(catOf(sel));
   $('#accept').disabled = !!nf || sel.p < 0;
-  $('#accept').classList.toggle('ready', !nf && sel.p >= 0);
+  setReady(!nf && sel.p >= 0);
   $('#taskWarn').hidden = sel.p >= 0;
   renderDup();
   $('#repeat').disabled = !S.obs.length;
@@ -881,10 +888,17 @@ function goToObs(i){
 }
 // Mensaje temporal «Postura guardada» en el propio botón
 let savedTimer = null;
+let readyTimer = null;
+function setReady(on){
+  const b = $('#accept');
+  b.classList.toggle('ready', on);
+  if (on && !readyTimer) readyTimer = setInterval(() => b.classList.toggle('flash'), 600);
+  if (!on && readyTimer){ clearInterval(readyTimer); readyTimer = null; b.classList.remove('flash'); }
+}
 function flashSaved(){
   const b = $('#accept');
   clearTimeout(savedTimer);
-  b.classList.remove('ready'); b.classList.add('saved'); b.innerHTML = ico('check') + 'Postura guardada';
+  setReady(false); b.classList.add('saved'); b.innerHTML = ico('check') + 'Postura guardada';
   $('#saveLive').textContent = 'Postura guardada';
   savedTimer = setTimeout(() => {
     b.classList.remove('saved'); b.innerHTML = ico('check') + 'Aceptar postura <span class="kbd">Enter</span>';
@@ -961,7 +975,7 @@ function setMode(m){
   $('#videoPane').hidden = m !== 'video';
   $('#photoPane').hidden = m !== 'photo';
   $('#liveBox').hidden = m !== 'live';
-  $('#aiNote').hidden = m === 'live';
+  $('#acceptWrap').classList.toggle('no-tip', m === 'live');
   if (m !== 'live') stopClock();
   if (m !== 'video') vid.pause();
   clearOverlay(); setDetectStatus('');
@@ -1044,20 +1058,13 @@ function renderVideoUI(){
   $('#vPlay').innerHTML = ico(playing ? 'pause' : 'play');
   $('#vPlay').setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');
 }
-// Observaciones del video debajo de su fotograma: número y categoría de riesgo.
-// Las que quedan muy juntas se reparten en varias filas para no taparse.
+// Observaciones del video en una sola fila debajo de su fotograma: número arriba y categoría de riesgo abajo
 function renderMarks(){
   const d = vid.duration, box = $('#marks');
   const items = !d ? [] : S.obs.map((o, i) => [o, i]).filter(([o]) => o.src === videoName && o.t != null).sort((x, y) => x[0].t - y[0].t);
-  const width = box.clientWidth || 600, lanes = [];
-  box.innerHTML = items.map(([o, i]) => {
-    const x = o.t / d * width;
-    let lane = lanes.findIndex(end => end < x - 50);
-    if (lane < 0){ lane = lanes.length; lanes.push(0); }
-    lanes[lane] = x;
-    return `<button style="left:${o.t / d * 100}%;top:${lane * 24}px" data-go="${i}" title="Obs. ${i+1}: ${codeStr(o)} · ${fmtTime(o.t)}" aria-label="Ir a la observación ${i+1}, categoría ${catOf(o)}"><b>${i+1}</b>${catBadge(catOf(o), false)}</button>`;
-  }).join('');
-  box.style.height = lanes.length ? lanes.length * 24 + 4 + 'px' : '0';
+  box.innerHTML = items.map(([o, i]) =>
+    `<button style="left:${o.t / d * 100}%" data-go="${i}" title="Obs. ${i+1}: ${codeStr(o)} · ${fmtTime(o.t)}" aria-label="Ir a la observación ${i+1}, categoría ${catOf(o)}"><b>${i+1}</b>${catBadge(catOf(o), false)}</button>`).join('');
+  box.style.height = items.length ? '44px' : '0';
 }
 $('#marks').addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) goToObs(+b.dataset.go); });
 $('#loadVideo').onclick = () => { const f = $('#fileVideo'); f.value = ''; f.click(); };
@@ -1786,7 +1793,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 3.15 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 3.16 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
@@ -1803,6 +1810,7 @@ function renderThemeBtn(){
   const dark = document.documentElement.dataset.theme === 'dark', t = dark ? 'Tema claro' : 'Tema oscuro';
   $('#themeBtn').innerHTML = ico(dark ? 'sun' : 'moon') + `<span class="lbl">${t}</span>`;
   $('#themeBtn').setAttribute('aria-label', 'Cambiar a ' + t.toLowerCase());
+  $('#themeBtn').title = t;
 }
 function toggleTheme(){
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
