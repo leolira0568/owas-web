@@ -102,7 +102,8 @@ dialog#viewer::backdrop{background:rgba(0,0,0,.6)}
 .subs b{color:#ffe08a}
 @media (max-width:640px){.subs{font-size:13px;padding:6px 8px}}
 .gallery .det-cap{display:block;width:100%;font-size:12px;color:var(--ink-2);line-height:1.35}
-.detect{border-top:1px solid var(--line-soft);margin-top:12px;padding-top:4px}
+.detect{border-bottom:1px solid var(--line-soft);margin-bottom:12px;padding-bottom:6px}
+.detect > .vctrl{margin-top:0}
 .detect-status{margin:8px 0 4px;min-height:1.5em;display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center}
 .detect-status .chip{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:6px;padding:1px 7px;font-variant-numeric:tabular-nums}
 .detect-status .warn,.warn-box{color:var(--danger);background:var(--danger-bg);border:1px solid var(--danger-line);border-radius:6px;padding:2px 9px;font-weight:600}
@@ -298,10 +299,10 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
         <label class="field"><span>Intervalo de tiempo (segundos)</span><input type="number" min="1" id="interval"></label>
       </div>
       <div class="card">
-        <h2 data-icon="layers">Fases de trabajo</h2>
+        <h2 data-icon="layers">Tareas</h2>
         <div id="phases"></div>
-        <button class="btn" id="addPhase" data-icon="plus">Añadir fase</button>
-        <p class="small muted">Cada observación se asigna a una fase. Una fase solo se puede eliminar si no tiene observaciones.</p>
+        <button class="btn" id="addPhase" data-icon="plus">Añadir tarea</button>
+        <p class="small muted">Cada observación se asigna a una tarea. Una tarea solo se puede eliminar si no tiene observaciones.</p>
       </div>
     </div>
   </section>
@@ -313,6 +314,27 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       <button data-mode="live" data-icon="timer" aria-pressed="false">En vivo</button>
     </div>
     <div class="card" id="mediaCard" hidden>
+      <div class="detect">
+        <div class="vctrl">
+          <button class="btn primary" id="detectBtn" data-icon="scan">Detectar postura <span class="kbd">D</span></button>
+          <label class="small"><input type="checkbox" id="autoDetect" checked autocomplete="off"> Detectar al llegar a cada muestra o fotografía</label>
+          <label class="small"><input type="checkbox" id="showSubs" checked autocomplete="off"> Mostrar subtítulos con los datos de la detección</label>
+          <label class="small"><input type="checkbox" id="bakeSkel" checked autocomplete="off"> Grabar el esqueleto y los subtítulos en la imagen guardada</label>
+        </div>
+        <p class="small detect-status" id="detectStatus" role="status"></p>
+        <details class="small">
+          <summary>Ajustes de detección</summary>
+          <div class="detect-cfg">
+            <label>Espalda inclinada desde (°) <input type="number" data-cfg="trunk" min="5" max="60"></label>
+            <label>Espalda girada o inclinada de lado desde (°) <input type="number" data-cfg="twist" min="5" max="60"></label>
+            <label>Rodilla flexionada por debajo de (°) <input type="number" data-cfg="knee" min="90" max="175"></label>
+            <label>Pie levantado desde (% de la pierna) <input type="number" data-cfg="lift" min="3" max="40"></label>
+            <label><input type="checkbox" data-cfg="walk"> Detectar «caminando» en video (compara con 0,5 s después)</label>
+            <label>Caminando si la cadera se desplaza más de (% del tronco) <input type="number" data-cfg="walkDist" min="5" max="100"></label>
+          </div>
+          <p class="muted">La detección usa MediaPipe Pose y solo propone espalda, brazos y piernas. La carga se elige siempre a mano. Revise cada propuesta antes de aceptarla.</p>
+        </details>
+      </div>
       <div id="videoPane">
         <div class="media-top">
           <button class="btn" id="loadVideo" data-icon="video">Cargar video…</button>
@@ -349,27 +371,6 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
         </div>
         <div class="thumbs" id="thumbs"></div>
       </div>
-      <div class="detect">
-        <div class="vctrl">
-          <button class="btn primary" id="detectBtn" data-icon="scan">Detección automática de postura <span class="kbd">D</span></button>
-          <label class="small"><input type="checkbox" id="autoDetect" checked autocomplete="off"> Detectar al llegar a cada muestra o fotografía</label>
-          <label class="small"><input type="checkbox" id="showSubs" checked autocomplete="off"> Mostrar subtítulos con los datos de la detección</label>
-          <label class="small"><input type="checkbox" id="bakeSkel" checked autocomplete="off"> Grabar el esqueleto y los subtítulos en la imagen guardada</label>
-        </div>
-        <p class="small detect-status" id="detectStatus" role="status"></p>
-        <details class="small">
-          <summary>Ajustes de detección</summary>
-          <div class="detect-cfg">
-            <label>Espalda inclinada desde (°) <input type="number" data-cfg="trunk" min="5" max="60"></label>
-            <label>Espalda girada o inclinada de lado desde (°) <input type="number" data-cfg="twist" min="5" max="60"></label>
-            <label>Rodilla flexionada por debajo de (°) <input type="number" data-cfg="knee" min="90" max="175"></label>
-            <label>Pie levantado desde (% de la pierna) <input type="number" data-cfg="lift" min="3" max="40"></label>
-            <label><input type="checkbox" data-cfg="walk"> Detectar «caminando» en video (compara con 0,5 s después)</label>
-            <label>Caminando si la cadera se desplaza más de (% del tronco) <input type="number" data-cfg="walkDist" min="5" max="100"></label>
-          </div>
-          <p class="muted">La detección usa MediaPipe Pose y solo propone espalda, brazos y piernas. La carga se elige siempre a mano. Revise cada propuesta antes de aceptarla.</p>
-        </details>
-      </div>
     </div>
     <div class="card">
       <div class="obs-head">
@@ -393,7 +394,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       <div class="recent" id="recent"></div>
     </div>
     <div class="parts" id="parts"></div>
-    <p class="small muted">Atajo de teclado: escribe los dígitos del código en orden (espalda, brazos, piernas, carga y, si hay varias fases, número de fase) y pulsa <span class="kbd">Enter</span>. <span class="kbd">Retroceso</span> borra el último dígito. En modo video: <span class="kbd">Espacio</span> reproduce o pausa, <span class="kbd">←</span> <span class="kbd">→</span> cambian de fotograma, <span class="kbd">Mayús</span> + flecha salta 1 s y <span class="kbd">B</span> / <span class="kbd">N</span> van a la muestra anterior o siguiente.</p>
+    <p class="small muted">Atajo de teclado: escribe los dígitos del código en orden (espalda, brazos, piernas, carga y, si hay varias tareas, número de tarea) y pulsa <span class="kbd">Enter</span>. <span class="kbd">Retroceso</span> borra el último dígito. En modo video: <span class="kbd">Espacio</span> reproduce o pausa, <span class="kbd">←</span> <span class="kbd">→</span> cambian de fotograma, <span class="kbd">Mayús</span> + flecha salta 1 s y <span class="kbd">B</span> / <span class="kbd">N</span> van a la muestra anterior o siguiente.</p>
   </section>
 
   <section class="tab" id="tab-resultados">
@@ -568,7 +569,7 @@ function blank(){
           phases:[''], interval:30, obs:[]};
 }
 let S = blank(), fileName = '', fileHandle = null, dirty = false, phaseFilter = -1;
-const phaseName = i => (S.phases[i] && S.phases[i].trim()) || `Fase ${i+1}`;
+const phaseName = i => (S.phases[i] && S.phases[i].trim()) || `Tarea ${i+1}`;
 
 function changed(){ dirty = true; persist(); renderHeader(); }
 // Autoguardado en IndexedDB (las imágenes no caben en localStorage)
@@ -674,7 +675,7 @@ async function joinFile(){
   const r = await pickFile($('#fileJoin')); if (!r) return;
   let o; try{ o = await readStudy(r.file); } catch(e){ alert(`"${r.file.name}" no es un archivo OWAS.`); return; }
   if (o.phases.length > S.phases.length){
-    if (!confirm('El archivo a unir tiene más fases de trabajo. ¿Continuar?')) return;
+    if (!confirm('El archivo a unir tiene más tareas. ¿Continuar?')) return;
     for (let i = S.phases.length; i < o.phases.length; i++) S.phases.push(o.phases[i]);
   }
   S.obs.push(...o.obs); changed(); renderAll();
@@ -728,7 +729,7 @@ function showTab(t){
   if (t === 'observar') renderObserve();
 }
 
-// ---- Datos generales y fases ----
+// ---- Datos generales y tareas ----
 function renderData(){
   $('#bgFields').innerHTML = BG_LABELS.map((l,i) =>
     `<label class="field"><span>${l}</span><input type="text" data-bg="${i}" value="${esc(S.bg[i]||'')}"${i===4?' placeholder="dd/mm/aaaa"':i===5?' placeholder="hh:mm"':''}></label>`).join('');
@@ -738,9 +739,9 @@ function renderData(){
 function renderPhases(){
   const used = S.phases.map((_,i) => S.obs.filter(o => o.p === i).length);
   $('#phases').innerHTML = S.phases.map((p,i) =>
-    `<div class="phase-row"><span class="num">${i+1}</span><input type="text" data-phase="${i}" value="${esc(p)}" placeholder="Fase ${i+1}">
+    `<div class="phase-row"><span class="num">${i+1}</span><input type="text" data-phase="${i}" value="${esc(p)}" placeholder="Tarea ${i+1}">
      <span class="small muted" style="min-width:60px">${used[i]} obs.</span>
-     <button class="btn danger icon-only" data-delphase="${i}" ${S.phases.length < 2 || used[i] ? 'disabled' : ''} title="Eliminar fase" aria-label="Eliminar fase ${i+1}">${ico('trash')}</button></div>`).join('');
+     <button class="btn danger icon-only" data-delphase="${i}" ${S.phases.length < 2 || used[i] ? 'disabled' : ''} title="Eliminar tarea" aria-label="Eliminar tarea ${i+1}">${ico('trash')}</button></div>`).join('');
 }
 document.addEventListener('input', e => {
   const t = e.target;
@@ -764,7 +765,7 @@ function renderObserve(){
   if (sel.p >= S.phases.length) sel.p = 0;
   let html = PARTS.map(p => `<div class="card part"><h3><span>${p.name}</span><span class="muted">${sel[p.key] || '–'}</span></h3>` +
     p.opts.map((o,i) => `<button class="opt${sel[p.key]===i+1?' sel':''}" data-k="${p.key}" data-v="${i+1}" aria-pressed="${sel[p.key]===i+1}"><b>${i+1}</b>${pict(p.key, i+1)}<span>${o}</span></button>`).join('') + '</div>').join('');
-  html += `<div class="card part"><h3><span>Fase de trabajo</span><span class="muted">${sel.p+1}</span></h3>` +
+  html += `<div class="card part"><h3><span>Tarea</span><span class="muted">${sel.p+1}</span></h3>` +
     S.phases.map((p,i) => `<button class="opt${sel.p===i?' sel':''}" data-k="p" data-v="${i}" aria-pressed="${sel.p===i}"><b>${i+1}</b><span>${esc(phaseName(i))}</span></button>`).join('') + '</div>';
   $('#parts').innerHTML = html;
   const nf = nextField();
@@ -1260,14 +1261,14 @@ function bgBlock(){
 }
 function resultsHTML(withGallery = true){
   const list = filtered(), n = list.length;
-  if (!n) return `<div class="card empty">No hay observaciones${phaseFilter >= 0 ? ' en esta fase' : ''}. Regístrelas en la pestaña «Observar» o abra un archivo .OWS.</div>`;
+  if (!n) return `<div class="card empty">No hay observaciones${phaseFilter >= 0 ? ' en esta tarea' : ''}. Regístrelas en la pestaña «Observar» o abra un archivo .OWS.</div>`;
   const c = catCounts(list);
   let h = `<div class="card"><h2>${ico('chart')}Categorías de acción — ${phaseFilter < 0 ? 'todo el material' : esc(phaseName(phaseFilter))}</h2>
     <p class="muted" style="margin-top:-6px">${n} observaciones${S.interval ? ` · tiempo observado aprox. ${Math.round(n*S.interval/60)} min` : ''}</p>
     ${stackBar(c)}
     <div class="legend">${CATS.map((k,i) => `<div>${catBadge(i+1,false)}<div><b>${k.t}</b> — ${c[i]} obs. (${pctFmt(c[i]/n*100)})<p>${k.d}</p></div></div>`).join('')}</div></div>`;
   if (phaseFilter < 0 && S.phases.length > 1){
-    h += `<div class="card"><h2>${ico('layers')}Porcentaje por fases de trabajo</h2><div class="tbl-wrap"><table><tr><th>Fase</th><th class="n">Obs.</th><th class="n">% del total</th>${[1,2,3,4].map(k => `<th class="n">Cat. ${k}</th>`).join('')}<th style="min-width:140px"></th></tr>` +
+    h += `<div class="card"><h2>${ico('layers')}Porcentaje por tareas</h2><div class="tbl-wrap"><table><tr><th>Tarea</th><th class="n">Obs.</th><th class="n">% del total</th>${[1,2,3,4].map(k => `<th class="n">Cat. ${k}</th>`).join('')}<th style="min-width:140px"></th></tr>` +
       S.phases.map((p,i) => { const l = S.obs.filter(o => o.p === i), m = l.length, cc = catCounts(l);
         return `<tr><td>${esc(phaseName(i))}</td><td class="n">${m}</td><td class="n">${pctFmt(m/S.obs.length*100)}</td>${cc.map(x => `<td class="n">${m ? pctFmt(x/m*100) : '–'}</td>`).join('')}<td>${stackBar(cc, true)}</td></tr>`; }).join('') +
       `</table></div></div>`;
@@ -1314,7 +1315,7 @@ function renderResults(){ fillPhaseFilters(); $('#results').innerHTML = resultsH
 
 function bodyHTML(){
   const list = filtered(), n = list.length;
-  if (!n) return `<div class="card empty">No hay observaciones${phaseFilter >= 0 ? ' en esta fase' : ''}.</div>`;
+  if (!n) return `<div class="card empty">No hay observaciones${phaseFilter >= 0 ? ' en esta tarea' : ''}.</div>`;
   let h = '';
   PARTS.forEach(p => {
     h += `<div class="card"><h2>${ico('body')}${p.name}</h2>`;
@@ -1370,11 +1371,11 @@ function figCategories(c, n){
   s += `<text transform="translate(16 ${T + ph / 2}) rotate(-90)" text-anchor="middle">Porcentaje de observaciones</text></svg>`;
   return s;
 }
-// Figura: barras apiladas al 100 % con la distribución de categorías en cada fase
+// Figura: barras apiladas al 100 % con la distribución de categorías en cada tarea
 function figPhases(){
   const rows = S.phases.map((p, i) => { const l = S.obs.filter(o => o.p === i); return {name: phaseName(i), n: l.length, c: catCounts(l)}; });
   const W = 640, L = 150, R = 16, T = 40, rh = 34, pw = W - L - R, H = T + rows.length * rh + 46;
-  let s = svgOpen(W, H, 'Gráfico de barras apiladas de las categorías de acción por fase de trabajo');
+  let s = svgOpen(W, H, 'Gráfico de barras apiladas de las categorías de acción por tarea');
   CATS.forEach((k, i) => { const x = L + i * (pw / 4); s += `<rect x="${x}" y="8" width="14" height="14" fill="${CAT_HEX[i]}" stroke="#000" stroke-width="0.6"/><text x="${x + 20}" y="20">Categoría ${i + 1}</text>`; });
   rows.forEach((r, j) => {
     const yy = T + j * rh; let x = L;
@@ -1389,7 +1390,7 @@ function figPhases(){
   });
   const yb = T + rows.length * rh;
   for (let v = 0; v <= 100; v += 25){ const x = L + v / 100 * pw; s += `<line x1="${x}" x2="${x}" y1="${yb}" y2="${yb + 5}" stroke="#000"/><text x="${x}" y="${yb + 19}" text-anchor="middle">${v}</text>`; }
-  s += `<line x1="${L}" x2="${L + pw}" y1="${yb}" y2="${yb}" stroke="#000"/><text x="${L + pw / 2}" y="${H - 6}" text-anchor="middle">Porcentaje de observaciones de la fase</text></svg>`;
+  s += `<line x1="${L}" x2="${L + pw}" y1="${yb}" y2="${yb}" stroke="#000"/><text x="${L + pw / 2}" y="${H - 6}" text-anchor="middle">Porcentaje de observaciones de la tarea</text></svg>`;
   return s;
 }
 // Figura: porcentaje del tiempo en cada postura, agrupado por parte del cuerpo
@@ -1420,7 +1421,7 @@ function figBody(list){
 function apaSections(){
   const list = filtered(), n = list.length;
   if (!n) return {cat: '', body: ''};
-  const mat = phaseFilter < 0 ? 'todo el material' : `la fase «${esc(phaseName(phaseFilter))}»`;
+  const mat = phaseFilter < 0 ? 'todo el material' : `la tarea «${esc(phaseName(phaseFilter))}»`;
   const base = `<i>N</i> = ${n} observaciones de ${mat}, registradas con un intervalo de ${S.interval} s`;
   let t = 0, f = 0, cat = '', body = '';
   const c = catCounts(list);
@@ -1433,13 +1434,13 @@ function apaSections(){
     `${base}. El color indica la categoría de acción.`);
 
   if (phaseFilter < 0 && S.phases.length > 1){
-    cat += apaTable(++t, 'Distribución de las categorías de acción por fase de trabajo',
-      [{t: 'Fase'}, {t: '<i>n</i>', n: 1}, {t: '% del total', n: 1}, ...[1, 2, 3, 4].map(k => ({t: `Cat. ${k} (%)`, n: 1}))],
+    cat += apaTable(++t, 'Distribución de las categorías de acción por tarea',
+      [{t: 'Tarea'}, {t: '<i>n</i>', n: 1}, {t: '% del total', n: 1}, ...[1, 2, 3, 4].map(k => ({t: `Cat. ${k} (%)`, n: 1}))],
       S.phases.map((p, i) => { const l = S.obs.filter(o => o.p === i), m = l.length, cc = catCounts(l);
         return {c: [esc(phaseName(i)), m, fmtP(m / n * 100), ...cc.map(x => m ? fmtP(x / m * 100) : '—')]}; }),
-      `Los porcentajes de cada categoría se calculan sobre las observaciones de la fase. — = fase sin observaciones.`);
-    cat += apaFigure(++f, 'Distribución de las categorías de acción en cada fase de trabajo', figPhases(),
-      `Cada barra suma el 100 % de las observaciones de la fase. Se omiten las etiquetas de los valores menores de 10 %.`);
+      `Los porcentajes de cada categoría se calculan sobre las observaciones de la tarea. — = tarea sin observaciones.`);
+    cat += apaFigure(++f, 'Distribución de las categorías de acción en cada tarea', figPhases(),
+      `Cada barra suma el 100 % de las observaciones de la tarea. Se omiten las etiquetas de los valores menores de 10 %.`);
   }
 
   const freq = new Map(); list.forEach(o => { const k = codeStr(o); freq.set(k, (freq.get(k) || 0) + 1); });
@@ -1492,7 +1493,7 @@ function apaCard(part){
 function renderList(){
   if (!S.obs.length){ $('#obsTable').innerHTML = '<div class="empty">No hay observaciones.</div>'; return; }
   const withImg = S.obs.some(o => o.img);
-  $('#obsTable').innerHTML = `<table><tr><th class="n">#</th>${withImg ? '<th>Imagen</th>' : ''}<th>Código</th><th>Postura</th><th>Fase</th><th>Categoría</th><th></th></tr>` +
+  $('#obsTable').innerHTML = `<table><tr><th class="n">#</th>${withImg ? '<th>Imagen</th>' : ''}<th>Código</th><th>Postura</th><th>Tarea</th><th>Categoría</th><th></th></tr>` +
     S.obs.map((o,i) => [o,i]).reverse().map(([o,i]) => `<tr><td class="n">${i+1}</td>${withImg ? `<td>${o.img ? `<button class="thumb" data-view="${i}" aria-label="Ver imagen de la observación ${i+1}"><img src="${o.img}" alt="" loading="lazy"></button>` : '<span class="muted">—</span>'}</td>` : ''}<td><b>${codeStr(o)}</b>${detTag(o)}</td><td class="postura" title="${esc(describe(codeStr(o)))}">${PARTS.map(p => pict(p.key, o[p.key])).join('')}<span class="sr">${esc(describe(codeStr(o)))}</span></td><td class="small">${esc(phaseName(o.p))}${o.t != null ? `<br><span class="muted">${fmtTime(o.t)}</span>` : ''}</td><td>${catBadge(catOf(o),false)}</td><td><button class="btn danger icon-only" data-del="${i}" title="Eliminar observación" aria-label="Eliminar observación ${i+1}">${ico('trash')}</button></td></tr>`).join('') + '</table>';
 }
 $('#obsTable').addEventListener('click', e => {
@@ -1530,13 +1531,13 @@ $('#showAgree').addEventListener('change', () => { renderResults(); renderBodyPa
 $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <p>OWAS (<i>Ovako Working posture Analysing System</i>) clasifica las posturas de trabajo mediante un código de cuatro dígitos: espalda, brazos, piernas y carga. Cada combinación tiene una categoría de acción del 1 al 4.</p>
 <h3>Pasos</h3>
-<ol><li>En <b>Datos generales</b>, rellene la información del estudio, el intervalo de observación y las fases de trabajo.</li>
+<ol><li>En <b>Datos generales</b>, rellene la información del estudio, el intervalo de observación y las tareas.</li>
 <li>En <b>Observar</b>, elija el modo:
   <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar postura</b>.</li>
   <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado.</li>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
-<li>En video y fotografías, <b>Detección automática de postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
-<li>Consulte <b>Categorías de acción</b> y <b>Por parte del cuerpo</b>. Puede filtrar por fase de trabajo.</li>
+<li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
+<li>Consulte <b>Categorías de acción</b> y <b>Por parte del cuerpo</b>. Puede filtrar por tarea.</li>
 <li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original, e <b>Imprimir</b> para imprimir o guardar en PDF.</li></ol>
 <h3>Categorías de acción</h3>
 <div class="legend" style="margin-bottom:14px">${CATS.map((k,i) => `<div>${catBadge(i+1,false)}<div><b>${k.t}</b><p>${k.d}</p></div></div>`).join('')}</div>
@@ -1544,7 +1545,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 3.10 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 3.11 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {

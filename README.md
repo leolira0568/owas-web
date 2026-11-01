@@ -13,17 +13,17 @@ El WinOWAS original era un programa de Windows 3.x de 16 bits (Visual Basic 3) q
 
 ## Funciones
 
-- **Datos generales**: empresa, departamento, trabajo estudiado, observador, fecha, hora, intervalo de observación y fases de trabajo.
+- **Datos generales**: empresa, departamento, trabajo estudiado, observador, fecha, hora, intervalo de observación y tareas.
 - **Observar**, en tres modos. En todos, la postura se elige con pictogramas o con el teclado (`2341` + Enter) y la categoría de acción se ve al instante.
   - **En vivo**: reloj con aviso sonoro en cada intervalo.
   - **Video** *(nuevo en 2.0)*: carga un video MP4 o WebM y lo revisa fotograma a fotograma, segundo a segundo o saltando a cada instante de muestreo según el intervalo. Al aceptar, el fotograma se guarda como imagen de la observación y queda marcado con su color de categoría en la barra de tiempo.
   - **Fotografías** *(nuevo en 2.0)*: carga varias fotos y registra una observación por foto, con su imagen.
-- **Detección automática de posturas** *(nuevo en 3.0)*: en los modos Video y Fotografías, **Detección automática de postura** (tecla `D`) localiza a la persona con [MediaPipe Pose](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker), dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas, con los ángulos medidos. La carga se elige siempre a mano. Puede detectar automáticamente al llegar a cada muestra o foto. La lista marca cada código como «auto» (aceptado) o «corregido», y los resultados muestran la concordancia por parte del cuerpo. Los umbrales se pueden ajustar.
+- **Detección automática de posturas** *(nuevo en 3.0)*: en los modos Video y Fotografías, **Detectar postura** (tecla `D`) localiza a la persona con [MediaPipe Pose](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker), dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas, con los ángulos medidos. La carga se elige siempre a mano. Puede detectar automáticamente al llegar a cada muestra o foto. La lista marca cada código como «auto» (aceptado) o «corregido», y los resultados muestran la concordancia por parte del cuerpo. Los umbrales se pueden ajustar.
 - **Imágenes** *(nuevo en 2.0)*: miniaturas en la lista de observaciones, galería ordenada por riesgo en los resultados, visor ampliado con salto al momento del video, e impresión de las imágenes en el informe.
-- **Categorías de acción**: distribución en las categorías 1–4 con sus recomendaciones, desglose por fase de trabajo y posturas agrupadas por categoría.
+- **Categorías de acción**: distribución en las categorías 1–4 con sus recomendaciones, desglose por tarea y posturas agrupadas por categoría.
 - **Por parte del cuerpo**: porcentaje del tiempo en cada postura de espalda, brazos y piernas, comparado con los límites de cada categoría.
 - **Tablas y figuras en formato APA (7.ª edición)** *(nuevo en 3.1)*: número en negrita, título en cursiva, tablas solo con líneas horizontales, «Nota.» con el tamaño de la muestra y referencia a Karhu et al. (1977). Numeración correlativa en todo el informe:
-  - *Categorías de acción*: distribución por categoría (tabla y figura), distribución por fase (tabla y figura, si hay varias fases) y frecuencia de los códigos de postura.
+  - *Categorías de acción*: distribución por categoría (tabla y figura), distribución por tarea (tabla y figura, si hay varias tareas) y frecuencia de los códigos de postura.
   - *Por parte del cuerpo*: frecuencia de cada postura con su categoría (tabla y figura). Las tablas de concordancia y de mediciones de la detección automática se muestran solo si se activa «Mostrar tablas de la detección automática».
   - Se incluyen en la impresión con la casilla «Incluir tablas y figuras APA al imprimir».
 - **Archivos**: abrir, guardar, guardar como y unir archivos `.OWS` (solo datos, compatibles con el original) y proyectos `.owsp` (datos más imágenes).
@@ -80,12 +80,12 @@ Texto plano con codificación Windows-1252 y finales de línea CRLF:
 "Observador"
 "dd/mm/aaaa"
 "hh:mm"
- N                ← número de fases (con un espacio antes y otro después)
-"Fase 1"          ← N nombres de fase
+ N                ← número de tareas (con un espacio antes y otro después)
+"Tarea 1"         ← N nombres de tarea
 ...
 30                ← intervalo en segundos
 M                 ← número de observaciones
-23330             ← M códigos: espalda, brazos, piernas, carga e índice de fase (desde 0)
+23330             ← M códigos: espalda, brazos, piernas, carga e índice de tarea (desde 0)
 ...
 ```
 
@@ -115,7 +115,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **3.10**: tema claro por defecto; encabezado gris neutro con «Imprimir resultados» en azul; las tablas de la detección automática (concordancia y mediciones) quedan ocultas por defecto.
+- **3.11**: las fases de trabajo pasan a llamarse tareas; botón «Detectar postura»; la detección y sus ajustes se muestran encima del video o la foto.
+- **[3.10](https://github.com/leolira0568/owas-web/releases/tag/v3.10)**: tema claro por defecto; encabezado gris neutro con «Imprimir resultados» en azul; las tablas de la detección automática (concordancia y mediciones) quedan ocultas por defecto.
 - **[3.9](https://github.com/leolira0568/owas-web/releases/tag/v3.9)**: tema oscuro y claro a elección; archivo `OWASWeb.html`; concordancia con la detección automática oculta por defecto; botones «Aceptar postura» e «Imprimir resultados»; advertencias en rojo.
 - **[3.8](https://github.com/leolira0568/owas-web/releases/tag/v3.8)**: botón «Aceptar» en verde; pie de página con el enlace a GitHub y las licencias; autor Leonardo Lira.
 - **[3.7](https://github.com/leolira0568/owas-web/releases/tag/v3.7)**: el modo Video es el que aparece seleccionado al abrir la aplicación.
