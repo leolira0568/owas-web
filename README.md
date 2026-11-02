@@ -13,7 +13,7 @@ El WinOWAS original era un programa de Windows 3.x de 16 bits (Visual Basic 3) q
 
 ## Funciones
 
-Desde la versión 4.0 la interfaz es **una sola página, sin pestañas**: 1 · Proyecto, 2 · Observación, 3 · Resultados y 4 · Observaciones, una tras otra, con la ayuda al final. En pantallas anchas, el video queda a la izquierda y los códigos a la derecha, fijos al desplazar la página. Los resultados se actualizan solos al guardar cada postura.
+Desde la versión 4.0 la interfaz es **una sola página, sin pestañas**: 1 · Proyecto, 2 · Observación, 3 · Resultados y 4 · Observaciones, una tras otra, con la ayuda al final. En pantallas anchas, el video queda a la izquierda, con el código de postura y «Aceptar postura» debajo, y los códigos a la derecha, fijos al desplazar la página. Los resultados se actualizan solos al guardar cada postura.
 
 
 - **1 · Proyecto**: empresa, departamento, trabajo estudiado, observador, fecha, hora, intervalo de observación y tareas.
@@ -121,7 +121,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **4.1**: botón flotante para subir al inicio de la página; área de códigos y tareas más compacta.
+- **4.2**: el código de postura y «Aceptar postura» se muestran debajo del video; a la derecha quedan solo los códigos.
+- **[4.1](https://github.com/leolira0568/owas-web/releases/tag/v4.1)**: botón flotante para subir al inicio de la página; área de códigos y tareas más compacta.
 - **[4.0](https://github.com/leolira0568/owas-web/releases/tag/v4.0)**: interfaz en una sola página, sin pestañas; video y códigos lado a lado en pantallas anchas; resultados y lista de observaciones actualizados al momento.
 - **[3.18](https://github.com/leolira0568/owas-web/releases/tag/v3.18)**: los avisos de la detección (espalda, brazos, piernas) desaparecen al elegir el código de esa parte; la carga nunca queda preseleccionada y se avisa «Seleccione la carga» hasta elegirla.
 - **[3.17](https://github.com/leolira0568/owas-web/releases/tag/v3.17)**: se quita el texto «Propuesta» con los ángulos bajo «Aceptar postura»; solo se muestran los avisos de la detección.

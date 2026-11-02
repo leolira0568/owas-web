@@ -153,7 +153,8 @@ main{max-width:1440px}
 /* Video a la izquierda y códigos a la derecha, fijos al desplazar la página */
 .obs-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
 .obs-right{position:sticky;top:72px;max-height:calc(100vh - 84px);overflow:auto;padding-right:2px}
-.obs-right .parts{margin-top:10px}
+.obs-right .parts{margin-top:0}
+.obs-left .accept-card{margin-top:16px}
 .obs-right .parts .card.part{grid-template-columns:70px 1fr;padding:5px 8px}
 .obs-right .opt{max-width:none;flex:1 1 112px;font-size:12px;padding:3px 7px 3px 4px;gap:5px;min-height:32px}
 .obs-right .opt .pict{width:20px;height:20px}
@@ -431,8 +432,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
         <div class="thumbs" id="thumbs"></div>
       </div>
     </div>
-    </div><div class="obs-right">
-    <div class="card">
+    <div class="card accept-card">
       <div class="obs-head">
         <div id="liveBox" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <div class="clock" id="clock">--</div>
@@ -457,6 +457,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       <p class="small detect-status" id="detectStatus" role="status"></p>
       <p class="small detect-status" id="detWarn" role="status"></p>
     </div>
+    </div><div class="obs-right">
     <div class="parts" id="parts"></div>
     </div></div>
     <p class="small muted">Atajo de teclado: escribe los dígitos del código en orden (espalda, brazos, piernas, carga y número de tarea) y pulsa <span class="kbd">Enter</span>. <span class="kbd">Retroceso</span> borra el último dígito. En modo video: <span class="kbd">Espacio</span> reproduce o pausa, <span class="kbd">←</span> <span class="kbd">→</span> cambian de fotograma, <span class="kbd">Mayús</span> + flecha salta 1 s y <span class="kbd">B</span> / <span class="kbd">N</span> van a la muestra anterior o siguiente.</p>
@@ -1833,7 +1834,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 4.1 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.2 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
