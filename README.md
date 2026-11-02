@@ -121,7 +121,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **4.3**: los códigos de espalda, brazos, piernas, carga y tarea se muestran debajo de «Aceptar postura», en una sola columna (nunca al lado del video).
+- **4.4**: el aviso de «Aceptar postura» indica que la detección debe ser revisada por un profesional en Ergonomía.
+- **[4.3](https://github.com/leolira0568/owas-web/releases/tag/v4.3)**: los códigos de espalda, brazos, piernas, carga y tarea se muestran debajo de «Aceptar postura», en una sola columna (nunca al lado del video).
 - **[4.2](https://github.com/leolira0568/owas-web/releases/tag/v4.2)**: el código de postura y «Aceptar postura» se muestran debajo del video; a la derecha quedan solo los códigos.
 - **[4.1](https://github.com/leolira0568/owas-web/releases/tag/v4.1)**: botón flotante para subir al inicio de la página; área de códigos y tareas más compacta.
 - **[4.0](https://github.com/leolira0568/owas-web/releases/tag/v4.0)**: interfaz en una sola página, sin pestañas; video y códigos lado a lado en pantallas anchas; resultados y lista de observaciones actualizados al momento.

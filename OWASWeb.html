@@ -447,7 +447,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       <p class="small task-warn" id="taskWarn"><span class="warn-box">Seleccione la tarea</span></p>
       <p class="small task-warn" id="dupWarn" hidden></p>
       <div class="obs-actions">
-        <span class="accept-wrap" id="acceptWrap"><button class="btn ok" id="accept" data-icon="check" aria-describedby="acceptTip">Aceptar postura <span class="kbd">Enter</span></button><span class="tip" id="acceptTip" role="tooltip">La detección automática puede tener errores y debe ser revisada por un profesional.</span></span><span class="sr" id="saveLive" aria-live="polite"></span>
+        <span class="accept-wrap" id="acceptWrap"><button class="btn ok" id="accept" data-icon="check" aria-describedby="acceptTip">Aceptar postura <span class="kbd">Enter</span></button><span class="tip" id="acceptTip" role="tooltip">La detección automática puede tener errores y debe ser revisada por un profesional en Ergonomía.</span></span><span class="sr" id="saveLive" aria-live="polite"></span>
         <button class="btn icon-only" id="repeat" data-icon="repeat" title="Repetir la postura anterior (R)" aria-label="Repetir la postura anterior"></button>
         <button class="btn icon-only" id="takeback" data-icon="undo" title="Deshacer la última observación (Supr)" aria-label="Deshacer la última observación"></button>
         <button class="btn icon-only" id="clearSel" data-icon="eraser" title="Limpiar la selección (Esc)" aria-label="Limpiar la selección"></button>
@@ -1833,7 +1833,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 4.3 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.4 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
