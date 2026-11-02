@@ -121,7 +121,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **4.0**: interfaz en una sola página, sin pestañas; video y códigos lado a lado en pantallas anchas; resultados y lista de observaciones actualizados al momento.
+- **4.1**: botón flotante para subir al inicio de la página; área de códigos y tareas más compacta.
+- **[4.0](https://github.com/leolira0568/owas-web/releases/tag/v4.0)**: interfaz en una sola página, sin pestañas; video y códigos lado a lado en pantallas anchas; resultados y lista de observaciones actualizados al momento.
 - **[3.18](https://github.com/leolira0568/owas-web/releases/tag/v3.18)**: los avisos de la detección (espalda, brazos, piernas) desaparecen al elegir el código de esa parte; la carga nunca queda preseleccionada y se avisa «Seleccione la carga» hasta elegirla.
 - **[3.17](https://github.com/leolira0568/owas-web/releases/tag/v3.17)**: se quita el texto «Propuesta» con los ángulos bajo «Aceptar postura»; solo se muestran los avisos de la detección.
 - **[3.16](https://github.com/leolira0568/owas-web/releases/tag/v3.16)**: observaciones en una sola fila bajo la línea de tiempo (número y riesgo en vertical); el aviso sobre la detección automática aparece al pasar el puntero sobre «Aceptar postura»; «Aceptar postura» destella con un aro amarillo aunque Windows tenga las animaciones desactivadas; «Postura guardada» en azul; botones de archivo y de tema solo con icono.

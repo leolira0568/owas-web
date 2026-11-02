@@ -154,10 +154,10 @@ main{max-width:1440px}
 .obs-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
 .obs-right{position:sticky;top:72px;max-height:calc(100vh - 84px);overflow:auto;padding-right:2px}
 .obs-right .parts{margin-top:10px}
-.obs-right .parts .card.part{grid-template-columns:84px 1fr;padding:8px 10px}
-.obs-right .opt{max-width:none;flex:1 1 128px;font-size:12px;padding:4px 8px 4px 5px;gap:6px;min-height:40px}
-.obs-right .opt .pict{width:24px;height:24px}
-.obs-right .opt b{min-width:22px;height:22px}
+.obs-right .parts .card.part{grid-template-columns:70px 1fr;padding:5px 8px}
+.obs-right .opt{max-width:none;flex:1 1 112px;font-size:12px;padding:3px 7px 3px 4px;gap:5px;min-height:32px}
+.obs-right .opt .pict{width:20px;height:20px}
+.obs-right .opt b{min-width:19px;height:19px}
 @media (max-width:1100px){.obs-layout{grid-template-columns:1fr}.obs-right{position:static;max-height:none;overflow:visible}}
 #tab-partes .filter{display:none}
 .help-details summary{cursor:pointer;font-weight:700;font-size:16px}
@@ -201,11 +201,15 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .code-digits span{display:inline-grid;place-items:center;width:40px;height:48px;border:2px solid var(--line);border-radius:8px;background:var(--field);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
 .code-digits span.next{border-color:var(--accent)}
 /* Códigos y tareas en filas horizontales */
-.parts{display:flex;flex-direction:column;gap:8px;margin-top:14px}
-.parts .card.part{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;padding:10px 12px;margin:0}
-.part h3{margin:0;display:flex;flex-direction:column;gap:2px}
-.part h3 .val{font-size:20px;font-weight:700;color:var(--ink)}
-.part .opts{display:flex;flex-wrap:wrap;gap:6px}
+.parts{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.parts .card.part{display:grid;grid-template-columns:80px 1fr;gap:8px;align-items:center;padding:5px 8px;margin:0}
+.part h3{margin:0;display:flex;flex-direction:column;gap:0;font-size:13px}
+.part h3 .val{font-size:15px;font-weight:700;color:var(--ink)}
+.part .opts{display:flex;flex-wrap:wrap;gap:4px}
+/* Opciones compactas */
+.parts .opt{min-height:32px;padding:3px 7px 3px 4px;gap:5px;font-size:12px;line-height:1.2;margin:0;border-radius:6px}
+.parts .opt .pict{width:20px;height:20px}
+.parts .opt b{min-width:19px;height:19px;font-size:12px;border-radius:5px}
 @media (max-width:640px){.parts .card.part{grid-template-columns:1fr}.part h3{flex-direction:row;justify-content:space-between}}
 .opt{display:flex;width:auto;max-width:210px;font-size:13px;line-height:1.25;text-align:left;gap:8px;align-items:center;background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-bottom:6px;min-height:44px}
 .opt:hover{border-color:var(--accent)}
@@ -271,6 +275,10 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 /* En los botones azules la tecla se ve en blanco sobre fondo translúcido, para que no parezca una casilla vacía */
 .btn.primary .kbd{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.6);color:#fff}
 #print{display:none}
+/* Botón flotante para volver al inicio de la página */
+.to-top{position:fixed;right:18px;bottom:18px;z-index:7;width:46px;height:46px;border-radius:50%;border:0;background:var(--accent);color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25);display:grid;place-items:center}
+.to-top:hover{filter:brightness(1.1)}
+.to-top .ico{width:22px;height:22px;stroke-width:2.5}
 
 @media (max-width:760px){
   .top{padding:8px 12px}
@@ -308,7 +316,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
     --c1-soft:#d8f0d8;--c2-soft:#fdeec9;--c3-soft:#fbe0d4;--c4-soft:#f5d3d3;--figure-bg:#fff;--tag-ok-bg:#eef8ee;--tag-ok-ink:#185c18;--tag-fix-bg:#fdf3e6;--tag-fix-ink:#7a4300;color-scheme:light}
   :root[data-theme="dark"] .apa,:root[data-theme="dark"] .apa-refs{padding:0}
   body{background:#fff}
-  .top,.tabs,main,.notice,.foot{display:none !important}
+  .top,.tabs,main,.notice,.foot,.to-top{display:none !important}
   #print{display:block;padding:0}
   .card{border:0;padding:0;margin-bottom:18px;break-inside:avoid}
   .apa{break-inside:avoid}
@@ -485,6 +493,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
     <details class="card help-details"><summary>Ayuda y códigos OWAS</summary><div id="helpBox"></div></details>
   </section>
 </main>
+<button class="to-top" id="toTop" data-icon="arrowUp" title="Subir al inicio" aria-label="Subir al inicio de la página" hidden></button>
 <footer class="foot">
   <p><b>OWAS Web</b> · © 2026 Leonardo Lira · Código abierto con <a href="https://github.com/leolira0568/owas-web/blob/main/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · <a href="https://github.com/leolira0568/owas-web" target="_blank" rel="noopener">Proyecto en GitHub</a></p>
   <p>Detección de posturas: MediaPipe Pose © Google LLC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mediapipe/LICENSE" target="_blank" rel="noopener">licencia Apache 2.0</a> · Iconos basados en <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC) · Método OWAS: Karhu et al. (1977)</p>
@@ -577,6 +586,7 @@ const ICONS = {
   copy:'<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
   trash:'<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
   close:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  arrowUp:'<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
   history:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
   timer:'<path d="M10 2h4"/><path d="m12 14 3-3"/><circle cx="12" cy="14" r="8"/>',
   video:'<path d="m16 13 5.22 3.48a.5.5 0 0 0 .78-.42V7.87a.5.5 0 0 0-.75-.43L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
@@ -1707,6 +1717,9 @@ function copyResults(){
   });
 }
 $('#copyBtn').onclick = copyResults;
+// Subir al inicio: el botón aparece al bajar por la página
+window.addEventListener('scroll', () => { $('#toTop').hidden = window.scrollY < 400; }, {passive: true});
+$('#toTop').onclick = () => window.scrollTo({top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
 
 // ---- Exportar a Word: documento MHTML (.doc) con el HTML y sus imágenes ----
 $('#expClose').onclick = () => $('#exportDlg').close();
@@ -1820,7 +1833,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 4.0 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.1 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
