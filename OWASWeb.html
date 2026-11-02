@@ -144,8 +144,24 @@ td.postura .pict{width:28px;height:28px}
 .tabs button{background:none;border:0;padding:12px 14px;border-bottom:3px solid transparent;color:var(--ink-2);white-space:nowrap}
 .tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
 main{max-width:1180px;margin:0 auto;padding:16px}
-section.tab{display:none}
-section.tab.on{display:block}
+section.tab{display:block;margin-bottom:28px;scroll-margin-top:76px}
+/* Una sola página: todas las secciones visibles, una tras otra */
+main{max-width:1440px}
+.sec-title{display:flex;align-items:center;gap:10px;font-size:20px;margin:6px 0 12px}
+.sec-title span{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--surface);font-size:15px}
+#bgFields{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0 12px}
+/* Video a la izquierda y códigos a la derecha, fijos al desplazar la página */
+.obs-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+.obs-right{position:sticky;top:72px;max-height:calc(100vh - 84px);overflow:auto;padding-right:2px}
+.obs-right .parts{margin-top:10px}
+.obs-right .parts .card.part{grid-template-columns:84px 1fr;padding:8px 10px}
+.obs-right .opt{max-width:none;flex:1 1 128px;font-size:12px;padding:4px 8px 4px 5px;gap:6px;min-height:40px}
+.obs-right .opt .pict{width:24px;height:24px}
+.obs-right .opt b{min-width:22px;height:22px}
+@media (max-width:1100px){.obs-layout{grid-template-columns:1fr}.obs-right{position:static;max-height:none;overflow:visible}}
+#tab-partes .filter{display:none}
+.help-details summary{cursor:pointer;font-weight:700;font-size:16px}
+.help-details[open] summary{margin-bottom:12px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
 .btn{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;min-height:40px}
@@ -317,18 +333,12 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
     <button class="ico-btn" data-act="theme" id="themeBtn" title="Tema oscuro">Tema oscuro</button>
   </div>
 </header>
-<nav class="tabs" id="tabs">
-  <button data-tab="datos" data-icon="info" class="on">Datos generales</button>
-  <button data-tab="observar" data-icon="eye">Observar</button>
-  <button data-tab="resultados" data-icon="chart">Categorías de acción</button>
-  <button data-tab="partes" data-icon="body">Por parte del cuerpo</button>
-  <button data-tab="lista" data-icon="list">Observaciones</button>
-  <button data-tab="ayuda" data-icon="help">Ayuda</button>
-</nav>
+<nav id="tabs" hidden></nav>
 <main>
   <div class="notice" id="restored" hidden><span style="display:flex;gap:8px;align-items:center" data-icon="history">Se recuperó el trabajo que no se había guardado.</span><button class="btn" id="restoredClose" data-icon="close">Cerrar</button></div>
 
   <section class="tab on" id="tab-datos">
+    <h1 class="sec-title"><span>1</span>Proyecto</h1>
     <div class="grid2">
       <div class="card">
         <h2 data-icon="info">Información general</h2>
@@ -344,7 +354,9 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
     </div>
   </section>
 
-  <section class="tab" id="tab-observar">
+  <section class="tab on" id="tab-observar">
+    <h1 class="sec-title"><span>2</span>Observación</h1>
+    <div class="obs-layout"><div class="obs-left">
     <div class="seg" id="modeSeg" role="group" aria-label="Modo de observación">
       <button data-mode="video" data-icon="video" aria-pressed="true" class="on">Video</button>
       <button data-mode="photo" data-icon="image" aria-pressed="false">Fotografías</button>
@@ -411,6 +423,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
         <div class="thumbs" id="thumbs"></div>
       </div>
     </div>
+    </div><div class="obs-right">
     <div class="card">
       <div class="obs-head">
         <div id="liveBox" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -437,10 +450,12 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       <p class="small detect-status" id="detWarn" role="status"></p>
     </div>
     <div class="parts" id="parts"></div>
+    </div></div>
     <p class="small muted">Atajo de teclado: escribe los dígitos del código en orden (espalda, brazos, piernas, carga y número de tarea) y pulsa <span class="kbd">Enter</span>. <span class="kbd">Retroceso</span> borra el último dígito. En modo video: <span class="kbd">Espacio</span> reproduce o pausa, <span class="kbd">←</span> <span class="kbd">→</span> cambian de fotograma, <span class="kbd">Mayús</span> + flecha salta 1 s y <span class="kbd">B</span> / <span class="kbd">N</span> van a la muestra anterior o siguiente.</p>
   </section>
 
-  <section class="tab" id="tab-resultados">
+  <section class="tab on" id="tab-resultados">
+    <h1 class="sec-title"><span>3</span>Resultados</h1>
     <div class="filter"><label>Material: <select class="phaseFilter"></select></label>
       <label><input type="checkbox" id="printBg" checked> Incluir información general al imprimir</label>
       <label><input type="checkbox" id="printImg" checked> Incluir imágenes al imprimir</label>
@@ -450,12 +465,13 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
     <div id="results"></div>
   </section>
 
-  <section class="tab" id="tab-partes">
+  <section class="tab on" id="tab-partes">
     <div class="filter"><label>Material: <select class="phaseFilter"></select></label></div>
     <div id="bodyparts"></div>
   </section>
 
-  <section class="tab" id="tab-lista">
+  <section class="tab on" id="tab-lista">
+    <h1 class="sec-title"><span>4</span>Observaciones</h1>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
         <h2 style="margin:0" data-icon="list">Observaciones registradas</h2>
@@ -465,8 +481,8 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
     </div>
   </section>
 
-  <section class="tab" id="tab-ayuda">
-    <div class="card" id="helpBox"></div>
+  <section class="tab on" id="tab-ayuda">
+    <details class="card help-details"><summary>Ayuda y códigos OWAS</summary><div id="helpBox"></div></details>
   </section>
 </main>
 <footer class="foot">
@@ -480,7 +496,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 <input type="file" id="filePhotos" accept="image/*" multiple hidden>
 <dialog id="exportDlg" aria-labelledby="exportTitle">
   <h2 id="exportTitle">Exportar resultados</h2>
-  <p class="small muted" style="margin-top:-4px">Se exporta el mismo informe que al imprimir, según las casillas de la pestaña «Categorías de acción».</p>
+  <p class="small muted" style="margin-top:-4px">Se exporta el mismo informe que al imprimir, según las casillas de la sección «Resultados».</p>
   <div class="export-opt">
     <button class="btn primary" id="expWord" data-icon="fileText">Word (.doc)</button>
     <p class="small muted">Descarga un documento para Microsoft Word con la información general, las tablas y figuras APA y las imágenes de las observaciones. Desde Word puede guardarse como .docx.</p>
@@ -630,7 +646,9 @@ function blank(){
 let S = blank(), fileName = '', fileHandle = null, dirty = false, phaseFilter = -1;
 const phaseName = i => (S.phases[i] && S.phases[i].trim()) || `Tarea ${i+1}`;
 
-function changed(){ dirty = true; persist(); renderHeader(); }
+let refreshTimer = null;
+function scheduleRefresh(){ clearTimeout(refreshTimer); refreshTimer = setTimeout(() => { renderResults(); renderBodyParts(); renderList(); }, 400); }
+function changed(){ dirty = true; persist(); renderHeader(); scheduleRefresh(); }
 // Autoguardado en IndexedDB (las imágenes no caben en localStorage)
 const idb = (() => {
   let p;
@@ -774,15 +792,16 @@ async function saveFile(as){
 }
 function newFile(){ if (!confirmDiscard()) return; loadState(blank(), '', null); showTab('datos'); }
 
-// ---- Interfaz: cabecera y pestañas ----
+// ---- Interfaz: cabecera y secciones ----
 function renderHeader(){
   $('#fname').textContent = fileName ? '— ' + fileName : '— (sin nombre)';
   $('#dirty').textContent = dirty ? '●' : '';
   $('#dirty').title = dirty ? 'Cambios sin guardar' : '';
 }
 function showTab(t){
-  $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-  $$('section.tab').forEach(s => s.classList.toggle('on', s.id === 'tab-' + t));
+  const sec = $('#tab-' + t);
+  if (sec) sec.scrollIntoView({behavior: 'smooth', block: 'start'});
+  if (t === 'ayuda') $('.help-details').open = true;
   if (t === 'resultados') renderResults();
   if (t === 'partes') renderBodyParts();
   if (t === 'lista') renderList();
@@ -1421,7 +1440,7 @@ function bgBlock(){
 }
 function resultsHTML(withGallery = true){
   const list = filtered(), n = list.length;
-  if (!n) return `<div class="card empty">No hay observaciones${phaseFilter >= 0 ? ' en esta tarea' : ''}. Regístrelas en la pestaña «Observar» o abra un archivo .OWS.</div>`;
+  if (!n) return `<div class="card empty">No hay observaciones${phaseFilter >= 0 ? ' en esta tarea' : ''}. Regístrelas en la sección «Observación» o abra un archivo .OWS.</div>`;
   const c = catCounts(list);
   let h = `<div class="card"><h2>${ico('chart')}Categorías de acción — ${phaseFilter < 0 ? 'todo el material' : esc(phaseName(phaseFilter))}</h2>
     <p class="muted" style="margin-top:-6px">${n} observaciones${S.interval ? ` · tiempo observado aprox. ${Math.round(n*S.interval/60)} min` : ''}</p>
@@ -1787,13 +1806,13 @@ $('#showAgree').addEventListener('change', () => { renderResults(); renderBodyPa
 $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <p>OWAS (<i>Ovako Working posture Analysing System</i>) clasifica las posturas de trabajo mediante un código de cuatro dígitos: espalda, brazos, piernas y carga. Cada combinación tiene una categoría de acción del 1 al 4.</p>
 <h3>Pasos</h3>
-<ol><li>En <b>Datos generales</b>, rellene la información del estudio, el intervalo de observación y las tareas.</li>
-<li>En <b>Observar</b>, elija el modo:
+<ol><li>En <b>1 · Proyecto</b>, rellene la información del estudio, el intervalo de observación y las tareas.</li>
+<li>En <b>2 · Observación</b>, elija el modo:
   <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar postura</b>.</li>
   <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado.</li>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
 <li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
-<li>Consulte <b>Categorías de acción</b> y <b>Por parte del cuerpo</b>. Puede filtrar por tarea.</li>
+<li>Consulte <b>3 · Resultados</b>: categorías de acción, partes del cuerpo y tablas APA, que se actualizan solos al guardar cada postura. Puede filtrar por tarea.</li>
 <li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original, e <b>Imprimir</b> para imprimir o guardar en PDF.</li></ol>
 <h3>Categorías de acción</h3>
 <div class="legend" style="margin-bottom:14px">${CATS.map((k,i) => `<div>${catBadge(i+1,false)}<div><b>${k.t}</b><p>${k.d}</p></div></div>`).join('')}</div>
@@ -1801,7 +1820,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 3.18 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.0 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {

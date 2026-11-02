@@ -13,8 +13,11 @@ El WinOWAS original era un programa de Windows 3.x de 16 bits (Visual Basic 3) q
 
 ## Funciones
 
-- **Datos generales**: empresa, departamento, trabajo estudiado, observador, fecha, hora, intervalo de observación y tareas.
-- **Observar**, en tres modos. En todos, la postura se elige con pictogramas o con el teclado (`2341` + Enter) y la categoría de acción se ve al instante.
+Desde la versión 4.0 la interfaz es **una sola página, sin pestañas**: 1 · Proyecto, 2 · Observación, 3 · Resultados y 4 · Observaciones, una tras otra, con la ayuda al final. En pantallas anchas, el video queda a la izquierda y los códigos a la derecha, fijos al desplazar la página. Los resultados se actualizan solos al guardar cada postura.
+
+
+- **1 · Proyecto**: empresa, departamento, trabajo estudiado, observador, fecha, hora, intervalo de observación y tareas.
+- **2 · Observación**, en tres modos. En todos, la postura se elige con pictogramas o con el teclado (`2341` + Enter) y la categoría de acción se ve al instante.
   - **En vivo**: reloj con aviso sonoro en cada intervalo.
   - **Video** *(nuevo en 2.0)*: carga un video MP4 o WebM y lo revisa fotograma a fotograma, segundo a segundo o saltando a cada instante de muestreo según el intervalo. Al aceptar, el fotograma se guarda como imagen de la observación y queda marcado con su color de categoría en la barra de tiempo.
   - **Fotografías** *(nuevo en 2.0)*: carga varias fotos y registra una observación por foto, con su imagen.
@@ -118,7 +121,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **3.18**: los avisos de la detección (espalda, brazos, piernas) desaparecen al elegir el código de esa parte; la carga nunca queda preseleccionada y se avisa «Seleccione la carga» hasta elegirla.
+- **4.0**: interfaz en una sola página, sin pestañas; video y códigos lado a lado en pantallas anchas; resultados y lista de observaciones actualizados al momento.
+- **[3.18](https://github.com/leolira0568/owas-web/releases/tag/v3.18)**: los avisos de la detección (espalda, brazos, piernas) desaparecen al elegir el código de esa parte; la carga nunca queda preseleccionada y se avisa «Seleccione la carga» hasta elegirla.
 - **[3.17](https://github.com/leolira0568/owas-web/releases/tag/v3.17)**: se quita el texto «Propuesta» con los ángulos bajo «Aceptar postura»; solo se muestran los avisos de la detección.
 - **[3.16](https://github.com/leolira0568/owas-web/releases/tag/v3.16)**: observaciones en una sola fila bajo la línea de tiempo (número y riesgo en vertical); el aviso sobre la detección automática aparece al pasar el puntero sobre «Aceptar postura»; «Aceptar postura» destella con un aro amarillo aunque Windows tenga las animaciones desactivadas; «Postura guardada» en azul; botones de archivo y de tema solo con icono.
 - **[3.15](https://github.com/leolira0568/owas-web/releases/tag/v3.15)**: detección promediada de 3 fotogramas cercanos; la detección ya no cambia las partes elegidas a mano; códigos y tareas en filas; las observaciones aparecen en la línea de tiempo bajo su fotograma; aviso de fotograma repetido y de revisión profesional; «Aceptar postura» parpadea cuando todo está elegido; «Nuevo proyecto» y «Abrir proyecto».
