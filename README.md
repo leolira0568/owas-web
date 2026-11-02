@@ -35,6 +35,10 @@ Desde la versión 4.0 la interfaz es **una sola página, sin pestañas**: 1 · P
 - **Autoguardado** en el navegador para no perder trabajo.
 - **Tema claro u oscuro** *(nuevo en 3.9)*: botón en la barra superior; la elección se recuerda en el navegador. Por defecto se usa el tema claro.
 
+## Privacidad y seguridad
+
+Todo se procesa en el equipo: la aplicación no envía datos a ningún servidor y una política de seguridad de contenido bloquea las conexiones de red. Los rostros se difuminan en las imágenes guardadas, el autoguardado puede desactivarse y los datos locales pueden borrarse desde la ayuda. Ver la [declaración de privacidad y seguridad](PRIVACIDAD.md).
+
 ## Cómo usarlo sin internet
 
 1. Descarga [`OWASWeb.html`](OWASWeb.html) (botón *Download raw file* en GitHub) o el archivo de la [última versión publicada](https://github.com/leolira0568/owas-web/releases/latest).
@@ -121,7 +125,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **4.4**: el aviso de «Aceptar postura» indica que la detección debe ser revisada por un profesional en Ergonomía.
+- **4.5**: declaración de privacidad y seguridad (ayuda, pie de página y [PRIVACIDAD.md](PRIVACIDAD.md)); política de seguridad de contenido sin conexiones de red; rostros difuminados en las imágenes guardadas; autoguardado desactivable y borrado de datos locales; estilo plano sin bordes inspirado en Windows 11.
+- **[4.4](https://github.com/leolira0568/owas-web/releases/tag/v4.4)**: el aviso de «Aceptar postura» indica que la detección debe ser revisada por un profesional en Ergonomía.
 - **[4.3](https://github.com/leolira0568/owas-web/releases/tag/v4.3)**: los códigos de espalda, brazos, piernas, carga y tarea se muestran debajo de «Aceptar postura», en una sola columna (nunca al lado del video).
 - **[4.2](https://github.com/leolira0568/owas-web/releases/tag/v4.2)**: el código de postura y «Aceptar postura» se muestran debajo del video; a la derecha quedan solo los códigos.
 - **[4.1](https://github.com/leolira0568/owas-web/releases/tag/v4.1)**: botón flotante para subir al inicio de la página; área de códigos y tareas más compacta.

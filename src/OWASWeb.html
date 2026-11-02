@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Seguridad: la aplicación no puede conectarse a ningún servidor externo. Solo se permiten el propio archivo,
+     los datos internos (data:/blob:) y WebAssembly para la detección de posturas, que se ejecuta en el equipo. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' data: blob:; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <title>OWAS Web</title>
 <script>
   // Tema claro u oscuro: el último elegido por el usuario; por defecto, el claro
@@ -311,6 +315,50 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .apa-refs h3{text-align:center;font-weight:700;font-size:inherit;margin:0 0 8px}
 .apa-refs p{padding-left:36px;text-indent:-36px;margin:0 0 6px}
 
+/* ===== Estilo plano, sin bordes ni sombras, inspirado en Windows 11 =====
+   Las secciones se distinguen por capas de color; los campos de texto conservan una línea inferior
+   (como en Windows 11) para indicar dónde se escribe, y el anillo de foco se mantiene para el teclado. */
+:root{--bg:#f3f3f3;--surface:#ffffff;--surface-2:#f6f6f6;--fill:rgba(0,0,0,.055);--fill-hover:rgba(0,0,0,.09);--accent:#005fb8;--accent-ink:#ffffff;--accent-soft:#e1edf8;--field-line:#868686;--radius:8px}
+:root[data-theme="dark"]{--bg:#202020;--surface:#2b2b2b;--surface-2:#323232;--fill:rgba(255,255,255,.075);--fill-hover:rgba(255,255,255,.12);--accent:#4cc2ff;--accent-ink:#002642;--accent-soft:#1d3546;--field-line:#9d9d9d}
+body{font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+.card,.notice,.cats4 .col,.gallery figure,.thumb,.marks button,.kbd,.tag,.warn-box,.warn-soft,.detect-status .warn,.accept-wrap .tip{border:0}
+.card,.seg button.on,.to-top,.accept-wrap .tip{box-shadow:none}
+.cats4 .col{background:var(--surface-2)}
+.cats4 .col h3{border-bottom:0;background:var(--fill)}
+.gallery figure{background:var(--surface-2)}
+.detect{border-bottom:0;padding-bottom:2px}
+.foot{border-top:0}
+.btn{border:0;background:var(--fill);border-radius:6px}
+.btn:hover{background:var(--fill-hover)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent);filter:brightness(1.08)}
+.btn.primary .kbd{background:transparent;color:inherit;box-shadow:inset 0 0 0 1px currentColor}
+.btn.ok,.btn.load{border:0}
+.btn.danger{background:var(--fill)}
+.kbd{background:var(--fill)}
+.opt{border:0;background:var(--fill);border-radius:6px}
+.opt:hover{background:var(--fill-hover)}
+.opt.sel{background:var(--accent);color:var(--accent-ink);box-shadow:none}
+.opt.sel .pict{color:var(--accent-ink)}
+.opt b{border:0;background:var(--surface)}
+.opt.sel b{background:rgba(255,255,255,.22);color:inherit}
+:root[data-theme="dark"] .opt.sel b{background:rgba(0,0,0,.18)}
+input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(--field-line);border-radius:4px 4px 0 0;background:var(--fill)}
+.code-digits span{border:0;background:var(--fill)}
+.code-digits span.next{box-shadow:inset 0 -3px 0 var(--accent)}
+.seg{background:var(--fill)}
+.seg button.on{background:var(--surface)}
+.top{background:#2c2c2c}
+.top .actions button{border:0;background:rgba(255,255,255,.08)}
+.top .actions button:hover{background:rgba(255,255,255,.15)}
+.top .actions button[data-act="print"],.top .actions button[data-act="export"]{color:var(--accent-ink);border:0}
+.to-top{color:var(--accent-ink)}
+.marks button{background:var(--fill)}
+.export-note{background:var(--fill);border-radius:6px;padding:8px 10px;margin:4px 0 8px}
+.privacy-actions{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:8px 0}
+.privacy-actions label{display:inline-flex;gap:8px;align-items:center}
+#privacidad{scroll-margin-top:76px}
+
 @media print{
   :root[data-theme]{--bg:#fff;--surface:#fff;--surface-2:#f7f6f3;--line:#dcdad3;--line-soft:#ebe9e3;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#6b6962;
     --c1-soft:#d8f0d8;--c2-soft:#fdeec9;--c3-soft:#fbe0d4;--c4-soft:#f5d3d3;--figure-bg:#fff;--tag-ok-bg:#eef8ee;--tag-ok-ink:#185c18;--tag-fix-bg:#fdf3e6;--tag-fix-ink:#7a4300;color-scheme:light}
@@ -381,6 +429,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
             <label><input type="checkbox" id="autoDetect" checked autocomplete="off"> Detectar al llegar a cada muestra o fotografía</label>
             <label><input type="checkbox" id="showSubs" checked autocomplete="off"> Mostrar subtítulos con los datos de la detección</label>
             <label><input type="checkbox" id="bakeSkel" checked autocomplete="off"> Grabar el esqueleto y los subtítulos en la imagen guardada</label>
+            <label><input type="checkbox" id="blurFace" checked autocomplete="off"> Difuminar el rostro en las imágenes guardadas (privacidad)</label>
           </div>
           <div class="detect-cfg">
             <label>Espalda inclinada desde (°) <input type="number" data-cfg="trunk" min="5" max="60"></label>
@@ -495,7 +544,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 </main>
 <button class="to-top" id="toTop" data-icon="arrowUp" title="Subir al inicio" aria-label="Subir al inicio de la página" hidden></button>
 <footer class="foot">
-  <p><b>OWAS Web</b> · © 2026 Leonardo Lira · Código abierto con <a href="https://github.com/leolira0568/owas-web/blob/main/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · <a href="https://github.com/leolira0568/owas-web" target="_blank" rel="noopener">Proyecto en GitHub</a></p>
+  <p><b>OWAS Web</b> · © 2026 Leonardo Lira · Código abierto con <a href="https://github.com/leolira0568/owas-web/blob/main/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · <a href="https://github.com/leolira0568/owas-web" target="_blank" rel="noopener">Proyecto en GitHub</a> · <a href="#privacidad" id="privacyLink">Privacidad y seguridad</a></p>
   <p>Detección de posturas: MediaPipe Pose © Google LLC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mediapipe/LICENSE" target="_blank" rel="noopener">licencia Apache 2.0</a> · Iconos basados en <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC) · Método OWAS: Karhu et al. (1977)</p>
 </footer>
 <div id="print"></div>
@@ -514,6 +563,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
     <button class="btn primary" id="expPdf" data-icon="print">PDF</button>
     <p class="small muted">Abre el diálogo de impresión: elija «Guardar como PDF» como destino.</p>
   </div>
+  <p class="small export-note">Los informes y proyectos con imágenes contienen datos personales de las personas observadas: guárdelos en un lugar protegido y compártalos solo con quien deba verlos.</p>
   <p class="small" id="expStatus" role="status"></p>
   <div class="vctrl"><button class="btn" id="expClose" data-icon="close">Cerrar</button></div>
 </dialog>
@@ -672,11 +722,15 @@ const idb = (() => {
     const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
     t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error);
   }));
-  return { get: k => run('readonly', s => s.get(k)), set: (k, v) => run('readwrite', s => s.put(v, k)) };
+  return { get: k => run('readonly', s => s.get(k)), set: (k, v) => run('readwrite', s => s.put(v, k)), del: k => run('readwrite', s => s.delete(k)) };
 })();
 let persistTimer = null;
+// Autoguardado en este navegador: se puede desactivar en equipos compartidos (sección de privacidad de la ayuda)
+let autosaveOn = true;
+try{ autosaveOn = localStorage.getItem('owasweb.autosave') !== 'off'; }catch(e){}
 function persist(){
   clearTimeout(persistTimer);
+  if (!autosaveOn) return;
   persistTimer = setTimeout(() => {
     const snap = {S, fileName, dirty};
     idb.set('autosave', snap).catch(() => {
@@ -1019,7 +1073,22 @@ function setMode(m){
 $('#modeSeg').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); });
 
 // Captura del fotograma o la fotografía actual, reducida para que el proyecto no pese demasiado
-function grabFrame(src, det){
+// Privacidad: pixela la cabeza de la persona detectada antes de guardar la imagen
+function pixelateFace(g, N, w, h){
+  const pts = [0,1,2,3,4,5,6,7,8,9,10].map(i => N[i]).filter(q => q && (q.visibility ?? 1) > 0.2);
+  if (!pts.length) return;
+  const xs = pts.map(q => q.x * w), ys = pts.map(q => q.y * h);
+  const sh = (N[11] && N[12]) ? Math.hypot((N[11].x - N[12].x) * w, (N[11].y - N[12].y) * h) : 0;
+  const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), sh * 0.55, w * 0.06) * 1.6;
+  const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+  const x0 = Math.max(0, Math.round(cx - size / 2)), y0 = Math.max(0, Math.round(cy - size / 2));
+  const bw = Math.min(w - x0, Math.round(size)), bh = Math.min(h - y0, Math.round(size));
+  if (bw < 4 || bh < 4) return;
+  const t = document.createElement('canvas'); t.width = Math.max(4, Math.round(bw / 14)); t.height = Math.max(4, Math.round(bh / 14));
+  t.getContext('2d').drawImage(g.canvas, x0, y0, bw, bh, 0, 0, t.width, t.height);
+  g.save(); g.imageSmoothingEnabled = false; g.drawImage(t, 0, 0, t.width, t.height, x0, y0, bw, bh); g.restore();
+}
+function grabFrame(src, det, faceDet){
   const w0 = src.videoWidth || src.naturalWidth, h0 = src.videoHeight || src.naturalHeight;
   if (!w0 || !h0) return null;
   const k = Math.min(1, 800 / Math.max(w0, h0)), c = document.createElement('canvas');
@@ -1028,6 +1097,7 @@ function grabFrame(src, det){
   c.width = w; c.height = h + (sub ? sub.height : 0);
   const g = c.getContext('2d');
   g.drawImage(src, 0, 0, w, h);
+  if (faceDet) pixelateFace(g, faceDet.N, w, h);
   if (det){ drawSkeleton(g, det.N, w, h, w / 640); drawSubtitles(g, sub, w, h); }
   try{ return c.toDataURL('image/jpeg', 0.8); }catch(e){ return null; }
 }
@@ -1057,12 +1127,13 @@ function drawSubtitles(g, sub, w, top){
 function captureMedia(){
   const det = lastDet && lastDet.key === mediaKey() ? lastDet : null;
   const extra = det ? {det: det.code, dm: det.m} : {}, bake = det && $('#bakeSkel').checked ? det : null;
+  const face = det && $('#blurFace').checked ? det : null;
   if (mode === 'video' && vid.src && vid.readyState >= 2){
-    const img = grabFrame(vid, bake);
+    const img = grabFrame(vid, bake, face);
     return img ? {img, t: Math.round(vid.currentTime * 1000) / 1000, src: videoName, ...extra} : {};
   }
   if (mode === 'photo' && photos[pi]){
-    const img = grabFrame($('#photo'), bake);
+    const img = grabFrame($('#photo'), bake, face);
     return img ? {img, src: photos[pi].name, ...extra} : {};
   }
   return {};
@@ -1833,7 +1904,56 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <div class="grid2">${PARTS.map(p => `<div><b>${p.name}</b>${p.opts.map((o,i) => `<div class="bp-name" style="margin:4px 0"><b>${i+1}</b>${pict(p.key, i+1)}${o}</div>`).join('')}</div>`).join('')}</div>
 <h3 style="margin-top:14px">Archivos</h3>
 <p class="small">Esta aplicación abre y guarda archivos <b>.OWS</b> del WinOWAS original, que contienen solo los datos. Los estudios con imágenes se guardan como proyecto <b>.owsp</b>, que incluye cada imagen. El video original no se guarda dentro del proyecto: conserve el archivo de video para volver a revisarlo. «Unir archivo» añade las observaciones de otro archivo al estudio actual. El trabajo se guarda además automáticamente en este navegador, pero conviene guardar el archivo. No se admiten los archivos del OWAS para DOS.</p>
-<p class="small muted">OWAS Web 4.4 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<h3 id="privacidad" style="margin-top:18px">Privacidad y seguridad</h3>
+<p class="small">OWAS Web está pensada para proteger los datos del estudio y la identidad de las personas que aparecen en los videos y las fotografías.</p>
+<ul class="small">
+<li><b>Todo se procesa en este equipo.</b> Los datos que escribe, los videos, las fotografías y la detección de posturas se procesan dentro del navegador. La aplicación no envía datos a ningún servidor, no usa cookies, ni analítica, ni servicios externos. MediaPipe y su modelo van incluidos en el propio archivo.</li>
+<li><b>Sin conexiones de red.</b> Una política de seguridad de contenido (CSP) impide que la aplicación se conecte a servidores externos, envíe formularios o cargue código de otros sitios.</li>
+<li><b>Videos y fotografías.</b> Se abren desde su equipo y nunca se suben a internet. El video original no se copia en el proyecto. Las imágenes que se guardan se vuelven a codificar, por lo que no conservan metadatos como la ubicación GPS ni el modelo de la cámara.</li>
+<li><b>Rostros difuminados.</b> Con «Difuminar el rostro en las imágenes guardadas» (en «Ajustes de detección», activado por defecto), la cabeza de la persona detectada se pixela en las imágenes de las observaciones, los informes y los proyectos. Solo funciona cuando la detección encuentra a la persona: revise cada imagen antes de compartirla.</li>
+<li><b>Dónde quedan los datos.</b> En el autoguardado de este navegador, hasta que lo borre, y en los archivos que usted guarda o exporta (.owsp, .OWS, .doc y PDF). Los proyectos .owsp y los informes con imágenes contienen datos personales.</li>
+<li><b>Versión en línea.</b> GitHub Pages sirve el archivo de la aplicación y puede registrar datos técnicos de la visita, como la dirección IP, según la política de privacidad de GitHub. Los datos del estudio no se envían. Para la máxima privacidad, use el archivo OWASWeb.html descargado y sin conexión.</li>
+</ul>
+<p class="small"><b>Protocolo recomendado</b></p>
+<ol class="small">
+<li>Informe a las personas observadas del propósito del estudio y obtenga su consentimiento antes de grabar o fotografiar.</li>
+<li>Grabe solo lo necesario para el análisis y, si es posible, encuadre el cuerpo sin mostrar el rostro.</li>
+<li>Mantenga activado el difuminado de rostros y revise las imágenes antes de compartir un informe.</li>
+<li>Evite nombres de personas en los datos del estudio y en las tareas cuando no sean necesarios.</li>
+<li>Guarde los proyectos, informes y videos en carpetas protegidas o cifradas y compártalos solo por medios seguros con quien deba verlos.</li>
+<li>En equipos compartidos, desactive el autoguardado y borre los datos de este navegador al terminar.</li>
+<li>Elimine los videos, fotografías y proyectos cuando ya no sean necesarios, y cumpla la normativa de protección de datos personales de su país.</li>
+</ol>
+<div class="privacy-actions small">
+<label><input type="checkbox" id="autosaveToggle" checked autocomplete="off"> Guardar automáticamente el trabajo en este navegador</label>
+<button class="btn danger" id="wipeData" type="button">Borrar los datos guardados en este navegador</button>
+<span id="privStatus" role="status" class="muted"></span>
+</div>
+<p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+<p class="small muted">OWAS Web 4.5 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+// Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
+// ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
+function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
+$('#privacyLink').addEventListener('click', e => { e.preventDefault(); showPrivacy(); });
+$('#autosaveToggle').checked = autosaveOn;
+$('#autosaveToggle').addEventListener('change', async e => {
+  autosaveOn = e.target.checked;
+  try{ localStorage.setItem('owasweb.autosave', autosaveOn ? 'on' : 'off'); }catch(err){}
+  if (autosaveOn) persist();
+  else { clearTimeout(persistTimer); try{ await idb.del('autosave'); }catch(err){} try{ localStorage.removeItem('winowas.autosave'); }catch(err){} }
+  $('#privStatus').textContent = autosaveOn ? 'Autoguardado activado.' : 'Autoguardado desactivado y copia borrada de este navegador.';
+});
+$('#wipeData').addEventListener('click', async () => {
+  if (!confirm('Se borrarán los datos guardados en este navegador (autoguardado y preferencias) y se cerrará el estudio abierto sin guardarlo. ¿Continuar?')) return;
+  loadState(blank(), '', null); clearTimeout(persistTimer);
+  try{ await idb.del('autosave'); }catch(e){}
+  try{ Object.keys(localStorage).filter(k => /^(winowas|owasweb)/.test(k)).forEach(k => localStorage.removeItem(k)); }catch(e){}
+  if (vid.src){ URL.revokeObjectURL(vid.src); vid.removeAttribute('src'); vid.load(); videoName = ''; $('#videoName').textContent = 'Ningún video cargado'; $('#vidEmpty').hidden = false; $('#loadVideo').classList.add('load'); }
+  photos.forEach(ph => URL.revokeObjectURL(ph.url)); photos = []; pi = 0; $('#photo').removeAttribute('src'); $('#photoEmpty').hidden = false; $('#loadPhotos').classList.add('load'); renderThumbs();
+  autosaveOn = true; $('#autosaveToggle').checked = true;
+  clearOverlay(); renderAll();
+  $('#privStatus').textContent = 'Datos de este navegador borrados.';
+});
 
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
@@ -1863,8 +1983,10 @@ function renderAll(){ renderHeader(); renderData(); fillPhaseFilters(); renderOb
 renderVideoUI();
 (async () => {
   let saved = null;
-  try{ saved = await idb.get('autosave'); }catch(e){}
-  if (!saved){ try{ saved = JSON.parse(localStorage.getItem('winowas.autosave') || 'null'); }catch(e){} }
+  if (autosaveOn){
+    try{ saved = await idb.get('autosave'); }catch(e){}
+    if (!saved){ try{ saved = JSON.parse(localStorage.getItem('winowas.autosave') || 'null'); }catch(e){} }
+  }
   if (saved && saved.S && Array.isArray(saved.S.obs)){
     S = saved.S; fileName = saved.fileName || ''; dirty = !!saved.dirty;
     if (dirty) $('#restored').hidden = false;
