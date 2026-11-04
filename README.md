@@ -32,7 +32,7 @@ Desde la versión 4.0 la interfaz es **una sola página, sin pestañas**: 1 · P
 - **Archivos**: abrir, guardar, guardar como y unir archivos `.OWS` (solo datos, compatibles con el original) y proyectos `.owsp` (datos más imágenes).
 - **Imprimir o guardar en PDF**, y copiar los resultados al portapapeles (se pegan como tabla en Excel o Word).
 - **Exportar resultados** *(nuevo en 3.14)*: a **Word** (`.doc`, con la información general, las tablas y figuras APA y las imágenes de las observaciones; desde Word puede guardarse como `.docx`) o a **PDF** (mediante «Guardar como PDF» en el diálogo de impresión).
-- **Exportar a OpenSim** *(nuevo en 4.6)*: guarda las posturas detectadas como marcadores 3D en un archivo `.trc`. Ver [Análisis en OpenSim](#análisis-en-opensim).
+- **Exportar a OpenSim** *(nuevo en 4.6)*: guarda las posturas detectadas como marcadores 3D en un archivo `.trc` y, desde la versión 4.7, calcula en la propia aplicación los ángulos articulares en un archivo `.mot`, sin instalar OpenSim ni Python. Ver [Análisis en OpenSim](#análisis-en-opensim).
 - **Autoguardado** en el navegador para no perder trabajo.
 - **Tema claro u oscuro** *(nuevo en 3.9)*: botón en la barra superior; la elección se recuerda en el navegador. Por defecto se usa el tema claro.
 
@@ -83,7 +83,17 @@ La detección es una ayuda y no reemplaza el criterio de quien observa. Funciona
 
 *Exportar resultados → OpenSim (.trc)* guarda las posturas aceptadas que tienen detección automática: 19 marcadores en metros, con los ejes de OpenSim (X adelante, Y arriba, Z derecha) y los pies en el suelo. Cada fila es una postura independiente, no un movimiento continuo.
 
-El script [`herramientas/trc_a_opensim.py`](herramientas/trc_a_opensim.py) vincula ese archivo a un modelo y calcula los ángulos articulares:
+### Ángulos en la aplicación
+
+*Exportar resultados → OpenSim (.mot)* calcula los ángulos articulares en el navegador, sin instalar nada, con la cinemática del modelo Rajagopal 2015 incluida en el archivo. Antes de descargar, muestra qué posturas son poco fiables y por qué, y por defecto las excluye del archivo. También permite descargar la revisión de calidad (`.csv`) y el modelo con los 19 marcadores (`.osim`).
+
+Para verlo en OpenSim: *File → Open Model* con `Rajagopal2015_OWAS.osim` y *File → Load Motion* con el `.mot`. El cálculo usa un modelo escalado a la persona, pero el `.osim` descargado tiene el tamaño estándar, por lo que el cuerpo no coincide exactamente con los marcadores. Para obtener un modelo escalado, usa el script.
+
+La aplicación no ejecuta OpenSim: resuelve el mismo problema con su propio código. Se comparó con Inverse Kinematics de OpenSim 4.6 en un video real y en una persona simulada: las dos vías señalaron las mismas posturas y, en las posturas fiables del video, los ángulos difirieron como máximo 0,1° en el tronco, 1,4° en la cadera y 1,1° en la rodilla. En los brazos llegaron a 3,7°, porque la aplicación mantiene cerca de la posición neutra los giros que los marcadores no pueden medir (`arm_rot` y `pro_sup`). Esos giros no tienen valor de medición en ninguna de las dos vías.
+
+### Script para OpenSim
+
+El script [`herramientas/trc_a_opensim.py`](herramientas/trc_a_opensim.py) usa OpenSim para vincular el `.trc` a un modelo y calcular los ángulos articulares:
 
 ```
 pip install opensim
@@ -102,12 +112,14 @@ El script gira cada fotograma para que las caderas miren hacia delante, escala e
 
 La inclinación del tronco es `tronco_grados` en `*_calidad.csv` (positiva hacia delante) y equivale a `pelvis_tilt` con el signo cambiado. La extensión lumbar queda bloqueada porque, sin marcadores en la pelvis, no se puede distinguir de la inclinación de la pelvis.
 
-Esta función es **experimental**. Se probó con una persona simulada y con un solo video real de 22 segundos, sin compararla con un sistema de captura de movimiento:
+### Límites
 
-- En ese video, la inclinación del tronco coincidió con los marcadores en la mayoría de los fotogramas, pero **los ángulos de rodilla no fueron fiables** y la revisión de calidad no los comprueba.
+Las dos vías son **experimentales**. Se probaron con una persona simulada y con un solo video real de 22 segundos, sin compararla con un sistema de captura de movimiento:
+
+- En ese video, la inclinación del tronco coincidió con los marcadores en la mayoría de los fotogramas, pero **los ángulos de rodilla no fueron fiables** y la revisión de calidad no los comprueba. Que la aplicación y OpenSim coincidan no significa que los ángulos sean correctos: ambas parten de los mismos puntos.
 - Los puntos vienen de una sola cámara y la profundidad es la medida menos fiable. Las proporciones del cuerpo son aproximadas y no sirven como medidas antropométricas.
-- Una detección errónea que parezca una postura creíble puede pasar la revisión de calidad. Los fotogramas señalados no se eliminan del archivo `.mot`.
-- Los límites de la revisión son valores de partida y se pueden cambiar al inicio del script.
+- Una detección errónea que parezca una postura creíble puede pasar la revisión de calidad. El script no elimina del archivo `.mot` los fotogramas señalados.
+- Los límites de la revisión son valores de partida.
 
 ## Formato de archivo `.OWS`
 
@@ -152,11 +164,12 @@ El código editable está en [`src/OWASWeb.html`](src/OWASWeb.html). El archivo 
 python build.py
 ```
 
-El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediapipe/): MediaPipe Tasks Vision 0.10.35 y el modelo Pose Landmarker *full*. Para probar `src/OWASWeb.html` sin compilar, sírvelo con un servidor local (por ejemplo `python -m http.server`): en ese caso lee los archivos de `vendor/`.
+El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediapipe/) (MediaPipe Tasks Vision 0.10.35 y el modelo Pose Landmarker *full*) y de [`vendor/opensim/`](vendor/opensim/) (modelo Rajagopal 2015, generado con [`herramientas/generar_modelo_js.py`](herramientas/generar_modelo_js.py)). Para probar `src/OWASWeb.html` sin compilar, sírvelo con un servidor local (por ejemplo `python -m http.server`): en ese caso lee los archivos de `vendor/`.
 
 ## Versiones
 
-- **4.6**: exportación de las posturas detectadas a OpenSim (`.trc`) y script experimental para calcular ángulos articulares con revisión de calidad de cada fotograma.
+- **4.7**: cálculo de los ángulos articulares en la propia aplicación y descarga del `.mot`, sin instalar OpenSim ni Python, con revisión de calidad antes de exportar y descarga del modelo con los marcadores; los códigos de espalda, brazos, piernas y carga se muestran en columnas.
+- **[4.6](https://github.com/leolira0568/owas-web/releases/tag/v4.6)**: exportación de las posturas detectadas a OpenSim (`.trc`) y script experimental para calcular ángulos articulares con revisión de calidad de cada fotograma.
 - **[4.5](https://github.com/leolira0568/owas-web/releases/tag/v4.5)**: declaración de privacidad y seguridad (ayuda, pie de página y [PRIVACIDAD.md](PRIVACIDAD.md)); política de seguridad de contenido sin conexiones de red; rostros difuminados en las imágenes guardadas; autoguardado desactivable y borrado de datos locales; estilo plano sin bordes inspirado en Windows 11.
 - **[4.4](https://github.com/leolira0568/owas-web/releases/tag/v4.4)**: el aviso de «Aceptar postura» indica que la detección debe ser revisada por un profesional en Ergonomía.
 - **[4.3](https://github.com/leolira0568/owas-web/releases/tag/v4.3)**: los códigos de espalda, brazos, piernas, carga y tarea se muestran debajo de «Aceptar postura», en una sola columna (nunca al lado del video).
@@ -198,3 +211,5 @@ Los resultados son una ayuda para la evaluación ergonómica y no sustituyen el 
 Los iconos de la interfaz están basados en [Lucide](https://lucide.dev) (licencia ISC, © Lucide Contributors). Los pictogramas de postura son propios del proyecto.
 
 `OWASWeb.html` incluye MediaPipe Tasks Vision y el modelo Pose Landmarker, © Google LLC, bajo la [licencia Apache 2.0](vendor/mediapipe/LICENSE). Ver [`vendor/mediapipe/README.md`](vendor/mediapipe/README.md).
+
+También incluye datos derivados del modelo Rajagopal 2015, © 2015 Stanford University, bajo [licencia MIT](vendor/opensim/LICENSE). Ver [`vendor/opensim/README.md`](vendor/opensim/README.md).

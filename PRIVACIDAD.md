@@ -26,7 +26,7 @@ OWAS Web está diseñada para proteger los datos de los estudios ergonómicos y 
 ## Dónde quedan los datos
 
 - En el **autoguardado del navegador** del equipo, hasta que el usuario lo borre o lo desactive.
-- En los **archivos que el usuario guarda o exporta**: proyectos `.owsp`, archivos `.OWS`, documentos de Word (`.doc`), PDF y archivos para OpenSim (`.trc`). Los proyectos y los informes con imágenes contienen datos personales. Los archivos `.trc` no llevan imágenes, pero sí las posiciones del cuerpo de la persona observada.
+- En los **archivos que el usuario guarda o exporta**: proyectos `.owsp`, archivos `.OWS`, documentos de Word (`.doc`), PDF y archivos para OpenSim (`.trc`, `.mot` y `.csv`). Los proyectos y los informes con imágenes contienen datos personales. Los archivos para OpenSim no llevan imágenes, pero sí las posiciones o los ángulos del cuerpo de la persona observada. Los ángulos del `.mot` se calculan en el navegador, sin enviar datos.
 - En los **resultados del script de OpenSim**, si se usa. Se ejecuta en el equipo del usuario y guarda sus archivos junto al `.trc`.
 
 ## Versión en línea

@@ -103,6 +103,7 @@ dialog#viewer::backdrop,dialog#exportDlg::backdrop{background:rgba(0,0,0,.6)}
 dialog#exportDlg{border:0;border-radius:12px;padding:18px 20px;max-width:min(520px,94vw);background:var(--surface);color:var(--ink)}
 .export-opt{display:grid;grid-template-columns:160px 1fr;gap:12px;align-items:center;margin:12px 0}
 .export-opt p{margin:0}
+.export-opt .btn{white-space:nowrap}
 @media (max-width:520px){.export-opt{grid-template-columns:1fr}}
 #viewImg{display:block;max-width:100%;max-height:70vh;margin:0 auto 10px;border-radius:6px;background:#141414}
 
@@ -159,7 +160,7 @@ main{max-width:1440px}
 .obs-right{margin-top:12px}
 .obs-right .parts{margin-top:0}
 .obs-left .accept-card{margin-top:16px}
-.obs-right .parts .card.part{grid-template-columns:70px 1fr;padding:5px 8px}
+.obs-right .parts .card.part{padding:5px 8px}
 .obs-right .opt{max-width:none;flex:0 1 auto;font-size:12px;padding:3px 7px 3px 4px;gap:5px;min-height:32px}
 .obs-right .opt .pict{width:20px;height:20px}
 .obs-right .opt b{min-width:19px;height:19px}
@@ -205,16 +206,20 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .code-digits span{display:inline-grid;place-items:center;width:40px;height:48px;border:2px solid var(--line);border-radius:8px;background:var(--field);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
 .code-digits span.next{border-color:var(--accent)}
 /* Códigos y tareas en filas horizontales */
-.parts{display:flex;flex-direction:column;gap:5px;margin-top:10px}
-.parts .card.part{display:grid;grid-template-columns:80px 1fr;gap:8px;align-items:center;padding:5px 8px;margin:0}
-.part h3{margin:0;display:flex;flex-direction:column;gap:0;font-size:13px}
+/* Una columna por parte del cuerpo; la tarea ocupa una fila completa debajo */
+.parts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:10px}
+.parts .card.part{display:flex;flex-direction:column;gap:6px;padding:5px 8px;margin:0}
+.parts .part-task{grid-column:1/-1}
+.part h3{margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:13px}
 .part h3 .val{font-size:15px;font-weight:700;color:var(--ink)}
-.part .opts{display:flex;flex-wrap:wrap;gap:4px}
+.part .opts{display:flex;flex-direction:column;gap:4px}
+.part-task .opts{flex-direction:row;flex-wrap:wrap}
 /* Opciones compactas */
 .parts .opt{min-height:32px;padding:3px 7px 3px 4px;gap:5px;font-size:12px;line-height:1.2;margin:0;border-radius:6px}
 .parts .opt .pict{width:20px;height:20px}
 .parts .opt b{min-width:19px;height:19px;font-size:12px;border-radius:5px}
-@media (max-width:640px){.parts .card.part{grid-template-columns:1fr}.part h3{flex-direction:row;justify-content:space-between}}
+@media (max-width:760px){.parts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.parts{grid-template-columns:1fr}}
 .opt{display:flex;width:auto;max-width:210px;font-size:13px;line-height:1.25;text-align:left;gap:8px;align-items:center;background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-bottom:6px;min-height:44px}
 .opt:hover{border-color:var(--accent)}
 .opt.sel{background:var(--accent-soft);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
@@ -354,6 +359,8 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 .top .actions button[data-act="print"],.top .actions button[data-act="export"]{color:var(--accent-ink);border:0}
 .to-top{color:var(--accent-ink)}
 .marks button{background:var(--fill)}
+.mot-panel{background:var(--fill);border-radius:6px;padding:8px 10px;margin:4px 0 8px}
+.mot-panel ul{margin:6px 0;padding-left:18px;max-height:130px;overflow:auto}
 .export-note{background:var(--fill);border-radius:6px;padding:8px 10px;margin:4px 0 8px}
 .privacy-actions{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:8px 0}
 .privacy-actions label{display:inline-flex;gap:8px;align-items:center}
@@ -545,7 +552,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 <button class="to-top" id="toTop" data-icon="arrowUp" title="Subir al inicio" aria-label="Subir al inicio de la página" hidden></button>
 <footer class="foot">
   <p><b>OWAS Web</b> · © 2026 Leonardo Lira · Código abierto con <a href="https://github.com/leolira0568/owas-web/blob/main/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · <a href="https://github.com/leolira0568/owas-web" target="_blank" rel="noopener">Proyecto en GitHub</a> · <a href="#privacidad" id="privacyLink">Privacidad y seguridad</a></p>
-  <p>Detección de posturas: MediaPipe Pose © Google LLC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mediapipe/LICENSE" target="_blank" rel="noopener">licencia Apache 2.0</a> · Iconos basados en <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC) · Método OWAS: Karhu et al. (1977)</p>
+  <p>Detección de posturas: MediaPipe Pose © Google LLC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mediapipe/LICENSE" target="_blank" rel="noopener">licencia Apache 2.0</a> · Modelo Rajagopal 2015 © Stanford University, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/opensim/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · Iconos basados en <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC) · Método OWAS: Karhu et al. (1977)</p>
 </footer>
 <div id="print"></div>
 <input type="file" id="fileOpen" accept=".ows,.OWS,.owsp" hidden>
@@ -566,6 +573,21 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   <div class="export-opt">
     <button class="btn primary" id="expTrc" data-icon="body">OpenSim (.trc)</button>
     <p class="small muted">Descarga las posturas detectadas como marcadores 3D, un fotograma por observación. No incluye imágenes.</p>
+  </div>
+  <div class="export-opt">
+    <button class="btn primary" id="expMot" data-icon="body">OpenSim (.mot)</button>
+    <p class="small muted">Calcula en este equipo los ángulos articulares de cada postura con el modelo Rajagopal 2015, sin instalar OpenSim. Función experimental.</p>
+  </div>
+  <div id="motPanel" class="mot-panel" hidden>
+    <p class="small" id="motSummary"></p>
+    <ul class="small" id="motList" hidden></ul>
+    <label class="small"><input type="checkbox" id="motOnlyOk" checked> Excluir del archivo las posturas poco fiables</label>
+    <p class="small muted">En OpenSim: <i>File → Open Model</i> con el modelo y <i>File → Load Motion</i> con el .mot. La revisión no comprueba las rodillas: sus ángulos no son fiables. Revise el resultado antes de usarlo.</p>
+    <div class="vctrl">
+      <button class="btn primary" id="motSave" data-icon="fileText">Descargar .mot</button>
+      <button class="btn" id="motCsv" data-icon="fileText">Calidad (.csv)</button>
+      <button class="btn" id="motOsim" data-icon="body">Modelo (.osim)</button>
+    </div>
   </div>
   <p class="small export-note">Los informes y proyectos con imágenes contienen datos personales de las personas observadas: guárdelos en un lugar protegido y compártalos solo con quien deba verlos.</p>
   <p class="small" id="expStatus" role="status"></p>
@@ -917,7 +939,7 @@ function renderParts(){
     partsSig = sig;
     $('#parts').innerHTML = PARTS.map(p => `<div class="card part"><h3><span>${p.name}</span><span class="val" data-val="${p.key}"></span></h3><div class="opts">` +
       p.opts.map((o, i) => `<button class="opt" data-k="${p.key}" data-v="${i+1}"><b>${i+1}</b>${pict(p.key, i+1)}<span>${o}</span></button>`).join('') + '</div></div>').join('') +
-      `<div class="card part"><h3><span>Tarea</span><span class="val" data-val="p"></span></h3><div class="opts">` +
+      `<div class="card part part-task"><h3><span>Tarea</span><span class="val" data-val="p"></span></h3><div class="opts">` +
       S.phases.map((p, i) => `<button class="opt" data-k="p" data-v="${i}"><b>${i+1}</b><span>${esc(phaseName(i))}</span></button>`).join('') + '</div></div>';
   }
   $$('#parts .opt').forEach(b => { const on = sel[b.dataset.k] === +b.dataset.v; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', on); });
@@ -1249,11 +1271,11 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-view
 // MediaPipe (Apache 2.0, © Google LLC) va incrustado en base64 al final del archivo; build.py lo inserta.
 const POSE = {lm: null, loading: null};
 const pageParsed = new Promise(res => document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', res) : res());
-async function embedded(id, file){
+async function embedded(id, file, dir = 'mediapipe'){
   await pageParsed;
   const txt = document.getElementById(id).textContent.trim();
   // Sin compilar (src/OWASWeb.html servido por HTTP): se leen los archivos de vendor/
-  if (txt.startsWith('@@')) return new Uint8Array(await (await fetch('../vendor/mediapipe/' + file)).arrayBuffer());
+  if (txt.startsWith('@@')) return new Uint8Array(await (await fetch(`../vendor/${dir}/${file}`)).arrayBuffer());
   const bin = atob(txt), out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
@@ -1806,11 +1828,23 @@ $('#expTrc').onclick = () => exportTRC();
 // Índices de MediaPipe Pose y nombres de los marcadores
 const TRC_MARKERS = [[0,'Nose'],[7,'LEar'],[8,'REar'],[11,'LShoulder'],[12,'RShoulder'],[13,'LElbow'],[14,'RElbow'],[15,'LWrist'],[16,'RWrist'],
   [23,'LHip'],[24,'RHip'],[25,'LKnee'],[26,'RKnee'],[27,'LAnkle'],[28,'RAnkle'],[29,'LHeel'],[30,'RHeel'],[31,'LToe'],[32,'RToe']];
-function buildTRC(list, name){
+// Posturas en orden de tiempo, con los marcadores en los ejes de OpenSim
+function trcRows(list){
   // Tiempo: el segundo del video o, sin video, el orden de la observación por el intervalo
   const rows = list.map((o, i) => ({o, t: o.t != null ? o.t : i * S.interval})).sort((a, b) => a.t - b.t);
   let prev = -Infinity;
-  rows.forEach(r => { if (r.t <= prev) r.t = prev + 0.01; prev = r.t; });   // TRC exige tiempos crecientes
+  rows.forEach(r => {
+    if (r.t <= prev) r.t = prev + 0.01;   // TRC exige tiempos crecientes
+    prev = r.t;
+    // MediaPipe: x derecha de la imagen, y abajo, z hacia el fondo. OpenSim: X adelante, Y arriba, Z derecha.
+    const P = r.o.w3, conv = q => [-q[2], -q[1], -q[0]];
+    const ground = Math.min(...[27, 28, 29, 30, 31, 32].map(k => conv(P[k])[1]));   // apoya los pies en Y = 0
+    r.pts = Object.fromEntries(TRC_MARKERS.map(m => { const c = conv(P[m[0]]); return [m[1], [c[0], c[1] - ground, c[2]]]; }));
+  });
+  return rows;
+}
+function buildTRC(list, name){
+  const rows = trcRows(list);
   const span = rows.at(-1).t - rows[0].t, rate = rows.length > 1 && span > 0 ? (rows.length - 1) / span : 1 / (S.interval || 1);
   const f = v => v.toFixed(5), T = '\t', n = TRC_MARKERS.length;
   const lines = [
@@ -1821,12 +1855,7 @@ function buildTRC(list, name){
     ['', '', ...TRC_MARKERS.flatMap((m, i) => [`X${i+1}`, `Y${i+1}`, `Z${i+1}`])].join(T),
     ''
   ];
-  rows.forEach((r, i) => {
-    // MediaPipe: x derecha de la imagen, y abajo, z hacia el fondo. OpenSim: X adelante, Y arriba, Z derecha.
-    const P = r.o.w3, conv = q => [-q[2], -q[1], -q[0]];
-    const ground = Math.min(...[27, 28, 29, 30, 31, 32].map(k => conv(P[k])[1]));   // apoya los pies en Y = 0
-    lines.push([i + 1, r.t.toFixed(4), ...TRC_MARKERS.flatMap(m => { const c = conv(P[m[0]]); return [f(c[0]), f(c[1] - ground), f(c[2])]; })].join(T));
-  });
+  rows.forEach((r, i) => lines.push([i + 1, r.t.toFixed(4), ...TRC_MARKERS.flatMap(m => r.pts[m[1]].map(f))].join(T)));
   return lines.join('\n') + '\n';
 }
 function exportTRC(){
@@ -1843,6 +1872,255 @@ function downloadBlob(blob, name){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
+/*IK-INICIO*/
+// ---- Cinemática inversa en la aplicación: ajusta el modelo Rajagopal 2015 a los puntos de cada postura ----
+// Marcador: [cuerpo al que se fija, cuerpo cuyo origen marca la articulación, desplazamiento, peso]
+const IK_MARKERS = {Nose: ['torso', 'torso', [.10, .58, 0], 0], LEar: ['torso', 'torso', [0, .58, -.07], 0], REar: ['torso', 'torso', [0, .58, .07], 0]};
+for (const [M, s] of [['L', 'l'], ['R', 'r']]) Object.assign(IK_MARKERS, {
+  [M + 'Shoulder']: ['torso', 'humerus_' + s, [0, 0, 0], 5], [M + 'Elbow']: ['ulna_' + s, 'ulna_' + s, [0, 0, 0], 1], [M + 'Wrist']: ['hand_' + s, 'hand_' + s, [0, 0, 0], 1],
+  [M + 'Hip']: ['pelvis', 'femur_' + s, [0, 0, 0], 5], [M + 'Knee']: ['tibia_' + s, 'tibia_' + s, [0, 0, 0], 1], [M + 'Ankle']: ['talus_' + s, 'talus_' + s, [0, 0, 0], 1],
+  [M + 'Heel']: ['calcn_' + s, 'calcn_' + s, [0, 0, 0], 1], [M + 'Toe']: ['toes_' + s, 'toes_' + s, [.05, 0, 0], 1]});
+// Límites para señalar una postura como poco fiable (valores de partida, no validados)
+const IK_SOFT = .02;
+const IK_LIMITS = {rms: 5, max: 10, trunk: 100, diff: 5, side: 30, twist: 40};
+
+const m3mul = (a, b) => { const r = new Array(9); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) r[i*3+j] = a[i*3]*b[j] + a[i*3+1]*b[3+j] + a[i*3+2]*b[6+j]; return r; };
+const m3vec = (a, v) => [a[0]*v[0] + a[1]*v[1] + a[2]*v[2], a[3]*v[0] + a[4]*v[1] + a[5]*v[2], a[6]*v[0] + a[7]*v[1] + a[8]*v[2]];
+const m3t = a => [a[0], a[3], a[6], a[1], a[4], a[7], a[2], a[5], a[8]];
+const v3add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const v3sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const v3mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
+const v3len = v => Math.hypot(v[0], v[1], v[2]);
+const v3dist = (a, b) => v3len(v3sub(a, b));
+function m3rot(u, a){
+  const c = Math.cos(a), s = Math.sin(a), t = 1 - c, [x, y, z] = u;
+  return [t*x*x + c, t*x*y - s*z, t*x*z + s*y, t*x*y + s*z, t*y*y + c, t*y*z - s*x, t*x*z - s*y, t*y*z + s*x, t*z*z + c];
+}
+const m3euler = o => m3mul(m3mul(m3rot([1, 0, 0], o[0]), m3rot([0, 1, 0], o[1])), m3rot([0, 0, 1], o[2]));
+const median = v => { const s = [...v].sort((a, b) => a - b), n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
+
+// Función de un eje: [pendiente, ordenada] o curva muestreada a intervalos regulares
+function ikFn(f, x){
+  if (Array.isArray(f)) return f[0] * x + f[1];
+  const k = Math.min(Math.max((x - f.x0) / f.dx, 0), f.y.length - 1), i = Math.min(Math.floor(k), f.y.length - 2);
+  return f.y[i] + (f.y[i + 1] - f.y[i]) * (k - i);
+}
+// Prepara la cadena cinemática con un factor de escala por cuerpo
+function ikModel(data, scale = {}){
+  const sc = b => scale[b] ?? 1, index = {};
+  data.coordenadas.forEach((c, i) => { index[c.n] = i; });
+  const joints = data.articulaciones.map(a => {
+    const sp = sc(a.padre[0]), sh = sc(a.hijo[0]);
+    return {parent: a.padre[0], body: a.hijo[0], pR: m3euler(a.padre[2]), pT: a.padre[1].map(v => v * sp), cRt: m3t(m3euler(a.hijo[2])), cT: a.hijo[1].map(v => v * sh), ts: sp,
+      axes: a.ejes.map(e => ({rot: e.rot, u: e.eje, i: index[e.c], f: e.f}))};
+  });
+  return {joints, index, coords: data.coordenadas};
+}
+// Posición y orientación de cada cuerpo en el suelo para las coordenadas q (radianes y metros)
+function ikForward(model, q){
+  const B = {ground: {R: [1, 0, 0, 0, 1, 0, 0, 0, 1], p: [0, 0, 0]}};
+  for (const j of model.joints){
+    const P = B[j.parent], F = m3mul(P.R, j.pR);
+    const o = v3add(P.p, m3vec(P.R, j.pT));
+    let Rj = [1, 0, 0, 0, 1, 0, 0, 0, 1], t = [0, 0, 0];
+    for (const e of j.axes){
+      const v = ikFn(e.f, q[e.i]);
+      if (e.rot) Rj = m3mul(Rj, m3rot(e.u, v));
+      else t = [t[0] + e.u[0] * v * j.ts, t[1] + e.u[1] * v * j.ts, t[2] + e.u[2] * v * j.ts];
+    }
+    const R = m3mul(m3mul(F, Rj), j.cRt);
+    B[j.body] = {R, p: v3sub(v3add(o, m3vec(F, t)), m3vec(R, j.cT))};
+  }
+  return B;
+}
+// Gira cada postura alrededor de la vertical para que las caderas miren hacia +X: la persona puede estar
+// orientada de cualquier forma y, sin este giro, pelvis_tilt deja de medir la inclinación del tronco
+function ikAlign(rows){
+  return rows.map(r => {
+    const L = r.pts.LHip, D = r.pts.RHip, cx = (L[0] + D[0]) / 2, cz = (L[2] + D[2]) / 2;
+    const g = Math.atan2(D[0] - L[0], D[2] - L[2]), co = Math.cos(g), se = Math.sin(g), pts = {};
+    for (const [n, p] of Object.entries(r.pts)){ const x = p[0] - cx, z = p[2] - cz; pts[n] = [co * x - se * z, p[1], se * x + co * z]; }
+    return {...r, pts};
+  });
+}
+// Factores de escala: relación entre lo medido en las posturas y el modelo (la mediana resiste las detecciones erróneas)
+function ikScale(data, rows){
+  const c = ikModel(data), q = c.coords.map(x => x.d), B = ikForward(c, q), d = (a, b) => v3dist(B[a].p, B[b].p);
+  const len = (a, b) => median(rows.map(r => v3dist(r.pts[a], r.pts[b])));
+  const f = {};
+  for (const [M, s] of [['L', 'l'], ['R', 'r']]){
+    for (const [bodies, a, b, p, r] of [[['femur', 'patella'], 'Hip', 'Knee', 'femur', 'tibia'], [['tibia', 'talus', 'calcn', 'toes'], 'Knee', 'Ankle', 'tibia', 'talus'],
+      [['humerus'], 'Shoulder', 'Elbow', 'humerus', 'ulna'], [['ulna', 'radius', 'hand'], 'Elbow', 'Wrist', 'ulna', 'hand']])
+      for (const n of bodies) f[`${n}_${s}`] = len(M + a, M + b) / d(`${p}_${s}`, `${r}_${s}`);
+  }
+  f.pelvis = len('LHip', 'RHip') / d('femur_l', 'femur_r');
+  const trunk = median(rows.map(r => v3dist(v3mid(r.pts.LShoulder, r.pts.RShoulder), v3mid(r.pts.LHip, r.pts.RHip))));
+  f.torso = trunk / v3dist(v3mid(B.humerus_l.p, B.humerus_r.p), v3mid(B.femur_l.p, B.femur_r.p));
+  for (const k in f) f[k] = Math.min(Math.max(f[k], .5), 1.5);
+  return f;
+}
+// Modelo escalado, marcadores y extensión lumbar fija con los hombros sobre las caderas. Sin marcadores en la pelvis,
+// su inclinación y la flexión lumbar se compensan y el ajuste las repartiría al azar: así pelvis_tilt mide todo el tronco
+function ikSetup(data, rows){
+  const aligned = ikAlign(rows), scale = ikScale(data, aligned), model = ikModel(data, scale);
+  const q0 = model.coords.map(c => c.d), B = ikForward(model, q0), markers = [];
+  for (const [name, [body, ref, off, w]] of Object.entries(IK_MARKERS)){
+    if (!w) continue;
+    const p = v3add(B[ref].p, m3vec(B[ref].R, off));
+    markers.push({name, body, w: Math.sqrt(w), loc: m3vec(m3t(B[body].R), v3sub(p, B[body].p))});
+  }
+  const L = B.torso.p, S = v3mid(B.humerus_l.p, B.humerus_r.p), H = v3mid(B.femur_l.p, B.femur_r.p);
+  q0[model.index.lumbar_extension] = -(Math.asin((H[0] - L[0]) / Math.hypot(S[0] - L[0], S[1] - L[1])) - Math.atan2(S[0] - L[0], S[1] - L[1]));
+  const free = model.coords.flatMap((c, i) => c.fija || c.n === 'lumbar_extension' || c.n.endsWith('_beta') ? [] : [i]);
+  // Girar un brazo estirado sobre su eje no mueve ningún marcador: un tirón muy débil hacia la posición neutra evita valores arbitrarios
+  const soft = model.coords.flatMap((c, i) => /^(arm_rot|pro_sup)_/.test(c.n) ? [i] : []);
+  return {model, markers, q0, free, soft, aligned, scale};
+}
+function ikResidual(s, q, pts){
+  const B = ikForward(s.model, q), r = new Array(s.markers.length * 3 + s.soft.length);
+  s.markers.forEach((m, k) => {
+    const b = B[m.body], p = v3add(b.p, m3vec(b.R, m.loc)), t = pts[m.name];
+    for (let i = 0; i < 3; i++) r[k*3+i] = m.w * (p[i] - t[i]);
+  });
+  s.soft.forEach((i, k) => { r[s.markers.length * 3 + k] = IK_SOFT * q[i]; });
+  return r;
+}
+function ikLinSolve(A, b){
+  const n = b.length, x = b.slice();
+  for (let c = 0; c < n; c++){
+    let p = c;
+    for (let i = c + 1; i < n; i++) if (Math.abs(A[i][c]) > Math.abs(A[p][c])) p = i;
+    [A[c], A[p]] = [A[p], A[c]]; [x[c], x[p]] = [x[p], x[c]];
+    if (!A[c][c]) continue;
+    for (let i = c + 1; i < n; i++){
+      const f = A[i][c] / A[c][c];
+      if (!f) continue;
+      for (let j = c; j < n; j++) A[i][j] -= f * A[c][j];
+      x[i] -= f * x[c];
+    }
+  }
+  for (let i = n - 1; i >= 0; i--){
+    let v = x[i];
+    for (let j = i + 1; j < n; j++) v -= A[i][j] * x[j];
+    x[i] = A[i][i] ? v / A[i][i] : 0;
+  }
+  return x;
+}
+// Mínimos cuadrados con pesos (Levenberg-Marquardt), respetando los límites articulares del modelo
+function ikFit(s, pts, start){
+  const q = start.slice(), F = s.free, n = F.length, cs = s.model.coords;
+  const lo = F.map(i => cs[i].lim ? cs[i].min : -Infinity), hi = F.map(i => cs[i].lim ? cs[i].max : Infinity);
+  F.forEach((i, k) => { q[i] = Math.min(Math.max(q[i], lo[k]), hi[k]); });
+  const cost = r => r.reduce((t, v) => t + v * v, 0);
+  let r = ikResidual(s, q, pts), c = cost(r), lambda = 1e-3;
+  for (let it = 0; it < 300; it++){
+    const J = F.map((i, k) => {
+      const h = q[i] + 1e-6 > hi[k] ? -1e-6 : 1e-6, v = q[i];
+      q[i] = v + h; const rr = ikResidual(s, q, pts); q[i] = v;
+      return rr.map((x, m) => (x - r[m]) / h);
+    });
+    const g = J.map(col => col.reduce((t, x, m) => t + x * r[m], 0));
+    const fixed = F.map((i, k) => (q[i] <= lo[k] && g[k] > 0) || (q[i] >= hi[k] && g[k] < 0));
+    const H = J.map(a => J.map(b => a.reduce((t, x, m) => t + x * b[m], 0)));
+    let improved = false, step = 0;
+    for (let tries = 0; tries < 12 && !improved; tries++){
+      const A = H.map((row, a) => row.map((v, b) => fixed[a] || fixed[b] ? (a === b ? 1 : 0) : (a === b ? v * (1 + lambda) + 1e-12 : v)));
+      const d = ikLinSolve(A, g.map((v, k) => fixed[k] ? 0 : -v)), t = q.slice();
+      F.forEach((i, k) => { t[i] = Math.min(Math.max(q[i] + d[k], lo[k]), hi[k]); });
+      const rt = ikResidual(s, t, pts), ct = cost(rt);
+      if (ct < c){ step = c - ct; F.forEach(i => { q[i] = t[i]; }); r = rt; c = ct; lambda = Math.max(lambda / 3, 1e-9); improved = true; }
+      else lambda *= 4;
+    }
+    if (!improved || step < 1e-11) break;
+  }
+  return {q, cost: c};
+}
+// Resuelve una postura y revisa su calidad. Se prueba desde varias posturas iniciales y se conserva el mejor ajuste,
+// porque desde una sola el ajuste puede quedarse en un mínimo local
+function ikFrame(s, row, prev){
+  const P = row.pts, ix = s.model.index, hip = v3mid(P.LHip, P.RHip), sh = v3mid(P.LShoulder, P.RShoulder), v = v3sub(sh, hip);
+  const start = s.q0.slice();
+  start[ix.pelvis_tx] = hip[0]; start[ix.pelvis_ty] = hip[1]; start[ix.pelvis_tz] = hip[2];
+  start[ix.pelvis_tilt] = -Math.atan2(v[0], v[1]);
+  const set = (base, v) => { const t = base.slice(); for (const k in v) t[ix[k]] = v[k]; return t; };
+  const bent = {knee_angle_r: .8, knee_angle_l: .8, hip_flexion_r: .8, hip_flexion_l: .8}, arms = {elbow_flex_r: 1, elbow_flex_l: 1, arm_flex_r: .6, arm_flex_l: .6};
+  const starts = [start, set(start, bent), set(start, arms), set(start, {...bent, ...arms})];
+  if (prev) starts.push(set(prev, {pelvis_tx: hip[0], pelvis_ty: hip[1], pelvis_tz: hip[2]}));
+  const {q} = starts.map(x => ikFit(s, P, x)).reduce((a, b) => b.cost < a.cost ? b : a);
+  const B = ikForward(s.model, q), err = s.markers.map(m => { const b = B[m.body]; return v3dist(v3add(b.p, m3vec(b.R, m.loc)), P[m.name]); });
+  const rms = Math.sqrt(err.reduce((t, e) => t + e * e, 0) / err.length) * 100, max = Math.max(...err) * 100;
+  const deg = a => a * 180 / Math.PI, vertical = deg(Math.acos(v[1] / v3len(v))), measured = deg(Math.atan2(v[0], v[1]));
+  const trunk = -deg(q[ix.pelvis_tilt]), side = Math.abs(deg(q[ix.lumbar_bending])), twist = Math.abs(deg(q[ix.lumbar_rotation])), diff = Math.abs(trunk - measured);
+  const why = [], Lm = IK_LIMITS;
+  if (rms > Lm.rms) why.push(`error medio ${rms.toFixed(1)} cm`);
+  if (max > Lm.max) why.push(`peor marcador ${max.toFixed(1)} cm`);
+  if (vertical > Lm.trunk) why.push(`tronco a ${vertical.toFixed(0)}° de la vertical`);
+  if (diff > Lm.diff) why.push(`modelo y marcadores difieren ${diff.toFixed(0)}°`);
+  if (side > Lm.side) why.push(`flexión lateral ${side.toFixed(0)}°`);
+  if (twist > Lm.twist) why.push(`rotación lumbar ${twist.toFixed(0)}°`);
+  return {t: row.t, q, rms, max, trunk, why};
+}
+function buildMOT(s, frames, name){
+  const cs = s.model.coords, ix = s.model.index, T = '\t';
+  const val = (f, c, i) => { const v = c.n.endsWith('_beta') ? f.q[ix[c.n.slice(0, -5)]] : f.q[i]; return (c.rot ? v * 180 / Math.PI : v).toFixed(8); };
+  return [name, 'version=1', `nRows=${frames.length}`, `nColumns=${cs.length + 1}`, 'inDegrees=yes', 'endheader', ['time', ...cs.map(c => c.n)].join(T),
+    ...frames.map(f => [f.t.toFixed(8), ...cs.map((c, i) => val(f, c, i))].join(T))].join('\n') + '\n';
+}
+/*IK-FIN*/
+// ---- Exportar a OpenSim: ángulos articulares (.mot) calculados en este equipo ----
+let ikResult = null;
+const exportBase = () => (fileName || 'estudio').replace(/\.(ows|owsp)$/i, '');
+async function exportMOT(){
+  const list = filtered().filter(o => o.w3), btn = $('#expMot');
+  $('#motPanel').hidden = true; ikResult = null;
+  if (!list.length){ $('#expStatus').innerHTML = '<span class="warn-box">No hay observaciones con postura detectada para exportar.</span>'; return; }
+  btn.disabled = true;
+  try{
+    const data = JSON.parse(new TextDecoder().decode(await embedded('os-model', 'rajagopal2015.json', 'opensim')));
+    const rows = trcRows(list), s = ikSetup(data, rows), frames = [];
+    let prev = null;
+    for (let i = 0; i < rows.length; i++){
+      $('#expStatus').textContent = `Calculando la postura ${i + 1} de ${rows.length}…`;
+      await new Promise(r => setTimeout(r));   // deja que se pinte el progreso
+      const f = ikFrame(s, s.aligned[i], prev);
+      prev = f.q; frames.push({...f, o: rows[i].o});
+    }
+    ikResult = {s, frames, skipped: filtered().length - list.length};
+    renderMot();
+  }catch(e){
+    console.error(e);
+    $('#expStatus').innerHTML = '<span class="warn-box">No se pudieron calcular los ángulos.</span>';
+  }finally{ btn.disabled = false; }
+}
+const motFrames = () => $('#motOnlyOk').checked ? ikResult.frames.filter(f => !f.why.length) : ikResult.frames;
+function renderMot(){
+  const {frames, skipped} = ikResult, bad = frames.filter(f => f.why.length);
+  $('#expStatus').textContent = '';
+  $('#motSummary').textContent = `${frames.length - bad.length} de ${frames.length} posturas son fiables.` + (skipped ? ` ${skipped} observaciones sin detección no se incluyeron.` : '');
+  $('#motList').innerHTML = bad.map(f => `<li>Observación ${S.obs.indexOf(f.o) + 1}${f.o.t != null ? ` (${fmtTime(f.o.t)})` : ''}: ${f.why.join('; ')}</li>`).join('');
+  $('#motList').hidden = !bad.length;
+  $('#motPanel').hidden = false;
+  updateMotSave();
+  $('#motPanel').scrollIntoView({block: 'nearest'});
+}
+function updateMotSave(){
+  const n = motFrames().length;
+  $('#motSave').disabled = !n;
+  $('#motSave').textContent = n ? `Descargar .mot (${n})` : 'Sin posturas fiables';
+}
+function saveMot(){
+  const name = exportBase() + ' - angulos.mot';
+  downloadBlob(new Blob([buildMOT(ikResult.s, motFrames(), name)], {type: 'text/plain'}), name);
+}
+function saveMotCsv(){
+  const rows = ikResult.frames.map(f => [f.t.toFixed(3), f.trunk.toFixed(1), f.rms.toFixed(1), f.max.toFixed(1), f.why.length ? 'no' : 'si', f.why.join('; ')].join(','));
+  downloadBlob(new Blob(['﻿' + ['tiempo_s,tronco_grados,error_rms_cm,error_max_cm,fiable,motivos', ...rows].join('\r\n') + '\r\n'], {type: 'text/csv'}), exportBase() + ' - calidad.csv');
+}
+async function saveOsim(){
+  const bytes = await embedded('os-osim', 'Rajagopal2015_OWAS.osim', 'opensim');
+  downloadBlob(new Blob([bytes], {type: 'application/xml'}), 'Rajagopal2015_OWAS.osim');
+}
+$('#expMot').onclick = exportMOT; $('#motSave').onclick = saveMot; $('#motCsv').onclick = saveMotCsv; $('#motOsim').onclick = saveOsim; $('#motOnlyOk').onchange = updateMotSave;
 // Figura SVG → PNG (Word no muestra SVG incrustado)
 function svgToPng(svg, scale = 2){
   const vb = (svg.getAttribute('viewBox') || '0 0 640 360').split(/\s+/).map(Number), w = vb[2], h = vb[3];
@@ -1952,7 +2230,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <li><b>Sin conexiones de red.</b> Una política de seguridad de contenido (CSP) impide que la aplicación se conecte a servidores externos, envíe formularios o cargue código de otros sitios.</li>
 <li><b>Videos y fotografías.</b> Se abren desde su equipo y nunca se suben a internet. El video original no se copia en el proyecto. Las imágenes que se guardan se vuelven a codificar, por lo que no conservan metadatos como la ubicación GPS ni el modelo de la cámara.</li>
 <li><b>Rostros difuminados.</b> Con «Difuminar el rostro en las imágenes guardadas» (en «Ajustes de detección», activado por defecto), la cabeza de la persona detectada se pixela en las imágenes de las observaciones, los informes y los proyectos. Solo funciona cuando la detección encuentra a la persona: revise cada imagen antes de compartirla.</li>
-<li><b>Dónde quedan los datos.</b> En el autoguardado de este navegador, hasta que lo borre, y en los archivos que usted guarda o exporta (.owsp, .OWS, .doc, PDF y .trc). Los proyectos .owsp y los informes con imágenes contienen datos personales. Los proyectos y los archivos para OpenSim (.trc) guardan además los puntos 3D del cuerpo detectados, sin imágenes.</li>
+<li><b>Dónde quedan los datos.</b> En el autoguardado de este navegador, hasta que lo borre, y en los archivos que usted guarda o exporta (.owsp, .OWS, .doc, PDF, .trc y .mot). Los proyectos .owsp y los informes con imágenes contienen datos personales. Los proyectos y los archivos para OpenSim (.trc) guardan además los puntos 3D del cuerpo detectados, sin imágenes.</li>
 <li><b>Versión en línea.</b> GitHub Pages sirve el archivo de la aplicación y puede registrar datos técnicos de la visita, como la dirección IP, según la política de privacidad de GitHub. Los datos del estudio no se envían. Para la máxima privacidad, use el archivo OWASWeb.html descargado y sin conexión.</li>
 </ul>
 <p class="small"><b>Protocolo recomendado</b></p>
@@ -1971,7 +2249,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.6 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.7 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
@@ -1999,7 +2277,7 @@ $('#wipeData').addEventListener('click', async () => {
 // ---- Inicio ----
 document.querySelector('.top .actions').addEventListener('click', e => {
   const a = e.target.closest('[data-act]'); if (!a) return;
-  ({new:newFile, open:openFile, join:joinFile, save:() => saveFile(false), saveas:() => saveFile(true), print:doPrint, export:() => { $('#expStatus').textContent = ''; $('#exportDlg').showModal(); }, theme:toggleTheme})[a.dataset.act]();
+  ({new:newFile, open:openFile, join:joinFile, save:() => saveFile(false), saveas:() => saveFile(true), print:doPrint, export:() => { $('#expStatus').textContent = ''; $('#motPanel').hidden = true; $('#exportDlg').showModal(); }, theme:toggleTheme})[a.dataset.act]();
 });
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) showTab(b.dataset.tab); });
 $('#restoredClose').onclick = () => $('#restored').hidden = true;
@@ -2042,5 +2320,7 @@ renderVideoUI();
 <script type="application/octet-stream" id="mp-loader">@@MP_LOADER@@</script>
 <script type="application/octet-stream" id="mp-wasm">@@MP_WASM@@</script>
 <script type="application/octet-stream" id="mp-model">@@MP_MODEL@@</script>
+<script type="application/octet-stream" id="os-model">@@OS_MODEL@@</script>
+<script type="application/octet-stream" id="os-osim">@@OS_OSIM@@</script>
 </body>
 </html>

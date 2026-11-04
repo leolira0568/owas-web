@@ -1,7 +1,7 @@
 """Genera OWASWeb.html, un solo archivo que funciona sin internet.
 
-Toma src/OWASWeb.html y reemplaza cada marcador @@MP_...@@ por el archivo
-correspondiente de vendor/mediapipe codificado en base64.
+Toma src/OWASWeb.html y reemplaza cada marcador @@...@@ por el archivo
+correspondiente de vendor/ codificado en base64.
 
 Uso: python build.py
 """
@@ -9,12 +9,14 @@ import base64
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent
-VENDOR = ROOT / 'vendor' / 'mediapipe'
+VENDOR = ROOT / 'vendor'
 ASSETS = {
-    'MP_BUNDLE': 'vision_bundle.mjs',
-    'MP_LOADER': 'vision_wasm_internal.js',
-    'MP_WASM': 'vision_wasm_internal.wasm',
-    'MP_MODEL': 'pose_landmarker_full.task',
+    'MP_BUNDLE': 'mediapipe/vision_bundle.mjs',
+    'MP_LOADER': 'mediapipe/vision_wasm_internal.js',
+    'MP_WASM': 'mediapipe/vision_wasm_internal.wasm',
+    'MP_MODEL': 'mediapipe/pose_landmarker_full.task',
+    'OS_MODEL': 'opensim/rajagopal2015.json',
+    'OS_OSIM': 'opensim/Rajagopal2015_OWAS.osim',
 }
 
 html = (ROOT / 'src' / 'OWASWeb.html').read_text(encoding='utf-8')
