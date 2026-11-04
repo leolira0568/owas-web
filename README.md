@@ -32,6 +32,7 @@ Desde la versión 4.0 la interfaz es **una sola página, sin pestañas**: 1 · P
 - **Archivos**: abrir, guardar, guardar como y unir archivos `.OWS` (solo datos, compatibles con el original) y proyectos `.owsp` (datos más imágenes).
 - **Imprimir o guardar en PDF**, y copiar los resultados al portapapeles (se pegan como tabla en Excel o Word).
 - **Exportar resultados** *(nuevo en 3.14)*: a **Word** (`.doc`, con la información general, las tablas y figuras APA y las imágenes de las observaciones; desde Word puede guardarse como `.docx`) o a **PDF** (mediante «Guardar como PDF» en el diálogo de impresión).
+- **Exportar a OpenSim** *(nuevo en 4.6)*: guarda las posturas detectadas como marcadores 3D en un archivo `.trc`. Ver [Análisis en OpenSim](#análisis-en-opensim).
 - **Autoguardado** en el navegador para no perder trabajo.
 - **Tema claro u oscuro** *(nuevo en 3.9)*: botón en la barra superior; la elección se recuerda en el navegador. Por defecto se usa el tema claro.
 
@@ -78,6 +79,36 @@ En video, los puntos del cuerpo se promedian entre el fotograma elegido y sus ve
 
 La detección es una ayuda y no reemplaza el criterio de quien observa. Funciona mejor con una sola persona de cuerpo entero, vista de lado o en diagonal. El giro de la espalda es la medida menos fiable desde una sola cámara.
 
+## Análisis en OpenSim
+
+*Exportar resultados → OpenSim (.trc)* guarda las posturas aceptadas que tienen detección automática: 19 marcadores en metros, con los ejes de OpenSim (X adelante, Y arriba, Z derecha) y los pies en el suelo. Cada fila es una postura independiente, no un movimiento continuo.
+
+El script [`herramientas/trc_a_opensim.py`](herramientas/trc_a_opensim.py) vincula ese archivo a un modelo y calcula los ángulos articulares:
+
+```
+pip install opensim
+python herramientas/trc_a_opensim.py "estudio - posturas.trc" --modelo Rajagopal_2015.osim
+```
+
+El script gira cada fotograma para que las caderas miren hacia delante, escala el modelo, coloca los marcadores en sus articulaciones y ejecuta Inverse Kinematics. El modelo debe tener los cuerpos de Rajagopal 2015, incluido en las descargas de OpenSim (en Windows lo busca en la instalación de `opensim-core` 4.6). Genera estos archivos:
+
+| Archivo | Contenido |
+|---|---|
+| `*_modelo.osim` | Modelo escalado con los 19 marcadores |
+| `*_ik.mot` | Ángulos articulares de cada postura |
+| `*_calidad.csv` | Inclinación del tronco, error de los marcadores y fotogramas poco fiables, con el motivo |
+| `*_alineado.trc` | Marcadores girados, usados por Inverse Kinematics |
+| `*_ik_errores.sto` | Error de los marcadores en cada fotograma |
+
+La inclinación del tronco es `tronco_grados` en `*_calidad.csv` (positiva hacia delante) y equivale a `pelvis_tilt` con el signo cambiado. La extensión lumbar queda bloqueada porque, sin marcadores en la pelvis, no se puede distinguir de la inclinación de la pelvis.
+
+Esta función es **experimental**. Se probó con una persona simulada y con un solo video real de 22 segundos, sin compararla con un sistema de captura de movimiento:
+
+- En ese video, la inclinación del tronco coincidió con los marcadores en la mayoría de los fotogramas, pero **los ángulos de rodilla no fueron fiables** y la revisión de calidad no los comprueba.
+- Los puntos vienen de una sola cámara y la profundidad es la medida menos fiable. Las proporciones del cuerpo son aproximadas y no sirven como medidas antropométricas.
+- Una detección errónea que parezca una postura creíble puede pasar la revisión de calidad. Los fotogramas señalados no se eliminan del archivo `.mot`.
+- Los límites de la revisión son valores de partida y se pueden cambiar al inicio del script.
+
 ## Formato de archivo `.OWS`
 
 Texto plano con codificación Windows-1252 y finales de línea CRLF:
@@ -111,7 +142,7 @@ Los estudios con imágenes se guardan como JSON (UTF-8):
                     "det": "213" } ] } }
 ```
 
-`img` es el fotograma o la foto (JPEG de 800 px como máximo), `t` el segundo del video, `src` el nombre del archivo de origen y `det` la propuesta automática de espalda, brazos y piernas, si la hubo (`0` en piernas significa que no se pudo detectar), y `dm` los ángulos medidos en grados: `trunk` (tronco), `twist` (giro), `side` (lateral), `armsUp` (brazos sobre el hombro), `kneeL` y `kneeR` (rodillas) y `walk` (desplazamiento en %). El video no se incluye en el proyecto. El identificador `winowas-proyecto` se conserva del nombre anterior para que los proyectos sigan siendo compatibles entre versiones.
+`img` es el fotograma o la foto (JPEG de 800 px como máximo), `t` el segundo del video, `src` el nombre del archivo de origen y `det` la propuesta automática de espalda, brazos y piernas, si la hubo (`0` en piernas significa que no se pudo detectar), y `dm` los ángulos medidos en grados: `trunk` (tronco), `twist` (giro), `side` (lateral), `armsUp` (brazos sobre el hombro), `kneeL` y `kneeR` (rodillas) y `walk` (desplazamiento en %). `w3` guarda los 33 puntos 3D de la detección en metros, para exportarlos a OpenSim. El video no se incluye en el proyecto. El identificador `winowas-proyecto` se conserva del nombre anterior para que los proyectos sigan siendo compatibles entre versiones.
 
 ## Desarrollo
 
@@ -125,7 +156,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **4.5**: declaración de privacidad y seguridad (ayuda, pie de página y [PRIVACIDAD.md](PRIVACIDAD.md)); política de seguridad de contenido sin conexiones de red; rostros difuminados en las imágenes guardadas; autoguardado desactivable y borrado de datos locales; estilo plano sin bordes inspirado en Windows 11.
+- **4.6**: exportación de las posturas detectadas a OpenSim (`.trc`) y script experimental para calcular ángulos articulares con revisión de calidad de cada fotograma.
+- **[4.5](https://github.com/leolira0568/owas-web/releases/tag/v4.5)**: declaración de privacidad y seguridad (ayuda, pie de página y [PRIVACIDAD.md](PRIVACIDAD.md)); política de seguridad de contenido sin conexiones de red; rostros difuminados en las imágenes guardadas; autoguardado desactivable y borrado de datos locales; estilo plano sin bordes inspirado en Windows 11.
 - **[4.4](https://github.com/leolira0568/owas-web/releases/tag/v4.4)**: el aviso de «Aceptar postura» indica que la detección debe ser revisada por un profesional en Ergonomía.
 - **[4.3](https://github.com/leolira0568/owas-web/releases/tag/v4.3)**: los códigos de espalda, brazos, piernas, carga y tarea se muestran debajo de «Aceptar postura», en una sola columna (nunca al lado del video).
 - **[4.2](https://github.com/leolira0568/owas-web/releases/tag/v4.2)**: el código de postura y «Aceptar postura» se muestran debajo del video; a la derecha quedan solo los códigos.

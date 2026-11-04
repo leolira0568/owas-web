@@ -563,6 +563,10 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
     <button class="btn primary" id="expPdf" data-icon="print">PDF</button>
     <p class="small muted">Abre el diálogo de impresión: elija «Guardar como PDF» como destino.</p>
   </div>
+  <div class="export-opt">
+    <button class="btn primary" id="expTrc" data-icon="body">OpenSim (.trc)</button>
+    <p class="small muted">Descarga las posturas detectadas como marcadores 3D, un fotograma por observación. No incluye imágenes.</p>
+  </div>
   <p class="small export-note">Los informes y proyectos con imágenes contienen datos personales de las personas observadas: guárdelos en un lugar protegido y compártalos solo con quien deba verlos.</p>
   <p class="small" id="expStatus" role="status"></p>
   <div class="vctrl"><button class="btn" id="expClose" data-icon="close">Cerrar</button></div>
@@ -1126,7 +1130,8 @@ function drawSubtitles(g, sub, w, top){
 }
 function captureMedia(){
   const det = lastDet && lastDet.key === mediaKey() ? lastDet : null;
-  const extra = det ? {det: det.code, dm: det.m} : {}, bake = det && $('#bakeSkel').checked ? det : null;
+  const mm = v => Math.round(v * 1000) / 1000;
+  const extra = det ? {det: det.code, dm: det.m, w3: det.W.map(q => [mm(q.x), mm(q.y), mm(q.z)])} : {}, bake = det && $('#bakeSkel').checked ? det : null;
   const face = det && $('#blurFace').checked ? det : null;
   if (mode === 'video' && vid.src && vid.readyState >= 2){
     const img = grabFrame(vid, bake, face);
@@ -1453,7 +1458,7 @@ async function detectPose(){
     const dm = {trunk: rd(r.m.trunk), twist: rd(r.m.twist), side: rd(r.m.side), armsUp: r.m.armsUp};
     if (r.m.kneeL != null){ dm.kneeL = rd(r.m.kneeL); dm.kneeR = rd(r.m.kneeR); }
     if (r.m.walk != null) dm.walk = rd(r.m.walk);
-    lastDet = {key, N: drawN || N, code: `${r.b}${r.a}${r.l || 0}`, m: dm};
+    lastDet = {key, N: drawN || N, W, code: `${r.b}${r.a}${r.l || 0}`, m: dm};
     // No se sobrescriben las partes que el usuario ya eligió a mano en este fotograma
     if (!manual.b) sel.b = r.b;
     if (!manual.a) sel.a = r.a;
@@ -1796,6 +1801,42 @@ $('#toTop').onclick = () => window.scrollTo({top: 0, behavior: matchMedia('(pref
 $('#expClose').onclick = () => $('#exportDlg').close();
 $('#expPdf').onclick = () => { $('#exportDlg').close(); doPrint(); };
 $('#expWord').onclick = () => exportWord();
+$('#expTrc').onclick = () => exportTRC();
+// ---- Exportar a OpenSim: marcadores 3D en formato TRC ----
+// Índices de MediaPipe Pose y nombres de los marcadores
+const TRC_MARKERS = [[0,'Nose'],[7,'LEar'],[8,'REar'],[11,'LShoulder'],[12,'RShoulder'],[13,'LElbow'],[14,'RElbow'],[15,'LWrist'],[16,'RWrist'],
+  [23,'LHip'],[24,'RHip'],[25,'LKnee'],[26,'RKnee'],[27,'LAnkle'],[28,'RAnkle'],[29,'LHeel'],[30,'RHeel'],[31,'LToe'],[32,'RToe']];
+function buildTRC(list, name){
+  // Tiempo: el segundo del video o, sin video, el orden de la observación por el intervalo
+  const rows = list.map((o, i) => ({o, t: o.t != null ? o.t : i * S.interval})).sort((a, b) => a.t - b.t);
+  let prev = -Infinity;
+  rows.forEach(r => { if (r.t <= prev) r.t = prev + 0.01; prev = r.t; });   // TRC exige tiempos crecientes
+  const span = rows.at(-1).t - rows[0].t, rate = rows.length > 1 && span > 0 ? (rows.length - 1) / span : 1 / (S.interval || 1);
+  const f = v => v.toFixed(5), T = '\t', n = TRC_MARKERS.length;
+  const lines = [
+    ['PathFileType', 4, '(X/Y/Z)', name].join(T),
+    ['DataRate', 'CameraRate', 'NumFrames', 'NumMarkers', 'Units', 'OrigDataRate', 'OrigDataStartFrame', 'OrigNumFrames'].join(T),
+    [rate.toFixed(6), rate.toFixed(6), rows.length, n, 'm', rate.toFixed(6), 1, rows.length].join(T),
+    ['Frame#', 'Time', ...TRC_MARKERS.flatMap(m => [m[1], '', ''])].join(T),
+    ['', '', ...TRC_MARKERS.flatMap((m, i) => [`X${i+1}`, `Y${i+1}`, `Z${i+1}`])].join(T),
+    ''
+  ];
+  rows.forEach((r, i) => {
+    // MediaPipe: x derecha de la imagen, y abajo, z hacia el fondo. OpenSim: X adelante, Y arriba, Z derecha.
+    const P = r.o.w3, conv = q => [-q[2], -q[1], -q[0]];
+    const ground = Math.min(...[27, 28, 29, 30, 31, 32].map(k => conv(P[k])[1]));   // apoya los pies en Y = 0
+    lines.push([i + 1, r.t.toFixed(4), ...TRC_MARKERS.flatMap(m => { const c = conv(P[m[0]]); return [f(c[0]), f(c[1] - ground), f(c[2])]; })].join(T));
+  });
+  return lines.join('\n') + '\n';
+}
+function exportTRC(){
+  const list = filtered().filter(o => o.w3);
+  if (!list.length){ $('#expStatus').innerHTML = '<span class="warn-box">No hay observaciones con postura detectada para exportar.</span>'; return; }
+  const name = (fileName || 'estudio').replace(/\.(ows|owsp)$/i, '') + ' - posturas.trc';
+  downloadBlob(new Blob([buildTRC(list, name)], {type: 'text/plain'}), name);
+  const skipped = filtered().length - list.length;
+  $('#expStatus').textContent = `Archivo descargado con ${list.length} posturas.` + (skipped ? ` ${skipped} observaciones sin detección no se incluyeron.` : '');
+}
 function downloadBlob(blob, name){
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = name;
@@ -1911,7 +1952,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <li><b>Sin conexiones de red.</b> Una política de seguridad de contenido (CSP) impide que la aplicación se conecte a servidores externos, envíe formularios o cargue código de otros sitios.</li>
 <li><b>Videos y fotografías.</b> Se abren desde su equipo y nunca se suben a internet. El video original no se copia en el proyecto. Las imágenes que se guardan se vuelven a codificar, por lo que no conservan metadatos como la ubicación GPS ni el modelo de la cámara.</li>
 <li><b>Rostros difuminados.</b> Con «Difuminar el rostro en las imágenes guardadas» (en «Ajustes de detección», activado por defecto), la cabeza de la persona detectada se pixela en las imágenes de las observaciones, los informes y los proyectos. Solo funciona cuando la detección encuentra a la persona: revise cada imagen antes de compartirla.</li>
-<li><b>Dónde quedan los datos.</b> En el autoguardado de este navegador, hasta que lo borre, y en los archivos que usted guarda o exporta (.owsp, .OWS, .doc y PDF). Los proyectos .owsp y los informes con imágenes contienen datos personales.</li>
+<li><b>Dónde quedan los datos.</b> En el autoguardado de este navegador, hasta que lo borre, y en los archivos que usted guarda o exporta (.owsp, .OWS, .doc, PDF y .trc). Los proyectos .owsp y los informes con imágenes contienen datos personales. Los proyectos y los archivos para OpenSim (.trc) guardan además los puntos 3D del cuerpo detectados, sin imágenes.</li>
 <li><b>Versión en línea.</b> GitHub Pages sirve el archivo de la aplicación y puede registrar datos técnicos de la visita, como la dirección IP, según la política de privacidad de GitHub. Los datos del estudio no se envían. Para la máxima privacidad, use el archivo OWASWeb.html descargado y sin conexión.</li>
 </ul>
 <p class="small"><b>Protocolo recomendado</b></p>
@@ -1930,7 +1971,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.5 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.6 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }

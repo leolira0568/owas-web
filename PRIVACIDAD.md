@@ -5,7 +5,7 @@ OWAS Web está diseñada para proteger los datos de los estudios ergonómicos y 
 ## Qué datos maneja la aplicación
 
 - Los datos del estudio que escribe el usuario: empresa, departamento, trabajo estudiado, observador, fecha, hora, intervalo y tareas.
-- Las observaciones: códigos OWAS, tarea, momento del video y, si se activa, la propuesta y los ángulos de la detección automática.
+- Las observaciones: códigos OWAS, tarea, momento del video y, si se activa, la propuesta, los ángulos y los puntos 3D del cuerpo de la detección automática.
 - Los videos y las fotografías que el usuario abre, y las imágenes de cada observación (fotogramas o fotos). Pueden mostrar rostros y otros rasgos que identifican a una persona.
 
 ## Dónde se procesan
@@ -26,7 +26,8 @@ OWAS Web está diseñada para proteger los datos de los estudios ergonómicos y 
 ## Dónde quedan los datos
 
 - En el **autoguardado del navegador** del equipo, hasta que el usuario lo borre o lo desactive.
-- En los **archivos que el usuario guarda o exporta**: proyectos `.owsp`, archivos `.OWS`, documentos de Word (`.doc`) y PDF. Los proyectos y los informes con imágenes contienen datos personales.
+- En los **archivos que el usuario guarda o exporta**: proyectos `.owsp`, archivos `.OWS`, documentos de Word (`.doc`), PDF y archivos para OpenSim (`.trc`). Los proyectos y los informes con imágenes contienen datos personales. Los archivos `.trc` no llevan imágenes, pero sí las posiciones del cuerpo de la persona observada.
+- En los **resultados del script de OpenSim**, si se usa. Se ejecuta en el equipo del usuario y guarda sus archivos junto al `.trc`.
 
 ## Versión en línea
 
