@@ -120,6 +120,7 @@ dialog#exportDlg{border:0;border-radius:12px;padding:18px 20px;max-width:min(520
 .detect details summary{cursor:pointer;color:var(--ink-2);padding:4px 0}
 .detect-opts{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}
 .detect-opts label{display:inline-flex;align-items:center;gap:8px}
+.detect-opts select{width:auto;min-width:120px;padding:4px 8px}
 .detect-cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 16px;margin:8px 0}
 .detect-cfg label{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .detect-cfg input[type=number]{width:80px;padding:5px 8px}
@@ -441,6 +442,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
             <label><input type="checkbox" id="showAngles" checked autocomplete="off"> Mostrar los ángulos de las articulaciones en el esqueleto</label>
             <label><input type="checkbox" id="bakeSkel" checked autocomplete="off"> Grabar el esqueleto, sus ángulos y los subtítulos en la imagen guardada</label>
             <label><input type="checkbox" id="blurFace" checked autocomplete="off"> Difuminar el rostro en las imágenes guardadas (privacidad)</label>
+            <label>Intensidad del difuminado <select data-cfg="blurBlocks"><option value="7">Suave</option><option value="5">Media</option><option value="3">Fuerte</option></select></label>
           </div>
           <div class="detect-cfg">
             <label>Espalda inclinada desde (°) <input type="number" data-cfg="trunk" min="5" max="60"></label>
@@ -1138,8 +1140,11 @@ function pixelateFace(g, N, w, h){
   const box = faceBox(N, w, h);
   if (!box || box.bw < 4 || box.bh < 4) return;
   const {x0, y0, bw, bh} = box;
-  const t = document.createElement('canvas'); t.width = 7; t.height = Math.max(3, Math.round(7 * bh / bw));   // 7 bloques de ancho: no se reconoce la cara
-  t.getContext('2d').drawImage(g.canvas, x0, y0, bw, bh, 0, 0, t.width, t.height);
+  // Bloques de ancho según la intensidad (suave 7, media 5, fuerte 3); cada uno toma el color medio de su zona
+  const n = [3, 5, 7].includes(CFG.blurBlocks) ? CFG.blurBlocks : 5;
+  const t = document.createElement('canvas'); t.width = n; t.height = Math.max(2, Math.round(n * bh / bw));
+  const tg = t.getContext('2d'); tg.imageSmoothingEnabled = true; tg.imageSmoothingQuality = 'high';
+  tg.drawImage(g.canvas, x0, y0, bw, bh, 0, 0, t.width, t.height);
   g.save(); g.imageSmoothingEnabled = false; g.drawImage(t, 0, 0, t.width, t.height, x0, y0, bw, bh); g.restore();
 }
 function grabFrame(src, det, faceDet){
@@ -1328,7 +1333,7 @@ function loadPose(){
 
 // Umbrales ajustables (se recuerdan en este navegador)
 const STYLE_DEFAULT = {skelColor: '#7fd1ff', skelWidth: 3, angColor: '#ffd54a', angSize: 12, arcColor: '#4cd964', arcSize: 15};
-const CFG_DEFAULT = {trunk: 20, twist: 20, knee: 150, lift: 10, walk: true, walkDist: 25, avg3: true, ...STYLE_DEFAULT};
+const CFG_DEFAULT = {trunk: 20, twist: 20, knee: 150, lift: 10, walk: true, walkDist: 25, avg3: true, blurBlocks: 5, ...STYLE_DEFAULT};
 let CFG = {...CFG_DEFAULT};
 try{ Object.assign(CFG, JSON.parse(localStorage.getItem('winowas.detect') || '{}')); }catch(e){}
 const showCfg = () => $$('[data-cfg]').forEach(el => { const k = el.dataset.cfg; if (el.type === 'checkbox') el.checked = !!CFG[k]; else el.value = CFG[k]; });
@@ -2342,7 +2347,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.9 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.10 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }

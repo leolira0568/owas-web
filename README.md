@@ -170,7 +170,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **4.9**: la tarea se muestra como quinta columna, al mismo nivel que espalda, brazos, piernas y carga.
+- **4.10**: el difuminado del rostro cubre la misma área, pero con bloques más grandes que promedian el color, para proteger mejor la identidad; en «Ajustes de detección» se elige su intensidad: suave, media (por defecto) o fuerte.
+- **[4.9](https://github.com/leolira0568/owas-web/releases/tag/v4.9)**: la tarea se muestra como quinta columna, al mismo nivel que espalda, brazos, piernas y carga.
 - **[4.8](https://github.com/leolira0568/owas-web/releases/tag/v4.8)**: al volver a un fotograma o una fotografía ya registrados, se muestran sus códigos bloqueados con el aviso «ya está registrado», para no registrarlos dos veces; el esqueleto muestra los ángulos de codos, hombros, caderas y rodillas y la inclinación del tronco, con un compás verde que indica dónde se mide cada uno, también en las imágenes guardadas (se pueden ocultar en «Ajustes de detección»); el difuminado de privacidad cubre solo la cara, de la frente al mentón, para que se vean el cuello y la postura de la cabeza; en «Ajustes de detección» se pueden cambiar el color y el grosor del esqueleto, y el color y el tamaño del texto de los ángulos y del compás.
 - **[4.7](https://github.com/leolira0568/owas-web/releases/tag/v4.7)**: cálculo de los ángulos articulares en la propia aplicación y descarga del `.mot`, sin instalar OpenSim ni Python, con revisión de calidad antes de exportar y descarga del modelo con los marcadores; los códigos de espalda, brazos, piernas y carga se muestran en columnas.
 - **[4.6](https://github.com/leolira0568/owas-web/releases/tag/v4.6)**: exportación de las posturas detectadas a OpenSim (`.trc`) y script experimental para calcular ángulos articulares con revisión de calidad de cada fotograma.
