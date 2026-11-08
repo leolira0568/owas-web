@@ -568,7 +568,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 <button class="to-top" id="toTop" data-icon="arrowUp" title="Subir al inicio" aria-label="Subir al inicio de la página" hidden></button>
 <footer class="foot">
   <p><b>OWAS Web</b> · © 2026 Leonardo Lira · Código abierto con <a href="https://github.com/leolira0568/owas-web/blob/main/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · <a href="https://github.com/leolira0568/owas-web" target="_blank" rel="noopener">Proyecto en GitHub</a> · <a href="#privacidad" id="privacyLink">Privacidad y seguridad</a></p>
-  <p>Detección de posturas: MediaPipe Pose © Google LLC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mediapipe/LICENSE" target="_blank" rel="noopener">licencia Apache 2.0</a> · Modelo Rajagopal 2015 © Stanford University, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/opensim/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · Iconos basados en <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC) · Método OWAS: Karhu et al. (1977)</p>
+  <p>Detección de posturas: MediaPipe Pose © Google LLC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mediapipe/LICENSE" target="_blank" rel="noopener">licencia Apache 2.0</a> · Modelo Rajagopal 2016 © Stanford University, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/opensim/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · Iconos basados en <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC) · Método OWAS: Karhu et al. (1977)</p>
 </footer>
 <div id="print"></div>
 <input type="file" id="fileOpen" accept=".ows,.OWS,.owsp" hidden>
@@ -592,13 +592,13 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   </div>
   <div class="export-opt">
     <button class="btn primary" id="expMot" data-icon="body">OpenSim (.mot)</button>
-    <p class="small muted">Calcula en este equipo los ángulos articulares de cada postura con el modelo Rajagopal 2015, sin instalar OpenSim. Función experimental.</p>
+    <p class="small muted">Calcula en este equipo los ángulos articulares de cada postura con el modelo Rajagopal 2016 de OpenSim, sin instalarlo. Función experimental.</p>
   </div>
   <div id="motPanel" class="mot-panel" hidden>
     <p class="small" id="motSummary"></p>
     <ul class="small" id="motList" hidden></ul>
     <label class="small"><input type="checkbox" id="motOnlyOk" checked> Excluir del archivo las posturas poco fiables</label>
-    <p class="small muted">En OpenSim: <i>File → Open Model</i> con el modelo y <i>File → Load Motion</i> con el .mot. La revisión no comprueba las rodillas: sus ángulos no son fiables. Revise el resultado antes de usarlo.</p>
+    <p class="small muted">En OpenSim: <i>File → Open Model</i> con el modelo descargado o con <i>Rajagopal2016.osim</i> (carpeta <i>Models/Rajagopal</i> de OpenSim) y <i>File → Load Motion</i> con el .mot. La revisión no comprueba las rodillas: sus ángulos no son fiables. Revise el resultado antes de usarlo.</p>
     <div class="vctrl">
       <button class="btn primary" id="motSave" data-icon="fileText">Descargar .mot</button>
       <button class="btn" id="motCsv" data-icon="fileText">Calidad (.csv)</button>
@@ -1971,7 +1971,7 @@ function downloadBlob(blob, name){
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 /*IK-INICIO*/
-// ---- Cinemática inversa en la aplicación: ajusta el modelo Rajagopal 2015 a los puntos de cada postura ----
+// ---- Cinemática inversa en la aplicación: ajusta el modelo Rajagopal 2016 a los puntos de cada postura ----
 // Marcador: [cuerpo al que se fija, cuerpo cuyo origen marca la articulación, desplazamiento, peso]
 const IK_MARKERS = {Nose: ['torso', 'torso', [.10, .58, 0], 0], LEar: ['torso', 'torso', [0, .58, -.07], 0], REar: ['torso', 'torso', [0, .58, .07], 0]};
 for (const [M, s] of [['L', 'l'], ['R', 'r']]) Object.assign(IK_MARKERS, {
@@ -2174,7 +2174,7 @@ async function exportMOT(){
   if (!list.length){ $('#expStatus').innerHTML = '<span class="warn-box">No hay observaciones con postura detectada para exportar.</span>'; return; }
   btn.disabled = true;
   try{
-    const data = JSON.parse(new TextDecoder().decode(await embedded('os-model', 'rajagopal2015.json', 'opensim')));
+    const data = JSON.parse(new TextDecoder().decode(await embedded('os-model', 'rajagopal2016.json', 'opensim')));
     const rows = trcRows(list), s = ikSetup(data, rows), frames = [];
     let prev = null;
     for (let i = 0; i < rows.length; i++){
@@ -2215,8 +2215,8 @@ function saveMotCsv(){
   downloadBlob(new Blob(['﻿' + ['tiempo_s,tronco_grados,error_rms_cm,error_max_cm,fiable,motivos', ...rows].join('\r\n') + '\r\n'], {type: 'text/csv'}), exportBase() + ' - calidad.csv');
 }
 async function saveOsim(){
-  const bytes = await embedded('os-osim', 'Rajagopal2015_OWAS.osim', 'opensim');
-  downloadBlob(new Blob([bytes], {type: 'application/xml'}), 'Rajagopal2015_OWAS.osim');
+  const bytes = await embedded('os-osim', 'Rajagopal2016_OWAS.osim', 'opensim');
+  downloadBlob(new Blob([bytes], {type: 'application/xml'}), 'Rajagopal2016_OWAS.osim');
 }
 $('#expMot').onclick = exportMOT; $('#motSave').onclick = saveMot; $('#motCsv').onclick = saveMotCsv; $('#motOsim').onclick = saveOsim; $('#motOnlyOk').onchange = updateMotSave;
 // Figura SVG → PNG (Word no muestra SVG incrustado)
@@ -2347,7 +2347,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.10 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.11 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }

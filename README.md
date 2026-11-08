@@ -87,9 +87,9 @@ La detección es una ayuda y no reemplaza el criterio de quien observa. Funciona
 
 ### Ángulos en la aplicación
 
-*Exportar resultados → OpenSim (.mot)* calcula los ángulos articulares en el navegador, sin instalar nada, con la cinemática del modelo Rajagopal 2015 incluida en el archivo. Antes de descargar, muestra qué posturas son poco fiables y por qué, y por defecto las excluye del archivo. También permite descargar la revisión de calidad (`.csv`) y el modelo con los 19 marcadores (`.osim`).
+*Exportar resultados → OpenSim (.mot)* calcula los ángulos articulares en el navegador, sin instalar nada, con la cinemática del modelo Rajagopal 2016 de OpenSim incluida en el archivo. Antes de descargar, muestra qué posturas son poco fiables y por qué, y por defecto las excluye del archivo. También permite descargar la revisión de calidad (`.csv`) y el modelo con los 19 marcadores (`.osim`).
 
-Para verlo en OpenSim: *File → Open Model* con `Rajagopal2015_OWAS.osim` y *File → Load Motion* con el `.mot`. El cálculo usa un modelo escalado a la persona, pero el `.osim` descargado tiene el tamaño estándar, por lo que el cuerpo no coincide exactamente con los marcadores. Para obtener un modelo escalado, usa el script.
+Para verlo en OpenSim: *File → Open Model* con `Rajagopal2016_OWAS.osim` (el modelo Rajagopal 2016 con los 19 marcadores de OWAS Web) o con `Rajagopal2016.osim` de la carpeta `Models/Rajagopal` de OpenSim, y *File → Load Motion* con el `.mot`. El archivo también carga en el modelo Rajagopal 2015 de OpenSense, que tiene las mismas coordenadas y la misma cinemática. El cálculo usa un modelo escalado a la persona, pero el `.osim` descargado tiene el tamaño estándar, por lo que el cuerpo no coincide exactamente con los marcadores. Para obtener un modelo escalado, usa el script.
 
 La aplicación no ejecuta OpenSim: resuelve el mismo problema con su propio código. Se comparó con Inverse Kinematics de OpenSim 4.6 en un video real y en una persona simulada: las dos vías señalaron las mismas posturas y, en las posturas fiables del video, los ángulos difirieron como máximo 0,1° en el tronco, 1,4° en la cadera y 1,1° en la rodilla. En los brazos llegaron a 3,7°, porque la aplicación mantiene cerca de la posición neutra los giros que los marcadores no pueden medir (`arm_rot` y `pro_sup`). Esos giros no tienen valor de medición en ninguna de las dos vías.
 
@@ -166,11 +166,12 @@ El código editable está en [`src/OWASWeb.html`](src/OWASWeb.html). El archivo 
 python build.py
 ```
 
-El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediapipe/) (MediaPipe Tasks Vision 0.10.35 y el modelo Pose Landmarker *full*) y de [`vendor/opensim/`](vendor/opensim/) (modelo Rajagopal 2015, generado con [`herramientas/generar_modelo_js.py`](herramientas/generar_modelo_js.py)). Para probar `src/OWASWeb.html` sin compilar, sírvelo con un servidor local (por ejemplo `python -m http.server`): en ese caso lee los archivos de `vendor/`.
+El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediapipe/) (MediaPipe Tasks Vision 0.10.35 y el modelo Pose Landmarker *full*) y de [`vendor/opensim/`](vendor/opensim/) (modelo Rajagopal 2016, generado con [`herramientas/generar_modelo_js.py`](herramientas/generar_modelo_js.py)). Para probar `src/OWASWeb.html` sin compilar, sírvelo con un servidor local (por ejemplo `python -m http.server`): en ese caso lee los archivos de `vendor/`.
 
 ## Versiones
 
-- **4.10**: el difuminado del rostro cubre la misma área, pero con bloques más grandes que promedian el color, para proteger mejor la identidad; en «Ajustes de detección» se elige su intensidad: suave, media (por defecto) o fuerte.
+- **4.11**: el `.mot` se calcula con el modelo Rajagopal 2016 de OpenSim (con sus límites de la pelvis) y se descarga ese modelo con los 19 marcadores; sigue siendo compatible con Rajagopal 2015.
+- **[4.10](https://github.com/leolira0568/owas-web/releases/tag/v4.10)**: el difuminado del rostro cubre la misma área, pero con bloques más grandes que promedian el color, para proteger mejor la identidad; en «Ajustes de detección» se elige su intensidad: suave, media (por defecto) o fuerte.
 - **[4.9](https://github.com/leolira0568/owas-web/releases/tag/v4.9)**: la tarea se muestra como quinta columna, al mismo nivel que espalda, brazos, piernas y carga.
 - **[4.8](https://github.com/leolira0568/owas-web/releases/tag/v4.8)**: al volver a un fotograma o una fotografía ya registrados, se muestran sus códigos bloqueados con el aviso «ya está registrado», para no registrarlos dos veces; el esqueleto muestra los ángulos de codos, hombros, caderas y rodillas y la inclinación del tronco, con un compás verde que indica dónde se mide cada uno, también en las imágenes guardadas (se pueden ocultar en «Ajustes de detección»); el difuminado de privacidad cubre solo la cara, de la frente al mentón, para que se vean el cuello y la postura de la cabeza; en «Ajustes de detección» se pueden cambiar el color y el grosor del esqueleto, y el color y el tamaño del texto de los ángulos y del compás.
 - **[4.7](https://github.com/leolira0568/owas-web/releases/tag/v4.7)**: cálculo de los ángulos articulares en la propia aplicación y descarga del `.mot`, sin instalar OpenSim ni Python, con revisión de calidad antes de exportar y descarga del modelo con los marcadores; los códigos de espalda, brazos, piernas y carga se muestran en columnas.
@@ -217,4 +218,4 @@ Los iconos de la interfaz están basados en [Lucide](https://lucide.dev) (licenc
 
 `OWASWeb.html` incluye MediaPipe Tasks Vision y el modelo Pose Landmarker, © Google LLC, bajo la [licencia Apache 2.0](vendor/mediapipe/LICENSE). Ver [`vendor/mediapipe/README.md`](vendor/mediapipe/README.md).
 
-También incluye datos derivados del modelo Rajagopal 2015, © 2015 Stanford University, bajo [licencia MIT](vendor/opensim/LICENSE). Ver [`vendor/opensim/README.md`](vendor/opensim/README.md).
+También incluye datos derivados del modelo Rajagopal 2016, © 2015 Stanford University, bajo [licencia MIT](vendor/opensim/LICENSE). Ver [`vendor/opensim/README.md`](vendor/opensim/README.md).

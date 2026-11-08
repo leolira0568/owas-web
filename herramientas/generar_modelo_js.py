@@ -1,11 +1,11 @@
-"""Convierte el modelo Rajagopal 2015 de OpenSim en los datos compactos que usa la aplicación.
+"""Convierte el modelo Rajagopal 2016 de OpenSim en los datos compactos que usa la aplicación.
 
 Genera en vendor/opensim:
-- rajagopal2015.json, con la cadena cinemática: desplazamientos de cada articulación, ejes y
+- rajagopal2016.json, con la cadena cinemática: desplazamientos de cada articulación, ejes y
   funciones. Las curvas de la rodilla se guardan muestreadas cada grado.
-- Rajagopal2015_OWAS.osim, el modelo con los 19 marcadores, para abrirlo en OpenSim.
+- Rajagopal2016_OWAS.osim, el modelo con los 19 marcadores, para abrirlo en OpenSim.
 
-Uso: python generar_modelo_js.py Rajagopal_2015.osim
+Uso: python generar_modelo_js.py Rajagopal2016.osim   (carpeta Models/Rajagopal de OpenSim 4.6)
 """
 import json
 import math
@@ -17,8 +17,8 @@ import opensim as osim
 from trc_a_opensim import colocar_marcadores
 
 CARPETA = pathlib.Path(__file__).resolve().parent.parent / 'vendor/opensim'
-SALIDA = CARPETA / 'rajagopal2015.json'
-MODELO = CARPETA / 'Rajagopal2015_OWAS.osim'
+SALIDA = CARPETA / 'rajagopal2016.json'
+MODELO = CARPETA / 'Rajagopal2016_OWAS.osim'
 
 
 def r(v):

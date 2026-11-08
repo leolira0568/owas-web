@@ -15,8 +15,8 @@ ASSETS = {
     'MP_LOADER': 'mediapipe/vision_wasm_internal.js',
     'MP_WASM': 'mediapipe/vision_wasm_internal.wasm',
     'MP_MODEL': 'mediapipe/pose_landmarker_full.task',
-    'OS_MODEL': 'opensim/rajagopal2015.json',
-    'OS_OSIM': 'opensim/Rajagopal2015_OWAS.osim',
+    'OS_MODEL': 'opensim/rajagopal2016.json',
+    'OS_OSIM': 'opensim/Rajagopal2016_OWAS.osim',
 }
 
 html = (ROOT / 'src' / 'OWASWeb.html').read_text(encoding='utf-8')
