@@ -187,7 +187,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **4.15**: en «Resultados», «Tamaño de las imágenes» permite imprimir o exportar a Word las imágenes de las observaciones en grande, una por fila y del tamaño del visor, con la descripción de la postura.
+- **4.16**: las impresiones, los PDF y los documentos de Word usan margen normal (2,5 cm arriba y abajo y 3 cm a los lados), y las tablas, barras y columnas se ajustan al ancho de la hoja en lugar de cortarse.
+- **[4.15](https://github.com/leolira0568/owas-web/releases/tag/v4.15)**: en «Resultados», «Tamaño de las imágenes» permite imprimir o exportar a Word las imágenes de las observaciones en grande, una por fila y del tamaño del visor, con la descripción de la postura.
 - **[4.14](https://github.com/leolira0568/owas-web/releases/tag/v4.14)**: el botón «Descargar modelo» está siempre a la vista, junto a la lista «Modelo», y descarga el modelo elegido sin calcular antes los ángulos.
 - **[4.13](https://github.com/leolira0568/owas-web/releases/tag/v4.13)**: el modelo de cuerpo completo se descarga en una versión visible, con el tronco, la cabeza y los 520 músculos a la vista y toda su geometría.
 - **[4.12](https://github.com/leolira0568/owas-web/releases/tag/v4.12)**: el `.mot` también puede calcularse para el modelo de cuerpo completo de Wilkinson, con 520 músculos en piernas, tronco y brazos; la columna, el abdomen y el cuello se ajustan con un reparto supuesto.

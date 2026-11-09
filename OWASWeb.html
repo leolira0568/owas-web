@@ -270,6 +270,7 @@ th,td{padding:7px 8px;border-bottom:1px solid var(--line-soft);text-align:left;v
 th{font-size:13px;color:var(--ink-2);font-weight:600}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .tbl-wrap{overflow-x:auto}
+.bar-col{min-width:140px}
 .cats4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .cats4 .col{border:1px solid var(--line-soft);border-radius:8px;overflow:hidden}
 .cats4 .col h3{margin:0;padding:8px 10px;background:var(--surface-2);border-bottom:1px solid var(--line-soft)}
@@ -379,6 +380,8 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 .privacy-actions label{display:inline-flex;gap:8px;align-items:center}
 #privacidad{scroll-margin-top:76px}
 
+/* Margen normal (como en Word: 2,5 cm arriba y abajo, 3 cm a los lados) en el tamaño de papel elegido al imprimir */
+@page{margin:2.5cm 3cm}
 @media print{
   :root[data-theme]{--bg:#fff;--surface:#fff;--surface-2:#f7f6f3;--line:#dcdad3;--line-soft:#ebe9e3;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#6b6962;
     --c1-soft:#d8f0d8;--c2-soft:#fdeec9;--c3-soft:#fbe0d4;--c4-soft:#f5d3d3;--figure-bg:#fff;--tag-ok-bg:#eef8ee;--tag-ok-ink:#185c18;--tag-fix-bg:#fdf3e6;--tag-fix-ink:#7a4300;color-scheme:light}
@@ -392,6 +395,18 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   .stack div,.track .band,.track .val,.cat i{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .cats4 .col .scroll{max-height:none}
   h1{font-size:20px;margin:0 0 4px}
+  /* En papel no hay desplazamiento: lo que no cabe se ajusta al ancho de la hoja en lugar de cortarse */
+  #print{width:auto;max-width:100%}
+  .tbl-wrap{overflow:visible}
+  #print table{width:100%}
+  #print table{font-size:13px}
+  #print th,#print td{padding:4px 6px}
+  #print th,#print td.n{white-space:nowrap}
+  #print td .stack{min-width:70px}
+  .cats4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .bp-row,.scale{grid-template-columns:minmax(120px,1.2fr) 2fr auto;gap:8px}
+  .bp-out,.scale .ph{min-width:90px}
+  .apa table{min-width:0;max-width:100%}
 }
 </style>
 </head>
@@ -1669,7 +1684,7 @@ function resultsHTML(withGallery = true){
     ${stackBar(c)}
     <div class="legend">${CATS.map((k,i) => `<div>${catBadge(i+1,false)}<div><b>${k.t}</b> — ${c[i]} obs. (${pctFmt(c[i]/n*100)})<p>${k.d}</p></div></div>`).join('')}</div></div>`;
   if (phaseFilter < 0 && S.phases.length > 1){
-    h += `<div class="card"><h2>${ico('layers')}Porcentaje por tareas</h2><div class="tbl-wrap"><table><tr><th>Tarea</th><th class="n">Obs.</th><th class="n">% del total</th>${[1,2,3,4].map(k => `<th class="n">Cat. ${k}</th>`).join('')}<th style="min-width:140px"></th></tr>` +
+    h += `<div class="card"><h2>${ico('layers')}Porcentaje por tareas</h2><div class="tbl-wrap"><table><tr><th>Tarea</th><th class="n">Obs.</th><th class="n">% del total</th>${[1,2,3,4].map(k => `<th class="n">Cat. ${k}</th>`).join('')}<th class="bar-col"></th></tr>` +
       S.phases.map((p,i) => { const l = S.obs.filter(o => o.p === i), m = l.length, cc = catCounts(l);
         return `<tr><td>${esc(phaseName(i))}</td><td class="n">${m}</td><td class="n">${pctFmt(m/S.obs.length*100)}</td>${cc.map(x => `<td class="n">${m ? pctFmt(x/m*100) : '–'}</td>`).join('')}<td>${stackBar(cc, true)}</td></tr>`; }).join('') +
       `</table></div></div>`;
@@ -2346,7 +2361,9 @@ function quotedPrintable(str){
   }
   return out + line;
 }
-const WORD_CSS = `body{font-family:"Times New Roman",serif;font-size:12pt}
+const WORD_CSS = `@page WordSection1{margin:2.5cm 3cm 2.5cm 3cm;mso-header-margin:1.25cm;mso-footer-margin:1.25cm}
+div.WordSection1{page:WordSection1}
+body{font-family:"Times New Roman",serif;font-size:12pt}
 h1{font-size:16pt;margin:0 0 4pt} h2{font-size:14pt;margin:18pt 0 6pt} p{margin:0 0 6pt}
 table{border-collapse:collapse;margin:0 0 4pt} th,td{padding:2pt 7pt;vertical-align:top;font-size:11pt}
 .apa th{font-weight:normal;text-align:center;border-top:1.5pt solid #000;border-bottom:1pt solid #000}
@@ -2369,7 +2386,7 @@ async function exportWord(){
     box.querySelectorAll('.apa tbody tr:last-child td').forEach(td => td.style.borderBottom = '1.5pt solid #000');
     for (const svg of [...box.querySelectorAll('svg')]){
       const png = await svgToPng(svg), img = inert.createElement('img');
-      img.src = addPart('image/png', png.b64); img.width = 600; img.height = Math.round(600 * png.h / png.w);
+      img.src = addPart('image/png', png.b64); img.width = 560; img.height = Math.round(560 * png.h / png.w);   // ancho útil con margen normal
       svg.replaceWith(img);
     }
     if ($('#printImg').checked){
@@ -2377,9 +2394,9 @@ async function exportWord(){
       if (items.length){
         let g = '<h2>Imágenes de las observaciones</h2>';
         for (const [o, i] of items){
-          // Grandes: al ancho útil de la página de Word (unos 600 px), sin pasar de lo que cabe en alto
+          // Grandes: al ancho útil de la página de Word con margen normal (unos 560 px), sin pasar de lo que cabe en alto
           const big = $('#printImgSize').value === 'big', [w, h] = await imgSize(o.img), k = catOf(o);
-          const W = big ? Math.round(Math.min(600, 760 * w / h)) : 380, H = Math.round(W * h / w);
+          const W = big ? Math.round(Math.min(560, 760 * w / h)) : 380, H = Math.round(W * h / w);
           g += `<p><img src="${addPart('image/jpeg', o.img.split(',')[1])}" width="${W}" height="${H}"></p>` +
             `<p class="cap"><b>Observación ${i + 1}</b> · código ${codeStr(o)} · categoría ${k} (${esc(CATS[k - 1].t.toLowerCase())}) · ${esc(phaseName(o.p))}${o.t != null ? ' · ' + fmtTime(o.t) : ''}` +
             (big ? `<br>${esc(describe(codeStr(o)))}` : '') +
@@ -2390,7 +2407,7 @@ async function exportWord(){
     }
     const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>OWAS Web</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
-<style>${WORD_CSS}</style></head><body>${box.innerHTML}</body></html>`;
+<style>${WORD_CSS}</style></head><body><div class="WordSection1">${box.innerHTML}</div></body></html>`;
     const B = '----=_OWASWeb_' + Date.now(), wrap = b64 => b64.replace(/.{76}/g, '$&\r\n');
     let mht = `MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="${B}"; type="text/html"\r\n\r\n` +
       `--${B}\r\nContent-Type: text/html; charset="utf-8"\r\nContent-Transfer-Encoding: quoted-printable\r\nContent-Location: file:///C:/owasweb/resultados.htm\r\n\r\n${quotedPrintable(doc)}\r\n`;
@@ -2448,7 +2465,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.15 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.16 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
