@@ -187,7 +187,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **4.17**: en el `.mot`, la altura de la pelvis se ajusta para que el modelo estándar de OpenSim quede apoyado en el suelo (la planta del pie o, de rodillas, la rodilla); antes los pies quedaban de 5 a 10 cm por debajo, porque los ángulos se calculan con el modelo escalado a la persona. Los ángulos no cambian.
+- **4.18**: el margen de las impresiones y los PDF va dentro de la página, así que se respeta aunque en el diálogo de impresión se elija «Márgenes: Ninguno» o «Predeterminado»; la tabla de mediciones de la detección automática se ajusta al ancho de la hoja.
+- **[4.17](https://github.com/leolira0568/owas-web/releases/tag/v4.17)**: en el `.mot`, la altura de la pelvis se ajusta para que el modelo estándar de OpenSim quede apoyado en el suelo (la planta del pie o, de rodillas, la rodilla); antes los pies quedaban de 5 a 10 cm por debajo, porque los ángulos se calculan con el modelo escalado a la persona. Los ángulos no cambian.
 - **[4.16](https://github.com/leolira0568/owas-web/releases/tag/v4.16)**: las impresiones, los PDF y los documentos de Word usan margen normal (2,5 cm arriba y abajo y 3 cm a los lados), y las tablas, barras y columnas se ajustan al ancho de la hoja en lugar de cortarse.
 - **[4.15](https://github.com/leolira0568/owas-web/releases/tag/v4.15)**: en «Resultados», «Tamaño de las imágenes» permite imprimir o exportar a Word las imágenes de las observaciones en grande, una por fila y del tamaño del visor, con la descripción de la postura.
 - **[4.14](https://github.com/leolira0568/owas-web/releases/tag/v4.14)**: el botón «Descargar modelo» está siempre a la vista, junto a la lista «Modelo», y descarga el modelo elegido sin calcular antes los ángulos.

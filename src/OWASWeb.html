@@ -380,8 +380,9 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 .privacy-actions label{display:inline-flex;gap:8px;align-items:center}
 #privacidad{scroll-margin-top:76px}
 
-/* Margen normal (como en Word: 2,5 cm arriba y abajo, 3 cm a los lados) en el tamaño de papel elegido al imprimir */
-@page{margin:2.5cm 3cm}
+/* Margen normal (como en Word: 2,5 cm arriba y abajo, 3 cm a los lados). Va dentro de la página, como relleno que se
+   repite en cada hoja, para que no dependa de los márgenes elegidos en el diálogo de impresión (ni de «Ninguno») */
+@page{margin:0}
 @media print{
   :root[data-theme]{--bg:#fff;--surface:#fff;--surface-2:#f7f6f3;--line:#dcdad3;--line-soft:#ebe9e3;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#6b6962;
     --c1-soft:#d8f0d8;--c2-soft:#fdeec9;--c3-soft:#fbe0d4;--c4-soft:#f5d3d3;--figure-bg:#fff;--tag-ok-bg:#eef8ee;--tag-ok-ink:#185c18;--tag-fix-bg:#fdf3e6;--tag-fix-ink:#7a4300;color-scheme:light}
@@ -396,7 +397,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   .cats4 .col .scroll{max-height:none}
   h1{font-size:20px;margin:0 0 4px}
   /* En papel no hay desplazamiento: lo que no cabe se ajusta al ancho de la hoja en lugar de cortarse */
-  #print{width:auto;max-width:100%}
+  #print{width:auto;max-width:100%;padding:2.5cm 3cm !important;box-sizing:border-box;box-decoration-break:clone;-webkit-box-decoration-break:clone}
   .tbl-wrap{overflow:visible}
   #print table{width:100%}
   #print table{font-size:13px}
@@ -407,6 +408,9 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   .bp-row,.scale{grid-template-columns:minmax(120px,1.2fr) 2fr auto;gap:8px}
   .bp-out,.scale .ph{min-width:90px}
   .apa table{min-width:0;max-width:100%}
+  /* Las tablas APA anchas (mediciones) caben en la hoja: cabeceras en varias líneas y menos espacio entre columnas */
+  #print .apa th{white-space:normal}
+  #print .apa th,#print .apa td{padding:3px 7px}
 }
 </style>
 </head>
@@ -2474,7 +2478,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.17 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.18 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
