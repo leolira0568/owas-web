@@ -98,6 +98,11 @@ td.postura{white-space:nowrap}
 .gallery button{display:block;width:100%;padding:0;border:0;background:#141414;min-height:0}
 .gallery img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain}
 .gallery figcaption{padding:7px 9px;font-size:13px;display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center}
+/* Imágenes grandes al imprimir: una por fila, al ancho de la página y sin recortar, como en el visor */
+.gallery.big{grid-template-columns:1fr;gap:16px}
+.gallery.big img{aspect-ratio:auto;width:auto;max-width:100%;max-height:21cm;margin:0 auto}
+.gallery.big button{background:transparent}
+.gallery.big .big-desc{display:block;width:100%;font-size:13px;color:var(--ink-2)}
 dialog#viewer{border:0;border-radius:12px;padding:14px;background:var(--surface);color:var(--ink);max-width:min(960px,94vw);width:auto}
 dialog#viewer::backdrop,dialog#exportDlg::backdrop{background:rgba(0,0,0,.6)}
 dialog#exportDlg{border:0;border-radius:12px;padding:18px 20px;max-width:min(520px,94vw);background:var(--surface);color:var(--ink)}
@@ -543,6 +548,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
     <div class="filter"><label>Material: <select class="phaseFilter"></select></label>
       <label><input type="checkbox" id="printBg" checked> Incluir información general al imprimir</label>
       <label><input type="checkbox" id="printImg" checked> Incluir imágenes al imprimir</label>
+      <label>Tamaño de las imágenes <select id="printImgSize"><option value="small">Pequeñas (cuadrícula)</option><option value="big">Grandes (una por fila, como en el visor)</option></select></label>
       <label><input type="checkbox" id="printApa" checked> Incluir tablas y figuras APA al imprimir</label>
       <label><input type="checkbox" id="showAgree" autocomplete="off"> Mostrar tablas de la detección automática (concordancia y mediciones)</label>
       <button class="btn" id="copyBtn" data-icon="copy">Copiar resultados</button></div>
@@ -1698,12 +1704,13 @@ function agreementHTML(list){
     </table></div></div>`;
 }
 // Imágenes de las observaciones, de la categoría más grave a la menos grave
-function galleryHTML(list, lazy = true){
+// big: una imagen por fila, del tamaño del visor y con la descripción de la postura (para imprimir)
+function galleryHTML(list, lazy = true, big = false){
   const items = list.map(o => [o, S.obs.indexOf(o)]).filter(([o]) => o.img).sort((x, y) => catOf(y[0]) - catOf(x[0]) || x[1] - y[1]);
   if (!items.length) return '';
-  return `<div class="card"><h2>${ico('image')}Imágenes de las observaciones</h2><p class="small muted" style="margin-top:-6px">${items.length === 1 ? "1 imagen." : items.length + " imágenes, ordenadas de mayor a menor riesgo."}</p><div class="gallery">` +
+  return `<div class="card"><h2>${ico('image')}Imágenes de las observaciones</h2><p class="small muted" style="margin-top:-6px">${items.length === 1 ? "1 imagen." : items.length + " imágenes, ordenadas de mayor a menor riesgo."}</p><div class="gallery${big ? ' big' : ''}">` +
     items.map(([o, i]) => `<figure><button data-view="${i}" aria-label="Ampliar la imagen de la observación ${i+1}"><img src="${o.img}" alt=""${lazy ? ' loading="lazy"' : ''}></button>
-      <figcaption>${catBadge(catOf(o), false)}<b>${codeStr(o)}</b><span class="muted">Obs. ${i+1} · ${esc(phaseName(o.p))}${o.t != null ? ' · ' + fmtTime(o.t) : ''}</span>${o.det && o.dm ? `<span class="det-cap">Detección automática: ${esc(detLines(o.det, o.dm).join(' · '))}${detTag(o)}</span>` : ''}</figcaption></figure>`).join('') + '</div></div>';
+      <figcaption>${catBadge(catOf(o), false)}<b>${codeStr(o)}</b><span class="muted">Obs. ${i+1} · ${esc(phaseName(o.p))}${o.t != null ? ' · ' + fmtTime(o.t) : ''}</span>${big ? `<span class="big-desc">${esc(describe(codeStr(o)))}</span>` : ''}${o.det && o.dm ? `<span class="det-cap">Detección automática: ${esc(detLines(o.det, o.dm).join(' · '))}${detTag(o)}</span>` : ''}</figcaption></figure>`).join('') + '</div></div>';
 }
 function describe(k){ return PARTS.map((p,i) => `${p.name}: ${p.opts[k[i]-1]}`).join(' · '); }
 function renderResults(){ fillPhaseFilters(); $('#results').innerHTML = resultsHTML() + apaCard('cat'); }
@@ -1903,7 +1910,7 @@ async function doPrint(){
   const apa = $('#printApa').checked ? apaSections() : null;
   $('#print').innerHTML = title + ($('#printBg').checked ? bgBlock() : '') + resultsHTML(false) + bodyHTML() +
     (apa && (apa.cat || apa.body) ? `<div class="card"><h2>Tablas y figuras</h2>${apa.cat}${apa.body}${apaRefs()}</div>` : '') +
-    ($('#printImg').checked ? galleryHTML(filtered(), false) : '');
+    ($('#printImg').checked ? galleryHTML(filtered(), false, $('#printImgSize').value === 'big') : '');
   // Las imágenes deben estar cargadas y decodificadas antes de abrir el diálogo de impresión
   await Promise.all([...$('#print').querySelectorAll('img')].map(img =>
     (img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })).then(() => img.decode ? img.decode().catch(() => {}) : null)));
@@ -2370,9 +2377,12 @@ async function exportWord(){
       if (items.length){
         let g = '<h2>Imágenes de las observaciones</h2>';
         for (const [o, i] of items){
-          const [w, h] = await imgSize(o.img), W = 380, H = Math.round(W * h / w), k = catOf(o);
+          // Grandes: al ancho útil de la página de Word (unos 600 px), sin pasar de lo que cabe en alto
+          const big = $('#printImgSize').value === 'big', [w, h] = await imgSize(o.img), k = catOf(o);
+          const W = big ? Math.round(Math.min(600, 760 * w / h)) : 380, H = Math.round(W * h / w);
           g += `<p><img src="${addPart('image/jpeg', o.img.split(',')[1])}" width="${W}" height="${H}"></p>` +
             `<p class="cap"><b>Observación ${i + 1}</b> · código ${codeStr(o)} · categoría ${k} (${esc(CATS[k - 1].t.toLowerCase())}) · ${esc(phaseName(o.p))}${o.t != null ? ' · ' + fmtTime(o.t) : ''}` +
+            (big ? `<br>${esc(describe(codeStr(o)))}` : '') +
             (o.det && o.dm ? `<br>Detección automática: ${esc(detLines(o.det, o.dm).join(' · '))}` : '') + '</p>';
         }
         box.insertAdjacentHTML('beforeend', g);
@@ -2438,7 +2448,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.14 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.15 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
