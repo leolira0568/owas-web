@@ -87,7 +87,7 @@ La detección es una ayuda y no reemplaza el criterio de quien observa. Funciona
 
 ### Ángulos en la aplicación
 
-*Exportar resultados → OpenSim (.mot)* calcula los ángulos articulares en el navegador, sin instalar nada, con la cinemática del modelo Rajagopal 2016 de OpenSim incluida en el archivo. Antes de descargar, muestra qué posturas son poco fiables y por qué, y por defecto las excluye del archivo. También permite descargar la revisión de calidad (`.csv`) y el modelo con los 19 marcadores (`.osim`).
+*Exportar resultados → OpenSim (.mot)* calcula los ángulos articulares en el navegador, sin instalar nada, con la cinemática del modelo de OpenSim incluida en el archivo. Por defecto usa el modelo de cuerpo completo (520 músculos, ver más abajo); en la lista «Modelo» se puede elegir Rajagopal 2016. Antes de descargar, muestra qué posturas son poco fiables y por qué, y por defecto las excluye del archivo. También permite descargar la revisión de calidad (`.csv`) y el modelo con los 19 marcadores (`.osim`).
 
 Para verlo en OpenSim: *File → Open Model* con `Rajagopal2016_OWAS.osim` (el modelo Rajagopal 2016 con los 19 marcadores de OWAS Web) o con `Rajagopal2016.osim` de la carpeta `Models/Rajagopal` de OpenSim, y *File → Load Motion* con el `.mot`. El archivo también carga en el modelo Rajagopal 2015 de OpenSense, que tiene las mismas coordenadas y la misma cinemática. El cálculo usa un modelo escalado a la persona, pero el `.osim` descargado tiene el tamaño estándar, por lo que el cuerpo no coincide exactamente con los marcadores. Para que ese modelo quede apoyado en el suelo, la aplicación ajusta en cada postura solo la altura de la pelvis (`pelvis_ty`), de modo que su punto más bajo (la planta del pie o, de rodillas, la rodilla) toque el suelo. Para obtener un modelo escalado, usa el script.
 
@@ -187,7 +187,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **4.18**: el margen de las impresiones y los PDF va dentro de la página, así que se respeta aunque en el diálogo de impresión se elija «Márgenes: Ninguno» o «Predeterminado»; la tabla de mediciones de la detección automática se ajusta al ancho de la hoja.
+- **4.19**: al exportar el `.mot`, el modelo de cuerpo completo (520 músculos) viene elegido por defecto; Rajagopal 2016 sigue disponible en la lista «Modelo».
+- **[4.18](https://github.com/leolira0568/owas-web/releases/tag/v4.18)**: el margen de las impresiones y los PDF va dentro de la página, así que se respeta aunque en el diálogo de impresión se elija «Márgenes: Ninguno» o «Predeterminado»; la tabla de mediciones de la detección automática se ajusta al ancho de la hoja.
 - **[4.17](https://github.com/leolira0568/owas-web/releases/tag/v4.17)**: en el `.mot`, la altura de la pelvis se ajusta para que el modelo estándar de OpenSim quede apoyado en el suelo (la planta del pie o, de rodillas, la rodilla); antes los pies quedaban de 5 a 10 cm por debajo, porque los ángulos se calculan con el modelo escalado a la persona. Los ángulos no cambian.
 - **[4.16](https://github.com/leolira0568/owas-web/releases/tag/v4.16)**: las impresiones, los PDF y los documentos de Word usan margen normal (2,5 cm arriba y abajo y 3 cm a los lados), y las tablas, barras y columnas se ajustan al ancho de la hoja en lugar de cortarse.
 - **[4.15](https://github.com/leolira0568/owas-web/releases/tag/v4.15)**: en «Resultados», «Tamaño de las imágenes» permite imprimir o exportar a Word las imágenes de las observaciones en grande, una por fila y del tamaño del visor, con la descripción de la postura.

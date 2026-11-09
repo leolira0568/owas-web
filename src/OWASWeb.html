@@ -624,7 +624,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
     <div>
       <p class="small muted">Calcula en este equipo los ángulos articulares de cada postura con un modelo de OpenSim, sin instalarlo. Función experimental.</p>
       <div class="mot-model">
-        <label class="small">Modelo <select id="motModel"><option value="rajagopal2016">Rajagopal 2016 (músculos en las piernas)</option><option value="wilkinson2021">Cuerpo completo (520 músculos)</option></select></label>
+        <label class="small">Modelo <select id="motModel"><option value="rajagopal2016">Rajagopal 2016 (músculos en las piernas)</option><option value="wilkinson2021" selected>Cuerpo completo (520 músculos)</option></select></label>
         <button class="btn" id="motOsim" data-icon="body">Descargar modelo</button> <span class="small muted" id="motModelInfo"></span>
       </div>
     </div>
@@ -2478,7 +2478,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.18 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.19 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
