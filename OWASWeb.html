@@ -364,7 +364,8 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 .to-top{color:var(--accent-ink)}
 .marks button{background:var(--fill)}
 .mot-panel{background:var(--fill);border-radius:6px;padding:8px 10px;margin:4px 0 8px}
-.mot-model{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:6px;max-width:100%}
+.mot-model{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:6px;max-width:100%}
+.mot-model label{display:inline-flex;align-items:center;gap:8px;max-width:100%;min-width:0}
 .export-opt > *{min-width:0}
 .mot-model select{width:auto;max-width:100%;min-width:0;padding:4px 8px}
 .mot-panel ul{margin:6px 0;padding-left:18px;max-height:130px;overflow:auto}
@@ -597,7 +598,10 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
     <button class="btn primary" id="expMot" data-icon="body">OpenSim (.mot)</button>
     <div>
       <p class="small muted">Calcula en este equipo los ángulos articulares de cada postura con un modelo de OpenSim, sin instalarlo. Función experimental.</p>
-      <label class="small mot-model">Modelo <select id="motModel"><option value="rajagopal2016">Rajagopal 2016 (músculos en las piernas)</option><option value="wilkinson2021">Cuerpo completo (520 músculos)</option></select></label>
+      <div class="mot-model">
+        <label class="small">Modelo <select id="motModel"><option value="rajagopal2016">Rajagopal 2016 (músculos en las piernas)</option><option value="wilkinson2021">Cuerpo completo (520 músculos)</option></select></label>
+        <button class="btn" id="motOsim" data-icon="body">Descargar modelo</button> <span class="small muted" id="motModelInfo"></span>
+      </div>
     </div>
   </div>
   <div id="motPanel" class="mot-panel" hidden>
@@ -609,7 +613,6 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
     <div class="vctrl">
       <button class="btn primary" id="motSave" data-icon="fileText">Descargar .mot</button>
       <button class="btn" id="motCsv" data-icon="fileText">Calidad (.csv)</button>
-      <button class="btn" id="motOsim" data-icon="body">Modelo (.osim)</button>
     </div>
   </div>
   <p class="small export-note">Los informes y proyectos con imágenes contienen datos personales de las personas observadas: guárdelos en un lugar protegido y compártalos solo con quien deba verlos.</p>
@@ -2243,8 +2246,8 @@ const MOT_DATA = {rajagopal2016: 'os-model', wilkinson2021: 'os-wilk'};
 // Versión visible del modelo de Wilkinson (herramientas/modelo_cuerpo_completo.py), adjunta a la versión 4.13 de GitHub
 const MODELO_ZIP_URL = 'https://github.com/leolira0568/owas-web/releases/download/v4.13/ModeloCuerpoCompleto_OWAS.zip';
 const MOT_HELP = {
-  rajagopal2016: 'En OpenSim: <i>File → Open Model</i> con el modelo descargado o con <i>Rajagopal2016.osim</i> (carpeta <i>Models/Rajagopal</i> de OpenSim) y <i>File → Load Motion</i> con el .mot.',
-  wilkinson2021: 'En OpenSim: descargue el modelo con el botón «Modelo (.zip)», descomprímalo, ábralo con <i>File → Open Model</i> (<i>cyclistFullBodyMuscle_OWAS.osim</i>, junto a su carpeta <i>Geometry</i>) y cargue el .mot con <i>File → Load Motion</i>. La flexión, la inclinación y el giro del tronco se reparten entre la pelvis y las 17 vértebras con proporciones supuestas, no medidas, y el cuello se estima con la nariz y las orejas.'
+  rajagopal2016: 'En OpenSim: <i>File → Open Model</i> con el modelo («Descargar modelo», junto a la lista «Modelo») o con <i>Rajagopal2016.osim</i> (carpeta <i>Models/Rajagopal</i> de OpenSim) y <i>File → Load Motion</i> con el .mot.',
+  wilkinson2021: 'En OpenSim: descargue el modelo con «Descargar modelo», junto a la lista «Modelo», descomprímalo, ábralo con <i>File → Open Model</i> (<i>cyclistFullBodyMuscle_OWAS.osim</i>, junto a su carpeta <i>Geometry</i>) y cargue el .mot con <i>File → Load Motion</i>. La flexión, la inclinación y el giro del tronco se reparten entre la pelvis y las 17 vértebras con proporciones supuestas, no medidas, y el cuello se estima con la nariz y las orejas.'
 };
 const exportBase = () => (fileName || 'estudio').replace(/\.(ows|owsp)$/i, '');
 async function exportMOT(){
@@ -2278,7 +2281,6 @@ function renderMot(){
   $('#motList').innerHTML = bad.map(f => `<li>Observación ${S.obs.indexOf(f.o) + 1}${f.o.t != null ? ` (${fmtTime(f.o.t)})` : ''}: ${f.why.join('; ')}</li>`).join('');
   $('#motList').hidden = !bad.length;
   $('#motHelp').innerHTML = MOT_HELP[ikResult.key];
-  $('#motOsim').textContent = ikResult.key === 'wilkinson2021' ? 'Modelo (.zip)' : 'Modelo (.osim)';
   $('#motPanel').hidden = false;
   updateMotSave();
   $('#motPanel').scrollIntoView({block: 'nearest'});
@@ -2296,14 +2298,18 @@ function saveMotCsv(){
   const rows = ikResult.frames.map(f => [f.t.toFixed(3), f.trunk.toFixed(1), f.rms.toFixed(1), f.max.toFixed(1), f.why.length ? 'no' : 'si', f.why.join('; ')].join(','));
   downloadBlob(new Blob(['﻿' + ['tiempo_s,tronco_grados,error_rms_cm,error_max_cm,fiable,motivos', ...rows].join('\r\n') + '\r\n'], {type: 'text/csv'}), exportBase() + ' - calidad.csv');
 }
+// El modelo elegido en la lista se puede descargar en cualquier momento, sin calcular antes los ángulos
+const MODEL_INFO = {rajagopal2016: '.osim, incluido en la aplicación', wilkinson2021: '.zip de 2,2 MB, se descarga de GitHub'};
+const updateModelInfo = () => { $('#motModelInfo').textContent = MODEL_INFO[$('#motModel').value]; };
 async function saveOsim(){
   // El modelo de cuerpo completo, con su geometría, es demasiado grande para incluirlo: se descarga de GitHub
-  if (ikResult.key === 'wilkinson2021'){ window.open(MODELO_ZIP_URL, '_blank', 'noopener'); return; }
+  if ($('#motModel').value === 'wilkinson2021'){ window.open(MODELO_ZIP_URL, '_blank', 'noopener'); return; }
   const bytes = await embedded('os-osim', 'Rajagopal2016_OWAS.osim', 'opensim');
   downloadBlob(new Blob([bytes], {type: 'application/xml'}), 'Rajagopal2016_OWAS.osim');
 }
 $('#expMot').onclick = exportMOT; $('#motSave').onclick = saveMot; $('#motCsv').onclick = saveMotCsv; $('#motOsim').onclick = saveOsim; $('#motOnlyOk').onchange = updateMotSave;
-$('#motModel').onchange = () => { $('#motPanel').hidden = true; ikResult = null; $('#expStatus').textContent = ''; };
+$('#motModel').onchange = () => { $('#motPanel').hidden = true; ikResult = null; $('#expStatus').textContent = ''; updateModelInfo(); };
+updateModelInfo();
 // Figura SVG → PNG (Word no muestra SVG incrustado)
 function svgToPng(svg, scale = 2){
   const vb = (svg.getAttribute('viewBox') || '0 0 640 360').split(/\s+/).map(Number), w = vb[2], h = vb[3];
@@ -2432,7 +2438,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.13 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.14 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
