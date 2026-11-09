@@ -2160,7 +2160,8 @@ function ikSetup(data, rows, cfg = IK_MODELS.rajagopal2016){
   model.joints.forEach(j => { parent[j.body] = j.parent; });
   for (const b of [...need]) for (let x = parent[b]; x && x !== 'ground'; x = parent[x]) need.add(x);
   const fk = {...model, joints: model.joints.filter(j => need.has(j.body))};
-  return {cfg, model, fk, markers, q0, base, params, soft, aligned, scale};
+  // Modelo estándar (sin escalar), el que se abre en OpenSim, y puntos de sus pies y tibias para apoyarlo en el suelo
+  return {cfg, model, fk, markers, q0, base, params, soft, aligned, scale, model0: ikModel(data), suelo: data.suelo};
 }
 function ikQ(s, p){
   const q = s.base.slice();
@@ -2253,6 +2254,14 @@ function ikFrame(s, row, prev){
   if (diff > Lm.diff) why.push(`modelo y marcadores difieren ${diff.toFixed(0)}°`);
   if (side > Lm.side) why.push(`flexión lateral ${side.toFixed(0)}°`);
   if (twist > Lm.twist) why.push(`${s.cfg.twistLabel} ${twist.toFixed(0)}°`);
+  // El .mot se carga en el modelo estándar, de otro tamaño que el escalado a la persona: se ajusta solo la altura de la
+  // pelvis para que su punto más bajo (la planta del pie o, de rodillas, la rodilla) quede en el suelo
+  if (s.suelo){
+    const B0 = ikForward(s.model0, q);
+    let low = Infinity;
+    for (const [b, pts] of Object.entries(s.suelo)){ const R = B0[b].R, y = B0[b].p[1]; for (const p of pts) low = Math.min(low, y + R[3]*p[0] + R[4]*p[1] + R[5]*p[2]); }
+    q[ix.pelvis_ty] -= low;
+  }
   return {t: row.t, q, p: best.p, rms, max, trunk, why};
 }
 function buildMOT(s, frames, name){
@@ -2465,7 +2474,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.16 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.17 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
