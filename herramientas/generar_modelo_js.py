@@ -1,24 +1,24 @@
-"""Convierte el modelo Rajagopal 2016 de OpenSim en los datos compactos que usa la aplicación.
+"""Convierte un modelo de OpenSim en los datos compactos que usa la aplicación.
 
 Genera en vendor/opensim:
-- rajagopal2016.json, con la cadena cinemática: desplazamientos de cada articulación, ejes y
-  funciones. Las curvas de la rodilla se guardan muestreadas cada grado.
-- Rajagopal2016_OWAS.osim, el modelo con los 19 marcadores, para abrirlo en OpenSim.
+- <nombre>.json, con la cadena cinemática: desplazamientos de cada articulación, ejes y
+  funciones. Las curvas (como las de la rodilla) se guardan muestreadas cada grado.
+- Con --osim, el modelo con los 19 marcadores de OWAS Web, para abrirlo en OpenSim.
 
-Uso: python generar_modelo_js.py Rajagopal2016.osim   (carpeta Models/Rajagopal de OpenSim 4.6)
+Uso:
+  python generar_modelo_js.py Rajagopal2016.osim rajagopal2016 --osim Rajagopal2016_OWAS.osim
+  python generar_modelo_js.py cyclistFullBodyMuscle.osim wilkinson2021
 """
+import argparse
 import json
 import math
 import pathlib
-import sys
 
 import opensim as osim
 
 from trc_a_opensim import colocar_marcadores
 
 CARPETA = pathlib.Path(__file__).resolve().parent.parent / 'vendor/opensim'
-SALIDA = CARPETA / 'rajagopal2016.json'
-MODELO = CARPETA / 'Rajagopal2016_OWAS.osim'
 
 
 def r(v):
@@ -48,47 +48,74 @@ def marco(f):
     return [o.getParentFrame().getName(), vec(o.get_translation()), vec(o.get_orientation())]
 
 
+def ejes(j, coordenadas):
+    """Ejes de movimiento de una articulación, en el orden en que se aplican."""
+    tipo = j.getConcreteClassName()
+    if tipo == 'CustomJoint':
+        st = osim.CustomJoint.safeDownCast(j).getSpatialTransform()
+        lista = []
+        for i in range(6):
+            t = st.getTransformAxis(i)
+            nombres = t.getCoordinateNamesInArray()
+            if nombres.getSize() == 0:
+                continue
+            c = nombres.get(0)
+            lista.append({'rot': i < 3, 'eje': vec(t.getAxis()), 'c': c, 'f': funcion(t.getFunction(), coordenadas[c])})
+        return lista
+    if tipo == 'PinJoint':
+        return [{'rot': True, 'eje': [0, 0, 1], 'c': j.get_coordinates(0).getName(), 'f': [1, 0]}]
+    if tipo == 'UniversalJoint':   # gira sobre X y luego sobre Y
+        return [{'rot': True, 'eje': [1, 0, 0], 'c': j.get_coordinates(0).getName(), 'f': [1, 0]},
+                {'rot': True, 'eje': [0, 1, 0], 'c': j.get_coordinates(1).getName(), 'f': [1, 0]}]
+    if tipo == 'WeldJoint':
+        return []
+    raise SystemExit(f'Tipo de articulación no admitido: {tipo} ({j.getName()})')
+
+
 def main():
-    modelo = osim.Model(sys.argv[1])
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument('modelo', type=pathlib.Path)
+    ap.add_argument('nombre')
+    ap.add_argument('--osim')
+    args = ap.parse_args()
+
+    modelo = osim.Model(str(args.modelo))
     modelo.initSystem()
     coordenadas = {c.getName(): c for c in modelo.getCoordinateSet()}
     articulaciones = []
     for j in modelo.getJointSet():
         if j.getName().startswith('patellofemoral'):   # la rótula no lleva marcadores y su coordenada sigue a la rodilla
             continue
-        padre, hijo = marco(j.getParentFrame()), marco(j.getChildFrame())
-        a = {'nombre': j.getName(), 'padre': padre, 'hijo': hijo, 'ejes': []}
-        cj = osim.CustomJoint.safeDownCast(j)
-        if cj is not None:
-            st = cj.getSpatialTransform()
-            for i in range(6):
-                t = st.getTransformAxis(i)
-                nombres = t.getCoordinateNamesInArray()
-                if nombres.getSize() == 0:
-                    continue
-                c = nombres.get(0)
-                a['ejes'].append({'rot': i < 3, 'eje': vec(t.getAxis()), 'c': c, 'f': funcion(t.getFunction(), coordenadas[c])})
-        elif j.getConcreteClassName() == 'PinJoint':
-            a['ejes'].append({'rot': True, 'eje': [0, 0, 1], 'c': j.get_coordinates(0).getName(), 'f': [1, 0]})
-        articulaciones.append(a)
+        articulaciones.append({'nombre': j.getName(), 'padre': marco(j.getParentFrame()), 'hijo': marco(j.getChildFrame()), 'ejes': ejes(j, coordenadas)})
+    # Cada cuerpo se calcula después de su padre
+    ordenadas, hechos = [], {'ground'}
+    while articulaciones:
+        listas = [a for a in articulaciones if a['padre'][0] in hechos]
+        if not listas:
+            raise SystemExit('La cadena cinemática tiene cuerpos sin padre: ' + ', '.join(a['nombre'] for a in articulaciones))
+        for a in listas:
+            ordenadas.append(a); hechos.add(a['hijo'][0]); articulaciones.remove(a)
 
     datos = {
         'coordenadas': [{'n': n, 'rot': c.getMotionType() == 1, 'd': r(c.getDefaultValue()), 'min': r(c.getRangeMin()), 'max': r(c.getRangeMax()),
                          'lim': c.get_clamped(), 'fija': c.get_locked()} for n, c in coordenadas.items()],
-        'articulaciones': articulaciones,
+        'articulaciones': ordenadas,
     }
-    SALIDA.parent.mkdir(parents=True, exist_ok=True)
-    SALIDA.write_text(json.dumps(datos, separators=(',', ':'), ensure_ascii=False), encoding='utf-8')
-    print(SALIDA, SALIDA.stat().st_size, 'bytes,', len(articulaciones), 'articulaciones,', len(coordenadas), 'coordenadas')
+    salida = CARPETA / f'{args.nombre}.json'
+    salida.parent.mkdir(parents=True, exist_ok=True)
+    salida.write_text(json.dumps(datos, separators=(',', ':'), ensure_ascii=False), encoding='utf-8')
+    print(salida, salida.stat().st_size, 'bytes,', len(ordenadas), 'articulaciones,', len(coordenadas), 'coordenadas')
 
-    colocar_marcadores(modelo)
-    modelo.printToXML(str(MODELO))
-    # La licencia MIT pide conservar el aviso en las copias
-    aviso = '<!-- ' + (CARPETA / 'LICENSE').read_text(encoding='utf-8').replace('--', '-') + '-->\n'
-    texto = MODELO.read_text(encoding='utf-8')
-    fin = texto.index('?>') + 3
-    MODELO.write_text(texto[:fin] + aviso + texto[fin:], encoding='utf-8', newline='')
-    print(MODELO, MODELO.stat().st_size, 'bytes')
+    if args.osim:
+        archivo = CARPETA / args.osim
+        colocar_marcadores(modelo)
+        modelo.printToXML(str(archivo))
+        # La licencia MIT pide conservar el aviso en las copias
+        aviso = '<!-- ' + (CARPETA / 'LICENSE').read_text(encoding='utf-8').replace('--', '-') + '-->\n'
+        texto = archivo.read_text(encoding='utf-8')
+        fin = texto.index('?>') + 3
+        archivo.write_text(texto[:fin] + aviso + texto[fin:], encoding='utf-8', newline='')
+        print(archivo, archivo.stat().st_size, 'bytes')
 
 
 if __name__ == '__main__':

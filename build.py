@@ -17,6 +17,7 @@ ASSETS = {
     'MP_MODEL': 'mediapipe/pose_landmarker_full.task',
     'OS_MODEL': 'opensim/rajagopal2016.json',
     'OS_OSIM': 'opensim/Rajagopal2016_OWAS.osim',
+    'OS_WILK': 'opensim/wilkinson2021.json',
 }
 
 html = (ROOT / 'src' / 'OWASWeb.html').read_text(encoding='utf-8')

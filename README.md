@@ -93,6 +93,23 @@ Para verlo en OpenSim: *File → Open Model* con `Rajagopal2016_OWAS.osim` (el m
 
 La aplicación no ejecuta OpenSim: resuelve el mismo problema con su propio código. Se comparó con Inverse Kinematics de OpenSim 4.6 en un video real y en una persona simulada: las dos vías señalaron las mismas posturas y, en las posturas fiables del video, los ángulos difirieron como máximo 0,1° en el tronco, 1,4° en la cadera y 1,1° en la rodilla. En los brazos llegaron a 3,7°, porque la aplicación mantiene cerca de la posición neutra los giros que los marcadores no pueden medir (`arm_rot` y `pro_sup`). Esos giros no tienen valor de medición en ninguna de las dos vías.
 
+### Modelo de cuerpo completo
+
+En el mismo panel se puede elegir el **modelo de cuerpo completo de Ross Wilkinson** ([GitHub](https://github.com/ross-wilkinson/opensim-model-fullBodyMuscleActuated), licencia MIT), con 520 músculos: 80 en las piernas, 326 en el tronco y 114 en los hombros y los brazos. Combina Rajagopal et al. (2016) con las mejoras de Lai et al. (2017), el tronco de Allaire et al. (2020) y los brazos de Saul et al. (2015) actualizados por McFarland et al. (2019). El modelo no va dentro de la aplicación: se descarga de su repositorio (*Code → Download ZIP*, con la carpeta de geometría) y se abre `cyclistFullBodyMuscle.osim` antes de cargar el `.mot`.
+
+El modelo tiene 17 niveles vertebrales con tres movimientos cada uno, el cuello, las costillas y el hombro con su propia cinemática. Con 19 puntos solo se conoce la orientación del tronco, por lo que la aplicación usa **proporciones supuestas, no medidas**:
+
+| Movimiento | Reparto |
+|---|---|
+| Flexión | 40 % pelvis y 60 % columna; de la columna, 60 % en los 6 niveles lumbares (L5-S1 a T12-L1) y 40 % en los 11 torácicos |
+| Inclinación lateral | 40 % lumbar y 60 % torácica |
+| Rotación | 15 % lumbar y 85 % torácica |
+| Abdomen | Sigue a las cinco vértebras lumbares |
+| Costillas y esternón | Fijos en su posición neutra |
+| Cuello | Se ajusta con la nariz y las orejas, colocadas en la cabeza con medidas aproximadas |
+
+Con el mismo reparto impuesto en OpenSim, su Inverse Kinematics dio el mismo error de los marcadores que la aplicación y, en las posturas fiables del video real, los ángulos difirieron como máximo 0,2° en tronco, columna y cuello, 1,3° en la rodilla y 3,1° en los brazos. La forma de la columna y la postura del cuello son estimaciones: sirven para visualizar la postura, no para medir cada vértebra.
+
 ### Script para OpenSim
 
 El script [`herramientas/trc_a_opensim.py`](herramientas/trc_a_opensim.py) usa OpenSim para vincular el `.trc` a un modelo y calcular los ángulos articulares:
@@ -166,11 +183,12 @@ El código editable está en [`src/OWASWeb.html`](src/OWASWeb.html). El archivo 
 python build.py
 ```
 
-El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediapipe/) (MediaPipe Tasks Vision 0.10.35 y el modelo Pose Landmarker *full*) y de [`vendor/opensim/`](vendor/opensim/) (modelo Rajagopal 2016, generado con [`herramientas/generar_modelo_js.py`](herramientas/generar_modelo_js.py)). Para probar `src/OWASWeb.html` sin compilar, sírvelo con un servidor local (por ejemplo `python -m http.server`): en ese caso lee los archivos de `vendor/`.
+El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediapipe/) (MediaPipe Tasks Vision 0.10.35 y el modelo Pose Landmarker *full*) y de [`vendor/opensim/`](vendor/opensim/) (modelos Rajagopal 2016 y de cuerpo completo de Wilkinson, generados con [`herramientas/generar_modelo_js.py`](herramientas/generar_modelo_js.py)). Para probar `src/OWASWeb.html` sin compilar, sírvelo con un servidor local (por ejemplo `python -m http.server`): en ese caso lee los archivos de `vendor/`.
 
 ## Versiones
 
-- **4.11**: el `.mot` se calcula con el modelo Rajagopal 2016 de OpenSim (con sus límites de la pelvis) y se descarga ese modelo con los 19 marcadores; sigue siendo compatible con Rajagopal 2015.
+- **4.12**: el `.mot` también puede calcularse para el modelo de cuerpo completo de Wilkinson, con 520 músculos en piernas, tronco y brazos; la columna, el abdomen y el cuello se ajustan con un reparto supuesto.
+- **[4.11](https://github.com/leolira0568/owas-web/releases/tag/v4.11)**: el `.mot` se calcula con el modelo Rajagopal 2016 de OpenSim (con sus límites de la pelvis) y se descarga ese modelo con los 19 marcadores; sigue siendo compatible con Rajagopal 2015.
 - **[4.10](https://github.com/leolira0568/owas-web/releases/tag/v4.10)**: el difuminado del rostro cubre la misma área, pero con bloques más grandes que promedian el color, para proteger mejor la identidad; en «Ajustes de detección» se elige su intensidad: suave, media (por defecto) o fuerte.
 - **[4.9](https://github.com/leolira0568/owas-web/releases/tag/v4.9)**: la tarea se muestra como quinta columna, al mismo nivel que espalda, brazos, piernas y carga.
 - **[4.8](https://github.com/leolira0568/owas-web/releases/tag/v4.8)**: al volver a un fotograma o una fotografía ya registrados, se muestran sus códigos bloqueados con el aviso «ya está registrado», para no registrarlos dos veces; el esqueleto muestra los ángulos de codos, hombros, caderas y rodillas y la inclinación del tronco, con un compás verde que indica dónde se mide cada uno, también en las imágenes guardadas (se pueden ocultar en «Ajustes de detección»); el difuminado de privacidad cubre solo la cara, de la frente al mentón, para que se vean el cuello y la postura de la cabeza; en «Ajustes de detección» se pueden cambiar el color y el grosor del esqueleto, y el color y el tamaño del texto de los ángulos y del compás.
@@ -218,4 +236,4 @@ Los iconos de la interfaz están basados en [Lucide](https://lucide.dev) (licenc
 
 `OWASWeb.html` incluye MediaPipe Tasks Vision y el modelo Pose Landmarker, © Google LLC, bajo la [licencia Apache 2.0](vendor/mediapipe/LICENSE). Ver [`vendor/mediapipe/README.md`](vendor/mediapipe/README.md).
 
-También incluye datos derivados del modelo Rajagopal 2016, © 2015 Stanford University, bajo [licencia MIT](vendor/opensim/LICENSE). Ver [`vendor/opensim/README.md`](vendor/opensim/README.md).
+También incluye datos derivados del modelo Rajagopal 2016, © 2015 Stanford University, bajo [licencia MIT](vendor/opensim/LICENSE), y del modelo de cuerpo completo de Ross Wilkinson, © 2021 Ross Wilkinson, bajo [licencia MIT](vendor/opensim/LICENSE-wilkinson). Ver [`vendor/opensim/README.md`](vendor/opensim/README.md).

@@ -364,6 +364,9 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 .to-top{color:var(--accent-ink)}
 .marks button{background:var(--fill)}
 .mot-panel{background:var(--fill);border-radius:6px;padding:8px 10px;margin:4px 0 8px}
+.mot-model{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:6px;max-width:100%}
+.export-opt > *{min-width:0}
+.mot-model select{width:auto;max-width:100%;min-width:0;padding:4px 8px}
 .mot-panel ul{margin:6px 0;padding-left:18px;max-height:130px;overflow:auto}
 .export-note{background:var(--fill);border-radius:6px;padding:8px 10px;margin:4px 0 8px}
 .privacy-actions{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:8px 0}
@@ -568,7 +571,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 <button class="to-top" id="toTop" data-icon="arrowUp" title="Subir al inicio" aria-label="Subir al inicio de la página" hidden></button>
 <footer class="foot">
   <p><b>OWAS Web</b> · © 2026 Leonardo Lira · Código abierto con <a href="https://github.com/leolira0568/owas-web/blob/main/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · <a href="https://github.com/leolira0568/owas-web" target="_blank" rel="noopener">Proyecto en GitHub</a> · <a href="#privacidad" id="privacyLink">Privacidad y seguridad</a></p>
-  <p>Detección de posturas: MediaPipe Pose © Google LLC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mediapipe/LICENSE" target="_blank" rel="noopener">licencia Apache 2.0</a> · Modelo Rajagopal 2016 © Stanford University, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/opensim/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · Iconos basados en <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC) · Método OWAS: Karhu et al. (1977)</p>
+  <p>Detección de posturas: MediaPipe Pose © Google LLC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mediapipe/LICENSE" target="_blank" rel="noopener">licencia Apache 2.0</a> · Modelo Rajagopal 2016 © Stanford University, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/opensim/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · Modelo de cuerpo completo © Ross Wilkinson, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/opensim/LICENSE-wilkinson" target="_blank" rel="noopener">licencia MIT</a> · Iconos basados en <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC) · Método OWAS: Karhu et al. (1977)</p>
 </footer>
 <div id="print"></div>
 <input type="file" id="fileOpen" accept=".ows,.OWS,.owsp" hidden>
@@ -592,13 +595,17 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   </div>
   <div class="export-opt">
     <button class="btn primary" id="expMot" data-icon="body">OpenSim (.mot)</button>
-    <p class="small muted">Calcula en este equipo los ángulos articulares de cada postura con el modelo Rajagopal 2016 de OpenSim, sin instalarlo. Función experimental.</p>
+    <div>
+      <p class="small muted">Calcula en este equipo los ángulos articulares de cada postura con un modelo de OpenSim, sin instalarlo. Función experimental.</p>
+      <label class="small mot-model">Modelo <select id="motModel"><option value="rajagopal2016">Rajagopal 2016 (músculos en las piernas)</option><option value="wilkinson2021">Cuerpo completo (520 músculos)</option></select></label>
+    </div>
   </div>
   <div id="motPanel" class="mot-panel" hidden>
     <p class="small" id="motSummary"></p>
     <ul class="small" id="motList" hidden></ul>
     <label class="small"><input type="checkbox" id="motOnlyOk" checked> Excluir del archivo las posturas poco fiables</label>
-    <p class="small muted">En OpenSim: <i>File → Open Model</i> con el modelo descargado o con <i>Rajagopal2016.osim</i> (carpeta <i>Models/Rajagopal</i> de OpenSim) y <i>File → Load Motion</i> con el .mot. La revisión no comprueba las rodillas: sus ángulos no son fiables. Revise el resultado antes de usarlo.</p>
+    <p class="small muted" id="motHelp"></p>
+    <p class="small muted">La revisión no comprueba las rodillas: sus ángulos no son fiables. Revise el resultado antes de usarlo.</p>
     <div class="vctrl">
       <button class="btn primary" id="motSave" data-icon="fileText">Descargar .mot</button>
       <button class="btn" id="motCsv" data-icon="fileText">Calidad (.csv)</button>
@@ -1971,13 +1978,49 @@ function downloadBlob(blob, name){
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 /*IK-INICIO*/
-// ---- Cinemática inversa en la aplicación: ajusta el modelo Rajagopal 2016 a los puntos de cada postura ----
+// ---- Cinemática inversa en la aplicación: ajusta un modelo de OpenSim a los puntos de cada postura ----
 // Marcador: [cuerpo al que se fija, cuerpo cuyo origen marca la articulación, desplazamiento, peso]
-const IK_MARKERS = {Nose: ['torso', 'torso', [.10, .58, 0], 0], LEar: ['torso', 'torso', [0, .58, -.07], 0], REar: ['torso', 'torso', [0, .58, .07], 0]};
-for (const [M, s] of [['L', 'l'], ['R', 'r']]) Object.assign(IK_MARKERS, {
-  [M + 'Shoulder']: ['torso', 'humerus_' + s, [0, 0, 0], 5], [M + 'Elbow']: ['ulna_' + s, 'ulna_' + s, [0, 0, 0], 1], [M + 'Wrist']: ['hand_' + s, 'hand_' + s, [0, 0, 0], 1],
-  [M + 'Hip']: ['pelvis', 'femur_' + s, [0, 0, 0], 5], [M + 'Knee']: ['tibia_' + s, 'tibia_' + s, [0, 0, 0], 1], [M + 'Ankle']: ['talus_' + s, 'talus_' + s, [0, 0, 0], 1],
-  [M + 'Heel']: ['calcn_' + s, 'calcn_' + s, [0, 0, 0], 1], [M + 'Toe']: ['toes_' + s, 'toes_' + s, [.05, 0, 0], 1]});
+function ikMarkers(shoulderBody, head){
+  const mk = {Nose: [head.body, head.body, head.nose, head.w], LEar: [head.body, head.body, [head.ear[0], head.ear[1], -head.ear[2]], head.w], REar: [head.body, head.body, head.ear, head.w]};
+  for (const [M, s] of [['L', 'l'], ['R', 'r']]) Object.assign(mk, {
+    [M + 'Shoulder']: [shoulderBody(s), 'humerus_' + s, [0, 0, 0], 5], [M + 'Elbow']: ['ulna_' + s, 'ulna_' + s, [0, 0, 0], 1], [M + 'Wrist']: ['hand_' + s, 'hand_' + s, [0, 0, 0], 1],
+    [M + 'Hip']: ['pelvis', 'femur_' + s, [0, 0, 0], 5], [M + 'Knee']: ['tibia_' + s, 'tibia_' + s, [0, 0, 0], 1], [M + 'Ankle']: ['talus_' + s, 'talus_' + s, [0, 0, 0], 1],
+    [M + 'Heel']: ['calcn_' + s, 'calcn_' + s, [0, 0, 0], 1], [M + 'Toe']: ['toes_' + s, 'toes_' + s, [.05, 0, 0], 1]});
+  return mk;
+}
+// Columna del modelo de cuerpo completo: 6 niveles lumbares (L5-S1 a T12-L1) y 11 torácicos (T11-T12 a T1-T2)
+const SPINE_L = ['L5_S1', 'L4_L5', 'L3_L4', 'L2_L3', 'L1_L2', 'T12_L1'];
+const SPINE_T = ['T11_T12', 'T10_T11', 'T9_T10', 'T8_T9', 'T7_T8', 'T6_T7', 'T5_T6', 'T4_T5', 'T3_T4', 'T2_T3', 'T1_T2'];
+// Reparto supuesto (no medido) del movimiento del tronco entre las zonas lumbar y torácica, según sus rangos habituales.
+// La flexión total de la columna es 1,5 veces la inclinación de la pelvis (60 % columna y 40 % pelvis)
+const SPINE_SHARE = {FE: .6, LB: .4, AR: .15}, SPINE_PELVIS = 1.5;
+function spineCouplings(){
+  const out = [];
+  for (const [ax, src, total] of [['FE', 'pelvis_tilt', SPINE_PELVIS], ['LB', '@spine_LB', 1], ['AR', '@spine_AR', 1]]){
+    const kL = total * SPINE_SHARE[ax] / SPINE_L.length, kT = total * (1 - SPINE_SHARE[ax]) / SPINE_T.length;
+    SPINE_L.forEach(n => out.push([`${n}_${ax}`, src, kL]));
+    SPINE_T.forEach(n => out.push([`${n}_${ax}`, src, kT]));
+    out.push([`Abs_${ax}`, src, kL * 5]);   // el abdomen sigue a las cinco vértebras lumbares
+  }
+  return out;
+}
+const IK_MODELS = {
+  rajagopal2016: {
+    label: 'Rajagopal 2016', file: 'rajagopal2016.json',
+    markers: ikMarkers(() => 'torso', {body: 'torso', nose: [.10, .58, 0], ear: [0, .58, .07], w: 0}),
+    lockLumbar: true, fixed: /^$/, couple: [], soft: /^(arm_rot|pro_sup)_/, pelvisBodies: [],
+    side: ['lumbar_bending'], twist: ['lumbar_rotation'], twistLabel: 'rotación lumbar', arms: {elbow_flex: 1, arm_flex: .6}
+  },
+  wilkinson2021: {
+    label: 'Cuerpo completo (Wilkinson)', file: 'wilkinson2021.json',
+    // La nariz y las orejas, con medidas antropométricas aproximadas desde la base del cuello
+    markers: ikMarkers(s => s === 'r' ? 'scapula_R' : 'scapula_L', {body: 'head_neck', nose: [.11, .12, 0], ear: [.01, .13, .075], w: 1}),
+    scaleOffsets: true, fixed: /^(T\d+_r\d+[RL]_|Sternum)/, couple: spineCouplings(), soft: /^(shoulder_rot|pro_sup|subtalar_angle)_/, pelvisBodies: ['sacrum'],
+    // Con la columna curvada, la vértebra superior gira más que la línea de los hombros: la flexión lateral y la rotación
+    // se miden con esa línea respecto a la pelvis, igual que en Rajagopal, donde el tronco es rígido
+    side: null, twist: null, twistLabel: 'rotación del tronco', arms: {elbow_flex: 1, shoulder_elv: .6}
+  }
+};
 // Límites para señalar una postura como poco fiable (valores de partida, no validados)
 const IK_SOFT = .02;
 const IK_LIMITS = {rms: 5, max: 10, trunk: 100, diff: 5, side: 30, twist: 40};
@@ -2042,7 +2085,7 @@ function ikAlign(rows){
   });
 }
 // Factores de escala: relación entre lo medido en las posturas y el modelo (la mediana resiste las detecciones erróneas)
-function ikScale(data, rows){
+function ikScale(data, rows, cfg){
   const c = ikModel(data), q = c.coords.map(x => x.d), B = ikForward(c, q), d = (a, b) => v3dist(B[a].p, B[b].p);
   const len = (a, b) => median(rows.map(r => v3dist(r.pts[a], r.pts[b])));
   const f = {};
@@ -2055,32 +2098,57 @@ function ikScale(data, rows){
   const trunk = median(rows.map(r => v3dist(v3mid(r.pts.LShoulder, r.pts.RShoulder), v3mid(r.pts.LHip, r.pts.RHip))));
   f.torso = trunk / v3dist(v3mid(B.humerus_l.p, B.humerus_r.p), v3mid(B.femur_l.p, B.femur_r.p));
   for (const k in f) f[k] = Math.min(Math.max(f[k], .5), 1.5);
+  // El resto de los cuerpos (columna, costillas, cabeza, cintura escapular) se escalan como el tronco
+  for (const j of data.articulaciones){ const b = j.hijo[0]; if (!(b in f)) f[b] = cfg.pelvisBodies.includes(b) ? f.pelvis : f.torso; }
   return f;
 }
-// Modelo escalado, marcadores y extensión lumbar fija con los hombros sobre las caderas. Sin marcadores en la pelvis,
-// su inclinación y la flexión lumbar se compensan y el ajuste las repartiría al azar: así pelvis_tilt mide todo el tronco
-function ikSetup(data, rows){
-  const aligned = ikAlign(rows), scale = ikScale(data, aligned), model = ikModel(data, scale);
-  const q0 = model.coords.map(c => c.d), B = ikForward(model, q0), markers = [];
-  for (const [name, [body, ref, off, w]] of Object.entries(IK_MARKERS)){
+// Modelo escalado, marcadores y parámetros del ajuste. Cada parámetro mueve una coordenada o, en la columna,
+// varias a la vez con proporciones fijas (q = base + suma de parámetro × factor)
+function ikSetup(data, rows, cfg = IK_MODELS.rajagopal2016){
+  const aligned = ikAlign(rows), scale = ikScale(data, aligned, cfg), model = ikModel(data, scale), ix = model.index, cs = model.coords;
+  const q0 = cs.map(c => c.d), B = ikForward(model, q0), markers = [];
+  for (const [name, [body, ref, off, w]] of Object.entries(cfg.markers)){
     if (!w) continue;
-    const p = v3add(B[ref].p, m3vec(B[ref].R, off));
+    const o = cfg.scaleOffsets ? off.map(v => v * scale[ref]) : off, p = v3add(B[ref].p, m3vec(B[ref].R, o));
     markers.push({name, body, w: Math.sqrt(w), loc: m3vec(m3t(B[body].R), v3sub(p, B[body].p))});
   }
-  const L = B.torso.p, S = v3mid(B.humerus_l.p, B.humerus_r.p), H = v3mid(B.femur_l.p, B.femur_r.p);
-  q0[model.index.lumbar_extension] = -(Math.asin((H[0] - L[0]) / Math.hypot(S[0] - L[0], S[1] - L[1])) - Math.atan2(S[0] - L[0], S[1] - L[1]));
-  const free = model.coords.flatMap((c, i) => c.fija || c.n === 'lumbar_extension' || c.n.endsWith('_beta') ? [] : [i]);
-  // Girar un brazo estirado sobre su eje no mueve ningún marcador: un tirón muy débil hacia la posición neutra evita valores arbitrarios
-  const soft = model.coords.flatMap((c, i) => /^(arm_rot|pro_sup)_/.test(c.n) ? [i] : []);
-  return {model, markers, q0, free, soft, aligned, scale};
+  // Rajagopal: sin marcadores en la pelvis, su inclinación y la flexión lumbar se compensan y el ajuste las repartiría
+  // al azar; la extensión lumbar queda fija con los hombros sobre las caderas y pelvis_tilt mide todo el tronco
+  if (cfg.lockLumbar){
+    const L = B.torso.p, S = v3mid(B.humerus_l.p, B.humerus_r.p), H = v3mid(B.femur_l.p, B.femur_r.p);
+    q0[ix.lumbar_extension] = -(Math.asin((H[0] - L[0]) / Math.hypot(S[0] - L[0], S[1] - L[1])) - Math.atan2(S[0] - L[0], S[1] - L[1]));
+  }
+  const dependent = new Set(cfg.couple.map(c => c[0]));
+  const params = cs.flatMap((c, i) => c.fija || c.n.endsWith('_beta') || cfg.fixed.test(c.n) || dependent.has(c.n) || (cfg.lockLumbar && c.n === 'lumbar_extension') ? []
+    : [{name: c.n, entries: [[i, 1]], lo: c.lim ? c.min : -Infinity, hi: c.lim ? c.max : Infinity}]);
+  const byName = Object.fromEntries(params.map(p => [p.name, p]));
+  for (const [dep, src, k] of cfg.couple){
+    if (!byName[src]) params.push(byName[src] = {name: src, entries: [], lo: -Infinity, hi: Infinity});   // parámetro virtual (@spine_LB, @spine_AR)
+    byName[src].entries.push([ix[dep], k]);
+  }
+  const base = q0.slice();
+  params.forEach(p => { if (p.entries[0] && p.entries[0][1] === 1 && p.entries[0][0] === ix[p.name]) base[ix[p.name]] = 0; });
+  // Girar un brazo estirado sobre su eje, o el pie sobre el subastragalino, apenas mueve los marcadores: un tirón muy débil
+  // hacia la posición neutra evita valores arbitrarios
+  const soft = params.flatMap((p, k) => cfg.soft.test(p.name) ? [k] : []);
+  const need = new Set([...markers.map(m => m.body), 'humerus_l', 'humerus_r', 'femur_l', 'femur_r']), parent = {};
+  model.joints.forEach(j => { parent[j.body] = j.parent; });
+  for (const b of [...need]) for (let x = parent[b]; x && x !== 'ground'; x = parent[x]) need.add(x);
+  const fk = {...model, joints: model.joints.filter(j => need.has(j.body))};
+  return {cfg, model, fk, markers, q0, base, params, soft, aligned, scale};
 }
-function ikResidual(s, q, pts){
-  const B = ikForward(s.model, q), r = new Array(s.markers.length * 3 + s.soft.length);
+function ikQ(s, p){
+  const q = s.base.slice();
+  s.params.forEach((P, k) => { for (const [i, f] of P.entries) q[i] += f * p[k]; });
+  return q;
+}
+function ikResidual(s, p, pts){
+  const B = ikForward(s.fk, ikQ(s, p)), r = new Array(s.markers.length * 3 + s.soft.length);
   s.markers.forEach((m, k) => {
-    const b = B[m.body], p = v3add(b.p, m3vec(b.R, m.loc)), t = pts[m.name];
-    for (let i = 0; i < 3; i++) r[k*3+i] = m.w * (p[i] - t[i]);
+    const b = B[m.body], x = v3add(b.p, m3vec(b.R, m.loc)), t = pts[m.name];
+    for (let i = 0; i < 3; i++) r[k*3+i] = m.w * (x[i] - t[i]);
   });
-  s.soft.forEach((i, k) => { r[s.markers.length * 3 + k] = IK_SOFT * q[i]; });
+  s.soft.forEach((k, j) => { r[s.markers.length * 3 + j] = IK_SOFT * p[k]; });
   return r;
 }
 function ikLinSolve(A, b){
@@ -2106,57 +2174,61 @@ function ikLinSolve(A, b){
 }
 // Mínimos cuadrados con pesos (Levenberg-Marquardt), respetando los límites articulares del modelo
 function ikFit(s, pts, start){
-  const q = start.slice(), F = s.free, n = F.length, cs = s.model.coords;
-  const lo = F.map(i => cs[i].lim ? cs[i].min : -Infinity), hi = F.map(i => cs[i].lim ? cs[i].max : Infinity);
-  F.forEach((i, k) => { q[i] = Math.min(Math.max(q[i], lo[k]), hi[k]); });
+  const P = s.params, n = P.length, lo = P.map(x => x.lo), hi = P.map(x => x.hi);
+  const p = start.map((v, k) => Math.min(Math.max(v, lo[k]), hi[k]));
   const cost = r => r.reduce((t, v) => t + v * v, 0);
-  let r = ikResidual(s, q, pts), c = cost(r), lambda = 1e-3;
+  let r = ikResidual(s, p, pts), c = cost(r), lambda = 1e-3;
   for (let it = 0; it < 300; it++){
-    const J = F.map((i, k) => {
-      const h = q[i] + 1e-6 > hi[k] ? -1e-6 : 1e-6, v = q[i];
-      q[i] = v + h; const rr = ikResidual(s, q, pts); q[i] = v;
+    const J = p.map((v, k) => {
+      const h = v + 1e-6 > hi[k] ? -1e-6 : 1e-6;
+      p[k] = v + h; const rr = ikResidual(s, p, pts); p[k] = v;
       return rr.map((x, m) => (x - r[m]) / h);
     });
     const g = J.map(col => col.reduce((t, x, m) => t + x * r[m], 0));
-    const fixed = F.map((i, k) => (q[i] <= lo[k] && g[k] > 0) || (q[i] >= hi[k] && g[k] < 0));
+    const fixed = p.map((v, k) => (v <= lo[k] && g[k] > 0) || (v >= hi[k] && g[k] < 0));
     const H = J.map(a => J.map(b => a.reduce((t, x, m) => t + x * b[m], 0)));
     let improved = false, step = 0;
     for (let tries = 0; tries < 12 && !improved; tries++){
       const A = H.map((row, a) => row.map((v, b) => fixed[a] || fixed[b] ? (a === b ? 1 : 0) : (a === b ? v * (1 + lambda) + 1e-12 : v)));
-      const d = ikLinSolve(A, g.map((v, k) => fixed[k] ? 0 : -v)), t = q.slice();
-      F.forEach((i, k) => { t[i] = Math.min(Math.max(q[i] + d[k], lo[k]), hi[k]); });
+      const d = ikLinSolve(A, g.map((v, k) => fixed[k] ? 0 : -v)), t = p.map((v, k) => Math.min(Math.max(v + d[k], lo[k]), hi[k]));
       const rt = ikResidual(s, t, pts), ct = cost(rt);
-      if (ct < c){ step = c - ct; F.forEach(i => { q[i] = t[i]; }); r = rt; c = ct; lambda = Math.max(lambda / 3, 1e-9); improved = true; }
+      if (ct < c){ step = c - ct; t.forEach((v, k) => { p[k] = v; }); r = rt; c = ct; lambda = Math.max(lambda / 3, 1e-9); improved = true; }
       else lambda *= 4;
     }
     if (!improved || step < 1e-11) break;
   }
-  return {q, cost: c};
+  return {p, cost: c};
 }
 // Resuelve una postura y revisa su calidad. Se prueba desde varias posturas iniciales y se conserva el mejor ajuste,
 // porque desde una sola el ajuste puede quedarse en un mínimo local
 function ikFrame(s, row, prev){
   const P = row.pts, ix = s.model.index, hip = v3mid(P.LHip, P.RHip), sh = v3mid(P.LShoulder, P.RShoulder), v = v3sub(sh, hip);
-  const start = s.q0.slice();
-  start[ix.pelvis_tx] = hip[0]; start[ix.pelvis_ty] = hip[1]; start[ix.pelvis_tz] = hip[2];
-  start[ix.pelvis_tilt] = -Math.atan2(v[0], v[1]);
-  const set = (base, v) => { const t = base.slice(); for (const k in v) t[ix[k]] = v[k]; return t; };
-  const bent = {knee_angle_r: .8, knee_angle_l: .8, hip_flexion_r: .8, hip_flexion_l: .8}, arms = {elbow_flex_r: 1, elbow_flex_l: 1, arm_flex_r: .6, arm_flex_l: .6};
-  const starts = [start, set(start, bent), set(start, arms), set(start, {...bent, ...arms})];
-  if (prev) starts.push(set(prev, {pelvis_tx: hip[0], pelvis_ty: hip[1], pelvis_tz: hip[2]}));
-  const {q} = starts.map(x => ikFit(s, P, x)).reduce((a, b) => b.cost < a.cost ? b : a);
-  const B = ikForward(s.model, q), err = s.markers.map(m => { const b = B[m.body]; return v3dist(v3add(b.p, m3vec(b.R, m.loc)), P[m.name]); });
+  const toP = q => s.params.map(x => x.entries.length && ix[x.name] === x.entries[0][0] ? q[ix[x.name]] : 0);
+  const set = (base, vals) => { const t = base.slice(); for (const k in vals) if (k in ix) t[ix[k]] = vals[k]; return t; };
+  const start = set(s.q0, {pelvis_tx: hip[0], pelvis_ty: hip[1], pelvis_tz: hip[2], pelvis_tilt: -Math.atan2(v[0], v[1]) / (s.cfg.lockLumbar ? 1 : 1 + SPINE_PELVIS)});
+  const both = {}, bent = {knee_angle_r: .8, knee_angle_l: .8, hip_flexion_r: .8, hip_flexion_l: .8};
+  for (const [k, val] of Object.entries(s.cfg.arms)){ both[k + '_r'] = val; both[k + '_l'] = val; }
+  const starts = [start, set(start, bent), set(start, both), set(start, {...bent, ...both})].map(toP);
+  if (prev){ const p = prev.slice(); ['pelvis_tx', 'pelvis_ty', 'pelvis_tz'].forEach((n, j) => { const k = s.params.findIndex(x => x.name === n); if (k >= 0) p[k] = hip[j]; }); starts.push(p); }
+  const best = starts.map(x => ikFit(s, P, x)).reduce((a, b) => b.cost < a.cost ? b : a), q = ikQ(s, best.p);
+  const B = ikForward(s.fk, q), err = s.markers.map(m => { const b = B[m.body]; return v3dist(v3add(b.p, m3vec(b.R, m.loc)), P[m.name]); });
   const rms = Math.sqrt(err.reduce((t, e) => t + e * e, 0) / err.length) * 100, max = Math.max(...err) * 100;
   const deg = a => a * 180 / Math.PI, vertical = deg(Math.acos(v[1] / v3len(v))), measured = deg(Math.atan2(v[0], v[1]));
-  const trunk = -deg(q[ix.pelvis_tilt]), side = Math.abs(deg(q[ix.lumbar_bending])), twist = Math.abs(deg(q[ix.lumbar_rotation])), diff = Math.abs(trunk - measured);
+  // Inclinación del tronco en el modelo: en Rajagopal es -pelvis_tilt; con la columna repartida, la de la línea de caderas a hombros
+  const ms = v3sub(v3mid(B.humerus_l.p, B.humerus_r.p), v3mid(B.femur_l.p, B.femur_r.p));
+  const trunk = s.cfg.lockLumbar ? -deg(q[ix.pelvis_tilt]) : deg(Math.atan2(ms[0], ms[1]));
+  const sum = names => Math.abs(deg(names.reduce((t, n) => t + q[ix[n]], 0)));
+  const Rp = m3t(B.pelvis.R), tl = m3vec(Rp, ms), sl = m3vec(Rp, v3sub(B.humerus_r.p, B.humerus_l.p));
+  const side = s.cfg.side ? sum(s.cfg.side) : Math.abs(deg(Math.asin(tl[2] / v3len(tl))));
+  const twist = s.cfg.twist ? sum(s.cfg.twist) : Math.abs(deg(Math.atan2(sl[0], sl[2]))), diff = Math.abs(trunk - measured);
   const why = [], Lm = IK_LIMITS;
   if (rms > Lm.rms) why.push(`error medio ${rms.toFixed(1)} cm`);
   if (max > Lm.max) why.push(`peor marcador ${max.toFixed(1)} cm`);
   if (vertical > Lm.trunk) why.push(`tronco a ${vertical.toFixed(0)}° de la vertical`);
   if (diff > Lm.diff) why.push(`modelo y marcadores difieren ${diff.toFixed(0)}°`);
   if (side > Lm.side) why.push(`flexión lateral ${side.toFixed(0)}°`);
-  if (twist > Lm.twist) why.push(`rotación lumbar ${twist.toFixed(0)}°`);
-  return {t: row.t, q, rms, max, trunk, why};
+  if (twist > Lm.twist) why.push(`${s.cfg.twistLabel} ${twist.toFixed(0)}°`);
+  return {t: row.t, q, p: best.p, rms, max, trunk, why};
 }
 function buildMOT(s, frames, name){
   const cs = s.model.coords, ix = s.model.index, T = '\t';
@@ -2167,6 +2239,12 @@ function buildMOT(s, frames, name){
 /*IK-FIN*/
 // ---- Exportar a OpenSim: ángulos articulares (.mot) calculados en este equipo ----
 let ikResult = null;
+const MOT_DATA = {rajagopal2016: 'os-model', wilkinson2021: 'os-wilk'};
+const WILKINSON_URL = 'https://github.com/ross-wilkinson/opensim-model-fullBodyMuscleActuated';
+const MOT_HELP = {
+  rajagopal2016: 'En OpenSim: <i>File → Open Model</i> con el modelo descargado o con <i>Rajagopal2016.osim</i> (carpeta <i>Models/Rajagopal</i> de OpenSim) y <i>File → Load Motion</i> con el .mot.',
+  wilkinson2021: 'En OpenSim: descargue el modelo desde GitHub (botón «Modelo en GitHub», <i>Code → Download ZIP</i>), ábralo con <i>File → Open Model</i> (<i>cyclistFullBodyMuscle.osim</i>) y cargue el .mot con <i>File → Load Motion</i>. La flexión, la inclinación y el giro del tronco se reparten entre la pelvis y las 17 vértebras con proporciones supuestas, no medidas, y el cuello se estima con la nariz y las orejas.'
+};
 const exportBase = () => (fileName || 'estudio').replace(/\.(ows|owsp)$/i, '');
 async function exportMOT(){
   const list = filtered().filter(o => o.w3), btn = $('#expMot');
@@ -2174,16 +2252,17 @@ async function exportMOT(){
   if (!list.length){ $('#expStatus').innerHTML = '<span class="warn-box">No hay observaciones con postura detectada para exportar.</span>'; return; }
   btn.disabled = true;
   try{
-    const data = JSON.parse(new TextDecoder().decode(await embedded('os-model', 'rajagopal2016.json', 'opensim')));
-    const rows = trcRows(list), s = ikSetup(data, rows), frames = [];
+    const key = $('#motModel').value, cfg = IK_MODELS[key];
+    const data = JSON.parse(new TextDecoder().decode(await embedded(MOT_DATA[key], cfg.file, 'opensim')));
+    const rows = trcRows(list), s = ikSetup(data, rows, cfg), frames = [];
     let prev = null;
     for (let i = 0; i < rows.length; i++){
       $('#expStatus').textContent = `Calculando la postura ${i + 1} de ${rows.length}…`;
       await new Promise(r => setTimeout(r));   // deja que se pinte el progreso
       const f = ikFrame(s, s.aligned[i], prev);
-      prev = f.q; frames.push({...f, o: rows[i].o});
+      prev = f.p; frames.push({...f, o: rows[i].o});
     }
-    ikResult = {s, frames, skipped: filtered().length - list.length};
+    ikResult = {s, key, frames, skipped: filtered().length - list.length};
     renderMot();
   }catch(e){
     console.error(e);
@@ -2197,6 +2276,8 @@ function renderMot(){
   $('#motSummary').textContent = `${frames.length - bad.length} de ${frames.length} posturas son fiables.` + (skipped ? ` ${skipped} observaciones sin detección no se incluyeron.` : '');
   $('#motList').innerHTML = bad.map(f => `<li>Observación ${S.obs.indexOf(f.o) + 1}${f.o.t != null ? ` (${fmtTime(f.o.t)})` : ''}: ${f.why.join('; ')}</li>`).join('');
   $('#motList').hidden = !bad.length;
+  $('#motHelp').innerHTML = MOT_HELP[ikResult.key];
+  $('#motOsim').textContent = ikResult.key === 'wilkinson2021' ? 'Modelo en GitHub' : 'Modelo (.osim)';
   $('#motPanel').hidden = false;
   updateMotSave();
   $('#motPanel').scrollIntoView({block: 'nearest'});
@@ -2207,7 +2288,7 @@ function updateMotSave(){
   $('#motSave').textContent = n ? `Descargar .mot (${n})` : 'Sin posturas fiables';
 }
 function saveMot(){
-  const name = exportBase() + ' - angulos.mot';
+  const name = exportBase() + (ikResult.key === 'wilkinson2021' ? ' - angulos cuerpo completo.mot' : ' - angulos.mot');
   downloadBlob(new Blob([buildMOT(ikResult.s, motFrames(), name)], {type: 'text/plain'}), name);
 }
 function saveMotCsv(){
@@ -2215,10 +2296,13 @@ function saveMotCsv(){
   downloadBlob(new Blob(['﻿' + ['tiempo_s,tronco_grados,error_rms_cm,error_max_cm,fiable,motivos', ...rows].join('\r\n') + '\r\n'], {type: 'text/csv'}), exportBase() + ' - calidad.csv');
 }
 async function saveOsim(){
+  // El modelo de cuerpo completo, con su geometría, se descarga de su repositorio
+  if (ikResult.key === 'wilkinson2021'){ window.open(WILKINSON_URL, '_blank', 'noopener'); return; }
   const bytes = await embedded('os-osim', 'Rajagopal2016_OWAS.osim', 'opensim');
   downloadBlob(new Blob([bytes], {type: 'application/xml'}), 'Rajagopal2016_OWAS.osim');
 }
 $('#expMot').onclick = exportMOT; $('#motSave').onclick = saveMot; $('#motCsv').onclick = saveMotCsv; $('#motOsim').onclick = saveOsim; $('#motOnlyOk').onchange = updateMotSave;
+$('#motModel').onchange = () => { $('#motPanel').hidden = true; ikResult = null; $('#expStatus').textContent = ''; };
 // Figura SVG → PNG (Word no muestra SVG incrustado)
 function svgToPng(svg, scale = 2){
   const vb = (svg.getAttribute('viewBox') || '0 0 640 360').split(/\s+/).map(Number), w = vb[2], h = vb[3];
@@ -2347,7 +2431,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.11 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.12 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
@@ -2420,5 +2504,6 @@ renderVideoUI();
 <script type="application/octet-stream" id="mp-model">@@MP_MODEL@@</script>
 <script type="application/octet-stream" id="os-model">@@OS_MODEL@@</script>
 <script type="application/octet-stream" id="os-osim">@@OS_OSIM@@</script>
+<script type="application/octet-stream" id="os-wilk">@@OS_WILK@@</script>
 </body>
 </html>
