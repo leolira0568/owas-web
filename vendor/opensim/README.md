@@ -17,6 +17,6 @@ Rajagopal, A., Dembia, C. L., DeMers, M. S., Delp, D. D., Hicks, J. L., & Delp, 
 
 - `wilkinson2021.json`: cadena cinemática del modelo de cuerpo completo (piernas, 17 niveles vertebrales, cuello, costillas, esternón, cintura escapular y brazos).
 
-Se genera a partir de `cyclistFullBodyMuscle.osim`, del repositorio https://github.com/ross-wilkinson/opensim-model-fullBodyMuscleActuated. El modelo y su geometría no se incluyen: se descargan de ese repositorio.
+Se genera a partir de `cyclistFullBodyMuscle.osim`, del repositorio https://github.com/ross-wilkinson/opensim-model-fullBodyMuscleActuated. El modelo y su geometría no se incluyen en la aplicación: la versión visible que descarga OWAS Web (`ModeloCuerpoCompleto_OWAS.zip`) se genera con [`herramientas/modelo_cuerpo_completo.py`](../../herramientas/modelo_cuerpo_completo.py) y se adjunta a la versión 4.13 de GitHub.
 
 El modelo, adaptado por Ross Wilkinson, combina Rajagopal et al. (2016), Lai et al. (2017), el tronco de Allaire et al. (2020) y los brazos de Saul et al. (2015) actualizados por McFarland et al. (2019). Licencia: [MIT](LICENSE-wilkinson), © 2021 Ross Wilkinson.

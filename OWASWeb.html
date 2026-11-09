@@ -2240,10 +2240,11 @@ function buildMOT(s, frames, name){
 // ---- Exportar a OpenSim: ángulos articulares (.mot) calculados en este equipo ----
 let ikResult = null;
 const MOT_DATA = {rajagopal2016: 'os-model', wilkinson2021: 'os-wilk'};
-const WILKINSON_URL = 'https://github.com/ross-wilkinson/opensim-model-fullBodyMuscleActuated';
+// Versión visible del modelo de Wilkinson (herramientas/modelo_cuerpo_completo.py), adjunta a la versión 4.13 de GitHub
+const MODELO_ZIP_URL = 'https://github.com/leolira0568/owas-web/releases/download/v4.13/ModeloCuerpoCompleto_OWAS.zip';
 const MOT_HELP = {
   rajagopal2016: 'En OpenSim: <i>File → Open Model</i> con el modelo descargado o con <i>Rajagopal2016.osim</i> (carpeta <i>Models/Rajagopal</i> de OpenSim) y <i>File → Load Motion</i> con el .mot.',
-  wilkinson2021: 'En OpenSim: descargue el modelo desde GitHub (botón «Modelo en GitHub», <i>Code → Download ZIP</i>), ábralo con <i>File → Open Model</i> (<i>cyclistFullBodyMuscle.osim</i>) y cargue el .mot con <i>File → Load Motion</i>. La flexión, la inclinación y el giro del tronco se reparten entre la pelvis y las 17 vértebras con proporciones supuestas, no medidas, y el cuello se estima con la nariz y las orejas.'
+  wilkinson2021: 'En OpenSim: descargue el modelo con el botón «Modelo (.zip)», descomprímalo, ábralo con <i>File → Open Model</i> (<i>cyclistFullBodyMuscle_OWAS.osim</i>, junto a su carpeta <i>Geometry</i>) y cargue el .mot con <i>File → Load Motion</i>. La flexión, la inclinación y el giro del tronco se reparten entre la pelvis y las 17 vértebras con proporciones supuestas, no medidas, y el cuello se estima con la nariz y las orejas.'
 };
 const exportBase = () => (fileName || 'estudio').replace(/\.(ows|owsp)$/i, '');
 async function exportMOT(){
@@ -2277,7 +2278,7 @@ function renderMot(){
   $('#motList').innerHTML = bad.map(f => `<li>Observación ${S.obs.indexOf(f.o) + 1}${f.o.t != null ? ` (${fmtTime(f.o.t)})` : ''}: ${f.why.join('; ')}</li>`).join('');
   $('#motList').hidden = !bad.length;
   $('#motHelp').innerHTML = MOT_HELP[ikResult.key];
-  $('#motOsim').textContent = ikResult.key === 'wilkinson2021' ? 'Modelo en GitHub' : 'Modelo (.osim)';
+  $('#motOsim').textContent = ikResult.key === 'wilkinson2021' ? 'Modelo (.zip)' : 'Modelo (.osim)';
   $('#motPanel').hidden = false;
   updateMotSave();
   $('#motPanel').scrollIntoView({block: 'nearest'});
@@ -2296,8 +2297,8 @@ function saveMotCsv(){
   downloadBlob(new Blob(['﻿' + ['tiempo_s,tronco_grados,error_rms_cm,error_max_cm,fiable,motivos', ...rows].join('\r\n') + '\r\n'], {type: 'text/csv'}), exportBase() + ' - calidad.csv');
 }
 async function saveOsim(){
-  // El modelo de cuerpo completo, con su geometría, se descarga de su repositorio
-  if (ikResult.key === 'wilkinson2021'){ window.open(WILKINSON_URL, '_blank', 'noopener'); return; }
+  // El modelo de cuerpo completo, con su geometría, es demasiado grande para incluirlo: se descarga de GitHub
+  if (ikResult.key === 'wilkinson2021'){ window.open(MODELO_ZIP_URL, '_blank', 'noopener'); return; }
   const bytes = await embedded('os-osim', 'Rajagopal2016_OWAS.osim', 'opensim');
   downloadBlob(new Blob([bytes], {type: 'application/xml'}), 'Rajagopal2016_OWAS.osim');
 }
@@ -2431,7 +2432,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.12 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.13 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
