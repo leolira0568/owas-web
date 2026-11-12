@@ -109,6 +109,8 @@ dialog#exportDlg{border:0;border-radius:12px;padding:18px 20px;max-width:min(520
 .export-opt{display:grid;grid-template-columns:160px 1fr;gap:12px;align-items:center;margin:12px 0}
 .export-opt p{margin:0}
 .export-opt .btn{white-space:nowrap}
+.export-opt .btn-col{display:flex;flex-direction:column;gap:6px}
+.export-opt .btn-col .btn{white-space:normal;text-align:left;justify-content:flex-start}
 @media (max-width:520px){.export-opt{grid-template-columns:1fr}}
 #viewImg{display:block;max-width:100%;max-height:70vh;margin:0 auto 10px;border-radius:6px;background:#141414}
 
@@ -638,6 +640,23 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
     <div class="vctrl">
       <button class="btn primary" id="motSave" data-icon="fileText">Descargar .mot</button>
       <button class="btn" id="motCsv" data-icon="fileText">Calidad (.csv)</button>
+    </div>
+  </div>
+  <div class="export-opt">
+    <div class="btn-col">
+      <button class="btn primary" id="expSloc" data-icon="body">3DSSPP (.sloc)</button>
+      <button class="btn primary" id="expBatch" data-icon="fileText">3DSSPP (archivo de lote)</button>
+      <button class="btn primary" id="expC3d" data-icon="body">Articulaciones (.c3d)</button>
+    </div>
+    <div>
+      <p class="small muted">Posturas detectadas para 3DSSPP (University of Michigan), como posiciones de las articulaciones. El <b>.sloc</b> se abre con <i>Animation → Import LOC File</i>: cada observación es un fotograma. El <b>archivo de lote</b> se ejecuta con <i>Task Input → Run Batch File</i>: analiza cada observación con la persona y la carga indicadas y guarda los resultados en un archivo terminado en «_export.txt». El <b>.c3d</b> lleva los 21 centros articulares que pide 3DSSPP (<i>Animation → Import C3D File</i>), en mm, un fotograma por observación; también lo abren OpenSim y otros programas. La cabeza, C7/T1, el esternón, L5/S1 y el centro de agarre se estiman a partir de los puntos detectados.</p>
+      <div class="mot-model small">
+        <label>Fuerza en cada mano (N, hacia abajo) <input type="number" id="sspF" min="0" max="2000" step="1" value="0" style="width:90px"></label>
+        <label><input type="checkbox" id="sspOwas" autocomplete="off"> Usar la carga OWAS de cada observación (menos de 10 kg: 5 kg; de 10 a 20 kg: 15 kg; más de 20 kg: 25 kg; repartida entre las dos manos)</label>
+        <label>Persona (archivo de lote) <select id="sspSex"><option value="0">Hombre</option><option value="1">Mujer</option></select></label>
+        <label>Estatura (cm) <input type="number" id="sspH" min="100" max="230" step="0.1" placeholder="percentil 50" style="width:120px"></label>
+        <label>Peso (kg) <input type="number" id="sspW" min="30" max="250" step="0.1" placeholder="percentil 50" style="width:120px"></label>
+      </div>
     </div>
   </div>
   <p class="small export-note">Los informes y proyectos con imágenes contienen datos personales de las personas observadas: guárdelos en un lugar protegido y compártalos solo con quien deba verlos.</p>
@@ -2001,6 +2020,153 @@ function exportTRC(){
   const skipped = filtered().length - list.length;
   $('#expStatus').textContent = `Archivo descargado con ${list.length} posturas.` + (skipped ? ` ${skipped} observaciones sin detección no se incluyeron.` : '');
 }
+/*3DSSPP-INICIO*/
+// ---- Exportar a 3DSSPP (3D Static Strength Prediction Program, University of Michigan) y a C3D ----
+// Formatos del manual de 3DSSPP 7.1: archivo de ubicaciones .sloc (sección 10.4), archivo de lote con el comando LOC,
+// que usa el formato .loc de 39 puntos (secciones 6.13 y 10.4), y C3D con los 21 marcadores de su sección 10.3.
+// Ejes de 3DSSPP: X hacia la derecha de la persona, Y hacia adelante y Z hacia arriba; el origen queda entre los
+// tobillos, en el suelo. Cada postura: {t, w3 (puntos 3D de MediaPipe), label, seated, force (N por mano, opcional)}.
+// Este bloque es igual en OWAS Web y en Análisis Postural OpenSim (usa v3add, v3sub, v3len y v3mid de la cinemática inversa).
+const v3scale = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+const v3cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const v3unit = a => v3scale(a, 1 / (v3len(a) || 1));
+const v3lerp = (a, b, k) => v3add(a, v3scale(v3sub(b, a), k));
+// Puntos de una postura en los ejes de 3DSSPP, en cm
+function sspPoints(w3){
+  // MediaPipe → ejes de OpenSim (X adelante, Y arriba, Z derecha), girado para que las caderas miren hacia adelante
+  const P = w3.map(q => [-q[2], -q[1], -q[0]]), L = P[23], D = P[24];
+  const cx = (L[0] + D[0]) / 2, cz = (L[2] + D[2]) / 2, g = Math.atan2(D[0] - L[0], D[2] - L[2]), co = Math.cos(g), se = Math.sin(g);
+  // → ejes de 3DSSPP (X = Z de OpenSim, Y = X, Z = Y), en cm
+  let Q = P.map(p => { const x = p[0] - cx, z = p[2] - cz; return [(se * x + co * z) * 100, (co * x - se * z) * 100, p[1] * 100]; });
+  const floor = Math.min(...[27, 28, 29, 30, 31, 32].map(k => Q[k][2])), o = v3mid(Q[27], Q[28]);
+  Q = Q.map(p => [p[0] - o[0], p[1] - o[1], p[2] - floor]);
+  // Marco del tronco: arriba (caderas → hombros), derecha (hombro izquierdo → derecho) y adelante
+  const sh = v3mid(Q[11], Q[12]), hip = v3mid(Q[23], Q[24]), up = v3unit(v3sub(sh, hip));
+  const rt0 = v3sub(Q[12], Q[11]), right = v3unit(v3sub(rt0, v3scale(up, rt0[0] * up[0] + rt0[1] * up[1] + rt0[2] * up[2])));
+  const fwd = v3cross(up, right), at = (p, f, u, r = 0) => v3add(v3add(v3add(p, v3scale(fwd, f)), v3scale(up, u)), v3scale(right, r));
+  // Puntos que MediaPipe no detecta, estimados con distancias aproximadas de un adulto (cm)
+  const headO = v3mid(Q[7], Q[8]), nasion = v3mid(Q[1], Q[4]);
+  const c7 = at(sh, -6, 4), scj = at(sh, 5, -3), l5s1 = at(hip, -3, 9);
+  const headUp = v3unit(v3sub(headO, c7)), headFwd = v3unit(v3sub(nasion, headO));
+  const side = s => {   // s = 0 izquierda, 1 derecha
+    const k = s ? 1 : -1, w = Q[15 + s], mcp = v3mid(Q[17 + s], Q[19 + s]), heel = Q[29 + s], toe = Q[31 + s];
+    const ball = v3lerp(heel, toe, 0.73);
+    return {sho: Q[11 + s], acr: at(Q[11 + s], 0, 3, 1 * k), elb: Q[13 + s], epi: v3add(Q[13 + s], v3scale(right, 3 * k)), wri: w,
+      grip: v3lerp(w, mcp, 0.85), hand: mcp, hipj: Q[23 + s], knee: Q[25 + s], epiF: v3add(Q[25 + s], v3scale(right, 4 * k)),
+      ank: Q[27 + s], mall: v3add(Q[27 + s], v3scale(right, 3 * k)), ball, mtp: v3add(ball, v3scale(right, 3 * k)), toe};
+  };
+  return {headTop: v3add(headO, v3scale(headUp, 12)), headL: Q[7], headR: Q[8], headO, nasion, sight: v3add(nasion, v3scale(headFwd, 30)),
+    c7, scj, supra: at(scj, 2, 1), l5s1, psis: at(l5s1, -5, 0), L: side(0), R: side(1)};
+}
+// .loc: 39 puntos (117 valores), en el orden de la tabla del manual
+const sspLoc = p => [p.headTop, p.headL, p.headR, p.headO, p.nasion, p.sight, p.c7, p.scj, p.supra, p.l5s1, p.psis,
+  ...[p.L, p.R].flatMap(s => [s.sho, s.acr, s.elb, s.epi, s.wri, s.grip, s.hand]),
+  ...[p.L, p.R].flatMap(s => [s.hipj, s.knee, s.epiF, s.ank, s.mall, s.ball, s.mtp])];
+// .sloc: 23 puntos y las fuerzas y momentos de cada mano (81 valores) y la marca final «#»
+const sspSloc = (p, F) => [p.headO, p.nasion, p.c7, p.scj, p.l5s1,
+  ...[p.L, p.R].flatMap(s => [s.sho, s.elb, s.wri, s.grip, s.hand]),
+  ...[p.L, p.R].flatMap(s => [s.hipj, s.knee, s.ank, s.toe]),
+  [0, 0, -F], [0, 0, 0], [0, 0, -F], [0, 0, 0]];
+const sspLine = pts => pts.flatMap(v => v.map(x => (Math.round(x * 10) / 10).toFixed(1))).join(' ');
+// 3DSSPP es un programa de Windows antiguo: textos sin tildes ni comillas dobles
+const ascii = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\x20-\x7e]/g, '').replace(/"/g, "'").replace(/#/g, 'n.');
+const sspSorted = list => list.slice().sort((a, b) => a.t - b.t);
+const sspF = (o, F) => Math.round((o.force != null ? o.force : F) * 10) / 10;
+function buildSloc(list, F){
+  return sspSorted(list).map(o => sspLine(sspSloc(sspPoints(o.w3), sspF(o, F))) + ' #').join('\r\n') + '\r\n';
+}
+// Archivo de lote: unidades métricas, persona (sexo y percentil 50, o estatura y peso), y por cada postura los apoyos,
+// las posiciones de las articulaciones, la fuerza en cada mano (hacia abajo) y el análisis con exportación de resultados
+function buildSsppBatch(list, {title, comment, app, sex, H, W, F}){
+  const ant = H > 0 && W > 0 ? `ANF ${sex} 0 1 0 ${H.toFixed(1)} ${W.toFixed(1)} #` : `ANF ${sex} 0 0 50 0 0 #`;
+  const L = ['3DSSPPBATCHFILE #', `COM ${ascii(app)}: ${list.length} posturas #`,
+    `DES 1 "${ascii(title).slice(0, 60)}" "" "${ascii(comment).slice(0, 120)}" "" #`, ant, 'AUT 0 #'];
+  for (const o of sspSorted(list)){
+    const f = sspF(o, F);
+    L.push(`COM ${ascii(o.label)} (t = ${o.t.toFixed(2)} s) #`,
+      `SUP 0 ${o.seated ? 1 : 0} 0 0 20.0 #`,   // sentado o de pie sobre ambos pies, según la postura
+      `LOC ${sspLine(sspLoc(sspPoints(o.w3)))} #`,
+      `HAN ${f} -90 0 ${f} -90 0 #`,
+      'OUT #');
+  }
+  return L.join('\r\n') + '\r\n';
+}
+// C3D: los 21 marcadores (centros articulares) que pide 3DSSPP al importar C3D, en mm, un fotograma por postura,
+// en el orden del manual: cabeza y tronco, lado izquierdo y lado derecho
+const C3D_MARKERS = [['HEAD', 'Head center between tragions', p => p.headO], ['FHED', 'Front of head at nasion', p => p.nasion],
+  ['C7T1', 'C7T1 joint center', p => p.c7], ['STER', 'Sternoclavicular center', p => p.scj], ['L5S1', 'L5S1 joint center', p => p.l5s1],
+  ...[['L', 'Left', p => p.L], ['R', 'Right', p => p.R]].flatMap(([k, n, s]) => [
+    [k + 'SHO', n + ' shoulder joint center', p => s(p).sho], [k + 'ELB', n + ' elbow joint center', p => s(p).elb],
+    [k + 'WRI', n + ' wrist joint center', p => s(p).wri], [k + 'HAN', n + ' hand grip center', p => s(p).grip],
+    [k + 'HIP', n + ' hip joint center', p => s(p).hipj], [k + 'KNE', n + ' knee joint center', p => s(p).knee],
+    [k + 'ANK', n + ' ankle joint center', p => s(p).ank], [k + 'TOE', n + ' foot ball joint center', p => s(p).ball]])];
+function buildC3D(list, rate){
+  const frames = sspSorted(list).map(o => { const p = sspPoints(o.w3); return C3D_MARKERS.map(m => v3scale(m[2](p), 10)); });
+  const nP = C3D_MARKERS.length, nF = frames.length;
+  // Sección de parámetros: grupos POINT y ANALOG (formato Intel, datos en coma flotante)
+  const chars = (s, n) => [...s.padEnd(n, ' ').slice(0, n)].map(c => c.charCodeAt(0) & 0x7f);
+  const le16 = v => [v & 255, (v >> 8) & 255], lef = v => [...new Uint8Array(new Float32Array([v]).buffer)];
+  const section = paramBlocks => {
+    const out = [], records = [];   // [nombre, id, cuerpo] — cuerpo: lo que sigue al desplazamiento al siguiente registro
+    const group = (id, name, desc) => records.push([name, -id, [desc.length, ...chars(desc, desc.length)]]);
+    const param = (id, name, type, dims, data, desc) => records.push([name, id, [type & 255, dims.length, ...dims, ...data, desc.length, ...chars(desc, desc.length)]]);
+    group(1, 'POINT', '3D point parameters');
+    group(2, 'ANALOG', 'Analog parameters');
+    param(1, 'USED', 2, [], le16(nP), 'Number of 3D points');
+    param(1, 'FRAMES', 2, [], le16(nF), 'Number of frames');
+    param(1, 'DATA_START', 2, [], le16(2 + paramBlocks), 'First data block');
+    param(1, 'SCALE', 4, [], lef(-1), 'Floating point data');
+    param(1, 'RATE', 4, [], lef(rate), 'Frame rate');
+    param(1, 'UNITS', -1, [2], chars('mm', 2), 'Units');
+    param(1, 'LABELS', -1, [4, nP], C3D_MARKERS.flatMap(m => chars(m[0], 4)), 'Point labels');
+    param(1, 'DESCRIPTIONS', -1, [32, nP], C3D_MARKERS.flatMap(m => chars(m[1], 32)), 'Point descriptions');
+    param(2, 'USED', 2, [], le16(0), 'Number of analog channels');
+    param(2, 'RATE', 4, [], lef(0), 'Analog rate (no analog data)');
+    out.push(1, 0x50, paramBlocks, 84);   // cabecera: bloque de parámetros, clave, nº de bloques y procesador Intel
+    records.forEach(([name, id, body], k) => {
+      out.push(name.length, id & 255, ...chars(name, name.length));
+      out.push(...le16(k === records.length - 1 ? 0 : 2 + body.length));   // el último registro termina la lista
+      out.push(...body);
+    });
+    return out;
+  };
+  const paramBlocks = Math.ceil(section(1).length / 512), out = section(paramBlocks), dataStart = 2 + paramBlocks;
+  // Cabecera (bloque 1)
+  const head = new DataView(new ArrayBuffer(512));
+  head.setUint8(0, 2); head.setUint8(1, 0x50);
+  head.setUint16(2, nP, true); head.setUint16(4, 0, true); head.setUint16(6, 1, true); head.setUint16(8, nF, true);
+  head.setUint16(10, 0, true); head.setFloat32(12, -1, true); head.setUint16(16, dataStart, true);
+  head.setUint16(18, 0, true); head.setFloat32(20, rate, true);
+  // Datos: por fotograma y marcador, X, Y, Z y residuo (0 = válido) en coma flotante
+  const data = new DataView(new ArrayBuffer(Math.ceil(nF * nP * 16 / 512) * 512 || 512));
+  frames.forEach((fr, i) => fr.forEach((v, j) => { const o = (i * nP + j) * 16; data.setFloat32(o, v[0], true); data.setFloat32(o + 4, v[1], true); data.setFloat32(o + 8, v[2], true); data.setFloat32(o + 12, 0, true); }));
+  const params = new Uint8Array(paramBlocks * 512); params.set(out);
+  return new Blob([head.buffer, params, data.buffer], {type: 'application/octet-stream'});
+}
+/*3DSSPP-FIN*/
+// Observaciones con postura detectada, como posturas para 3DSSPP y C3D
+function sspList(){
+  const owas = $('#sspOwas').checked, F = Math.min(2000, Math.max(0, parseFloat($('#sspF').value) || 0));
+  const list = filtered().filter(o => o.w3).map((o, i) => ({t: o.t != null ? o.t : i * S.interval, w3: o.w3, label: `Observacion ${S.obs.indexOf(o) + 1}`,
+    seated: o.l === 1, force: owas ? [5, 15, 25][o.w - 1] * 9.81 / 2 : F}));
+  return {list, F, owas};
+}
+function export3DSSPP(kind){
+  const {list, F, owas} = sspList(), skipped = filtered().length - list.length;
+  if (!list.length){ $('#expStatus').innerHTML = '<span class="warn-box">No hay observaciones con postura detectada para exportar.</span>'; return; }
+  try{
+    let blob, name;
+    if (kind === 'sloc'){ name = exportBase() + ' - 3DSSPP.sloc'; blob = new Blob([buildSloc(list, F)], {type: 'text/plain'}); }
+    else if (kind === 'c3d'){ name = exportBase() + ' - articulaciones.c3d'; blob = buildC3D(list, 1); }
+    else {
+      name = exportBase() + ' - 3DSSPP lote.txt';
+      blob = new Blob([buildSsppBatch(list, {title: S.bg[2] || exportBase(), comment: owas ? 'Posturas detectadas con MediaPipe; carga segun el codigo OWAS' : `Posturas detectadas con MediaPipe; carga ${F} N por mano`,
+        app: `OWAS Web, ${exportBase()}`, sex: +$('#sspSex').value, H: parseFloat($('#sspH').value), W: parseFloat($('#sspW').value), F})], {type: 'text/plain'});
+    }
+    downloadBlob(blob, name);
+    $('#expStatus').textContent = `Archivo descargado: ${name} (${list.length} posturas).` + (skipped ? ` ${skipped} observaciones sin detección no se incluyeron.` : '');
+  }catch(e){ console.error(e); $('#expStatus').innerHTML = '<span class="warn-box">No se pudo exportar.</span>'; }
+}
 function downloadBlob(blob, name){
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = name;
@@ -2343,7 +2509,7 @@ async function saveOsim(){
   const bytes = await embedded('os-osim', 'Rajagopal2016_OWAS.osim', 'opensim');
   downloadBlob(new Blob([bytes], {type: 'application/xml'}), 'Rajagopal2016_OWAS.osim');
 }
-$('#expMot').onclick = exportMOT; $('#motSave').onclick = saveMot; $('#motCsv').onclick = saveMotCsv; $('#motOsim').onclick = saveOsim; $('#motOnlyOk').onchange = updateMotSave;
+$('#expMot').onclick = exportMOT; $('#expSloc').onclick = () => export3DSSPP('sloc'); $('#expBatch').onclick = () => export3DSSPP('batch'); $('#expC3d').onclick = () => export3DSSPP('c3d'); $('#motSave').onclick = saveMot; $('#motCsv').onclick = saveMotCsv; $('#motOsim').onclick = saveOsim; $('#motOnlyOk').onchange = updateMotSave;
 $('#motModel').onchange = () => { $('#motPanel').hidden = true; ikResult = null; $('#expStatus').textContent = ''; updateModelInfo(); };
 updateModelInfo();
 // Figura SVG → PNG (Word no muestra SVG incrustado)
@@ -2446,7 +2612,8 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
 <li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
 <li>Consulte <b>3 · Resultados</b>: categorías de acción, partes del cuerpo y tablas APA, que se actualizan solos al guardar cada postura. Puede filtrar por tarea.</li>
-<li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original, e <b>Imprimir</b> para imprimir o guardar en PDF.</li></ol>
+<li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original, e <b>Imprimir</b> para imprimir o guardar en PDF.</li>
+<li>En <b>Exportar resultados</b>, las posturas detectadas también se pueden llevar a OpenSim (.trc y .mot) y a 3DSSPP, el programa de análisis biomecánico de la Universidad de Míchigan: como archivo de ubicaciones <b>.sloc</b> (<i>Animation → Import LOC File</i>), como <b>archivo de lote</b> que analiza cada observación con la persona y la carga indicadas (<i>Task Input → Run Batch File</i>) o como <b>.c3d</b> con los 21 centros articulares que pide 3DSSPP (<i>Animation → Import C3D File</i>), que también abren OpenSim y otros programas. La carga de cada observación puede tomarse de su código OWAS. La cabeza, C7/T1, el esternón, L5/S1 y el centro de agarre se estiman a partir de los puntos detectados: revise las posturas en 3DSSPP antes de usar sus resultados. 3DSSPP es software de la University of Michigan. OWAS Web no está afiliada a ella ni incluye 3DSSPP: los archivos siguen el formato de importación descrito en el manual de 3DSSPP 7.1, y su uso requiere la licencia correspondiente de 3DSSPP. C3D es un formato abierto (c3d.org).</li></ol>
 <h3>Categorías de acción</h3>
 <div class="legend" style="margin-bottom:14px">${CATS.map((k,i) => `<div>${catBadge(i+1,false)}<div><b>${k.t}</b><p>${k.d}</p></div></div>`).join('')}</div>
 <h3>Códigos</h3>
@@ -2460,7 +2627,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <li><b>Sin conexiones de red.</b> Una política de seguridad de contenido (CSP) impide que la aplicación se conecte a servidores externos, envíe formularios o cargue código de otros sitios.</li>
 <li><b>Videos y fotografías.</b> Se abren desde su equipo y nunca se suben a internet. El video original no se copia en el proyecto. Las imágenes que se guardan se vuelven a codificar, por lo que no conservan metadatos como la ubicación GPS ni el modelo de la cámara.</li>
 <li><b>Rostros difuminados.</b> Con «Difuminar el rostro en las imágenes guardadas» (en «Ajustes de detección», activado por defecto), la cara de la persona detectada, de la frente al mentón, se pixela en las imágenes de las observaciones, los informes y los proyectos. Solo funciona cuando la detección encuentra a la persona: revise cada imagen antes de compartirla.</li>
-<li><b>Dónde quedan los datos.</b> En el autoguardado de este navegador, hasta que lo borre, y en los archivos que usted guarda o exporta (.owsp, .OWS, .doc, PDF, .trc y .mot). Los proyectos .owsp y los informes con imágenes contienen datos personales. Los proyectos y los archivos para OpenSim (.trc) guardan además los puntos 3D del cuerpo detectados, sin imágenes.</li>
+<li><b>Dónde quedan los datos.</b> En el autoguardado de este navegador, hasta que lo borre, y en los archivos que usted guarda o exporta (.owsp, .OWS, .doc, PDF, .trc, .mot, .sloc, .c3d y archivos de lote de 3DSSPP). Los proyectos .owsp y los informes con imágenes contienen datos personales. Los proyectos y los archivos para OpenSim y 3DSSPP (.trc, .sloc, .c3d y archivos de lote) guardan además los puntos 3D del cuerpo detectados, sin imágenes.</li>
 <li><b>Versión en línea.</b> GitHub Pages sirve el archivo de la aplicación y puede registrar datos técnicos de la visita, como la dirección IP, según la política de privacidad de GitHub. Los datos del estudio no se envían. Para la máxima privacidad, use el archivo OWASWeb.html descargado y sin conexión.</li>
 </ul>
 <p class="small"><b>Protocolo recomendado</b></p>
@@ -2479,7 +2646,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.20 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.21 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
