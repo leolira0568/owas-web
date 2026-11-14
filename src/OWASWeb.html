@@ -267,6 +267,11 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:14px}
 .legend > div{display:flex;gap:10px;align-items:flex-start}
 .legend p{margin:0;font-size:13px;color:var(--ink-2)}
+/* Guía de las categorías: la figura va siempre sobre fondo blanco, también en el tema oscuro */
+.guide-fig{background:#fff;border-radius:8px;padding:8px;margin-bottom:10px}
+.guide-fig svg{display:block;width:100%;max-width:820px;height:auto;margin:0 auto}
+.guide-list{margin:0 0 8px;padding-left:20px}
+.guide-list li{margin-bottom:4px}
 table{border-collapse:collapse;width:100%}
 th,td{padding:7px 8px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:middle}
 th{font-size:13px;color:var(--ink-2);font-weight:600}
@@ -394,7 +399,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   #print{display:block;padding:0}
   .card{border:0;padding:0;margin-bottom:18px;break-inside:avoid}
   .apa{break-inside:avoid}
-  .apa svg *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .apa svg *,.guide-fig svg *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .stack div,.track .band,.track .val,.cat i{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .cats4 .col .scroll{max-height:none}
   h1{font-size:20px;margin:0 0 4px}
@@ -500,6 +505,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
         <div class="media-top">
           <button class="btn load" id="loadVideo" data-icon="video">Cargar video</button>
           <span class="muted small" id="videoName">Ningún video cargado</span>
+          <span class="warn-soft small" id="vidNote" role="status" hidden></span>
         </div>
         <div class="stage"><video id="vid" playsinline muted preload="auto"></video><canvas class="overlay" id="ovVideo" aria-hidden="true"></canvas><p class="stage-empty" id="vidEmpty">Cargue un video (MP4 o WebM) para revisarlo fotograma a fotograma.</p></div>
         <div class="subs" id="subsVideo" role="status" hidden></div>
@@ -570,6 +576,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
       <label><input type="checkbox" id="printBg" checked> Incluir información general al imprimir</label>
       <label><input type="checkbox" id="printImg" checked> Incluir imágenes al imprimir</label>
       <label>Tamaño de las imágenes <select id="printImgSize"><option value="small">Pequeñas (cuadrícula)</option><option value="big">Grandes (una por fila, como en el visor)</option></select></label>
+      <label><input type="checkbox" id="printGuide" checked> Incluir la guía de interpretación de las categorías al imprimir</label>
       <label><input type="checkbox" id="printApa" checked> Incluir tablas y figuras APA al imprimir</label>
       <label><input type="checkbox" id="showAgree" autocomplete="off"> Mostrar tablas de la detección automática (concordancia y mediciones)</label>
       <button class="btn" id="copyBtn" data-icon="copy">Copiar resultados</button></div>
@@ -1292,17 +1299,43 @@ function renderMarks(){
 }
 $('#marks').addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) goToObs(+b.dataset.go); });
 $('#loadVideo').onclick = () => { const f = $('#fileVideo'); f.value = ''; f.click(); };
+// Se conserva el archivo para poder volver a abrir el video si el navegador deja de reproducirlo
+let videoFile = null, videoOk = false, videoT = 0, reopen = {n: 0, at: 0};
 $('#fileVideo').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   if (vid.src) URL.revokeObjectURL(vid.src);
+  videoFile = f; videoOk = false; videoT = 0; reopen = {n: 0, at: 0};
   videoName = f.name; vid.src = URL.createObjectURL(f);
   $('#videoName').textContent = f.name; $('#vidEmpty').hidden = true; $('#loadVideo').classList.remove('load');
 };
-vid.addEventListener('loadedmetadata', () => { renderVideoUI(); renderMarks(); });
+vid.addEventListener('loadedmetadata', () => { videoOk = true; renderVideoUI(); renderMarks(); });
 ['timeupdate', 'seeked', 'play', 'pause'].forEach(ev => vid.addEventListener(ev, renderVideoUI));
+// Momento del video al que volver si hay que reabrirlo (no cuentan los saltos internos de la detección)
+['timeupdate', 'seeked'].forEach(ev => vid.addEventListener(ev, () => { if (!vid.error && !detecting) videoT = vid.currentTime; }));
+// Un video que ya se reproducía puede fallar después de muchos saltos (el decodificador del navegador se bloquea o
+// se queda sin memoria). En ese caso se vuelve a abrir el mismo archivo en el mismo momento, sin perder el trabajo.
+// Solo si no se puede abrir (o falla una y otra vez) se avisa y se quita el video.
+function reopenVideo(){
+  const t = videoT, rate = vid.playbackRate, old = vid.src;
+  videoOk = false;
+  vid.src = URL.createObjectURL(videoFile);
+  URL.revokeObjectURL(old);
+  vid.addEventListener('loadedmetadata', () => { vid.currentTime = Math.min(t, vid.duration || t); vid.playbackRate = rate; }, {once: true});
+  const note = $('#vidNote'); note.textContent = 'El navegador dejó de reproducir el video y se volvió a abrir en el mismo momento. Puede seguir trabajando.'; note.hidden = false;
+  clearTimeout(reopenVideo.timer); reopenVideo.timer = setTimeout(() => { note.hidden = true; }, 12000);
+}
 vid.addEventListener('error', () => {
-  alert('El navegador no puede reproducir este video. Use un archivo MP4 (H.264) o WebM.');
-  vid.removeAttribute('src'); videoName = ''; $('#videoName').textContent = 'Ningún video cargado'; $('#vidEmpty').hidden = false; $('#loadVideo').classList.add('load');
+  if (!vid.getAttribute('src')) return;
+  const err = vid.error, code = err ? err.code : 0, detail = `código ${code}${err && err.message ? ', ' + err.message : ''}`;
+  console.warn('Error del video:', detail);
+  if (videoOk && videoFile){
+    const now = Date.now();
+    reopen = {n: now - reopen.at < 60000 ? reopen.n + 1 : 1, at: now};
+    if (reopen.n <= 3){ reopenVideo(); return; }
+  }
+  alert((videoOk ? 'El navegador dejó de reproducir este video varias veces seguidas. Vuelva a cargarlo o pruebe con una copia en MP4 (H.264) de menor resolución.'
+    : 'El navegador no puede reproducir este video. Use un archivo MP4 (H.264) o WebM.') + `\n\nDetalle técnico: ${detail}.`);
+  vid.removeAttribute('src'); videoName = ''; videoFile = null; videoOk = false; $('#videoName').textContent = 'Ningún video cargado'; $('#vidEmpty').hidden = false; $('#loadVideo').classList.add('load');
 });
 vid.addEventListener('click', togglePlay);
 $('#seek').addEventListener('input', e => setVideoTime(+e.target.value));
@@ -1568,7 +1601,17 @@ function renderOverlay(det){
 // Clave del fotograma o la foto actual, para saber si la detección sigue vigente
 const mediaKey = () => mode === 'video' ? `${videoName}@${vid.currentTime.toFixed(3)}` : (photos[pi] ? photos[pi].name : '');
 let lastDet = null, detecting = false, triedKey = '';
-const seekTo = t => new Promise(res => { vid.addEventListener('seeked', res, {once: true}); vid.currentTime = t; });
+// Salto a un momento del video. Termina también si el video falla o tarda demasiado, para que la detección nunca quede bloqueada
+// MediaPipe solo debe recibir un fotograma ya decodificado: con un video sin imagen (al saltar o al reabrirlo) su
+// detector queda dañado y todas las detecciones siguientes fallan
+const frameReady = () => vid.readyState >= 2 && vid.videoWidth > 0 && !vid.error;
+const seekTo = t => new Promise(res => {
+  let tm = 0;
+  const fin = () => { clearTimeout(tm); vid.removeEventListener('seeked', fin); vid.removeEventListener('error', fin); res(); };
+  tm = setTimeout(fin, 4000);
+  vid.addEventListener('seeked', fin); vid.addEventListener('error', fin);
+  vid.currentTime = t;
+});
 
 // Promedio punto a punto de varias detecciones de la misma persona
 function averageLandmarks(sets){
@@ -1580,7 +1623,7 @@ function averageLandmarks(sets){
 async function detectPose(){
   if (detecting) return;
   const el = mediaEl();
-  if (mode === 'live' || !(mode === 'video' ? vid.src && vid.readyState >= 2 : photos[pi] && el.complete && el.naturalWidth)){
+  if (mode === 'live' || !(mode === 'video' ? vid.src && frameReady() : photos[pi] && el.complete && el.naturalWidth)){
     setDetectStatus('Cargue primero un video o una fotografía.'); return;
   }
   detecting = true; triedKey = mediaKey();
@@ -1599,7 +1642,7 @@ async function detectPose(){
       for (const t of [t0 - 0.1, t0 + 0.1]){
         if (t < 0 || t > vid.duration) continue;
         await seekTo(t);
-        const rr = lm.detect(vid);
+        const rr = frameReady() ? lm.detect(vid) : {};
         if (rr.landmarks && rr.landmarks.length) sets.push([rr.landmarks[0], rr.worldLandmarks[0]]);
       }
       await seekTo(t0);
@@ -1615,7 +1658,7 @@ async function detectPose(){
       const t0 = vid.currentTime, t1 = t0 + 0.5 <= vid.duration ? t0 + 0.5 : t0 - 0.5;
       if (t1 >= 0){
         await seekTo(t1);
-        const r2 = lm.detect(vid);
+        const r2 = frameReady() ? lm.detect(vid) : {};
         await seekTo(t0);
         if (r2.landmarks && r2.landmarks.length){
           const N2 = r2.landmarks[0], hip = n => [(n[23].x + n[24].x) / 2, (n[23].y + n[24].y) / 2];
@@ -1643,7 +1686,9 @@ async function detectPose(){
     setDetectStatus(''); detWarn = r.warn; renderDetWarn();
   }catch(e){
     console.error(e);
-    setDetectStatus('<span class="warn">No se pudo usar el detector de posturas en este navegador.</span>');
+    // Si el detector de MediaPipe falla, queda inutilizable: se descarta y se vuelve a crear en la próxima detección
+    const broken = !!POSE.lm; POSE.lm = null; POSE.loading = null;
+    setDetectStatus(broken ? '<span class="warn">No se pudo detectar la postura en este fotograma. Vuelva a intentarlo.</span>' : '<span class="warn">No se pudo usar el detector de posturas en este navegador.</span>');
   }finally{
     detecting = false;
     // Si mientras tanto se cambió de fotograma, se detecta el nuevo
@@ -1699,14 +1744,15 @@ function bgBlock(){
     BG_LABELS.map((l,i) => `<tr><th style="width:200px">${l}</th><td>${esc(S.bg[i]||'')}</td></tr>`).join('') +
     `<tr><th>Intervalo de tiempo</th><td>${S.interval} s</td></tr></table></div>`;
 }
-function resultsHTML(withGallery = true){
+function resultsHTML(withGallery = true, withGuide = withGallery){
   const list = filtered(), n = list.length;
-  if (!n) return `<div class="card empty">No hay observaciones${phaseFilter >= 0 ? ' en esta tarea' : ''}. Regístrelas en la sección «Observación» o abra un archivo .OWS.</div>`;
+  if (!n) return `<div class="card empty">No hay observaciones${phaseFilter >= 0 ? ' en esta tarea' : ''}. Regístrelas en la sección «Observación» o abra un archivo .OWS.</div>` + (withGuide ? guideHTML() : '');
   const c = catCounts(list);
   let h = `<div class="card"><h2>${ico('chart')}Categorías de acción — ${phaseFilter < 0 ? 'todo el material' : esc(phaseName(phaseFilter))}</h2>
     <p class="muted" style="margin-top:-6px">${n} observaciones${S.interval ? ` · tiempo observado aprox. ${Math.round(n*S.interval/60)} min` : ''}</p>
     ${stackBar(c)}
     <div class="legend">${CATS.map((k,i) => `<div>${catBadge(i+1,false)}<div><b>${k.t}</b> — ${c[i]} obs. (${pctFmt(c[i]/n*100)})<p>${k.d}</p></div></div>`).join('')}</div></div>`;
+  if (withGuide) h += guideHTML();
   if (phaseFilter < 0 && S.phases.length > 1){
     h += `<div class="card"><h2>${ico('layers')}Porcentaje por tareas</h2><div class="tbl-wrap"><table><tr><th>Tarea</th><th class="n">Obs.</th><th class="n">% del total</th>${[1,2,3,4].map(k => `<th class="n">Cat. ${k}</th>`).join('')}<th class="bar-col"></th></tr>` +
       S.phases.map((p,i) => { const l = S.obs.filter(o => o.p === i), m = l.length, cc = catCounts(l);
@@ -1859,6 +1905,96 @@ function figBody(list){
   return s;
 }
 
+// ---- Guía de interpretación de las categorías de acción ----
+// Significado de cada categoría según el método OWAS (Karhu et al., 1977, 1981) y el WinOWAS original
+const CAT_GUIDE = [
+  {color: 'Verde', effect: 'Postura normal y natural, sin efectos dañinos en el sistema musculoesquelético.', act: 'No se requieren acciones.', when: 'Ninguna'},
+  {color: 'Amarillo', effect: 'Postura con posible efecto dañino en el sistema musculoesquelético.', act: 'Se requieren acciones correctivas.', when: 'En un futuro cercano'},
+  {color: 'Naranja', effect: 'Postura con efecto dañino en el sistema musculoesquelético.', act: 'Se requieren acciones correctivas.', when: 'Lo antes posible'},
+  {color: 'Rojo', effect: 'Postura con efecto sumamente dañino en el sistema musculoesquelético.', act: 'Se requieren acciones correctivas.', when: 'Inmediatamente'}
+];
+const CAT_TINT = ['#e6f5e6', '#fff3d4', '#fde5da', '#f7dada'];
+// Reparte un texto en renglones de como mucho «max» caracteres (los SVG no ajustan el texto solos)
+function svgWrap(text, max){
+  const rows = []; let cur = '';
+  for (const w of text.split(' ')){ const t = cur ? cur + ' ' + w : w; if (t.length > max && cur){ rows.push(cur); cur = w; } else cur = t; }
+  return cur ? [...rows, cur] : rows;
+}
+function figGuide(){
+  const W = 680, M = 6, gap = 8, cw = (W - 2 * M - 3 * gap) / 4, lh = 15, ink = i => i === 0 || i === 3 ? '#fff' : '#000';
+  const cols = CAT_GUIDE.map(g => ({e: svgWrap(g.effect, 24), a: svgWrap(g.act, 24)}));
+  const nBody = Math.max(...cols.map(c => c.e.length + c.a.length));
+  const T = 40, hh = 52, bh = 14 + (nBody + 4) * lh + 18;
+  const y2 = T + hh + bh + 30, ph = 132, H = y2 + 22 + ph + 6;
+  let s = svgOpen(W, H, 'Guía de las cuatro categorías de acción OWAS: color, efecto en el cuerpo, acción y plazo, y cómo se asigna la categoría');
+  // Flecha de urgencia, de verde a rojo
+  s += `<text x="${M}" y="12" font-size="11" fill="#444">Menor urgencia</text><text x="${W / 2}" y="12" text-anchor="middle" font-weight="700">Urgencia de la acción correctiva</text><text x="${W - M}" y="12" text-anchor="end" font-size="11" fill="#444">Mayor urgencia</text>`;
+  CAT_GUIDE.forEach((g, i) => {
+    const x = M + i * (cw + gap), last = i === 3, x2 = last ? W - M - 12 : x + cw + gap;
+    s += `<rect x="${x}" y="19" width="${x2 - x}" height="12" fill="${CAT_HEX[i]}"/>`;
+    if (last) s += `<polygon points="${x2},14 ${W - M},25 ${x2},36" fill="${CAT_HEX[i]}"/>`;
+  });
+  // Una columna por categoría: color, nombre, efecto, acción y plazo
+  CAT_GUIDE.forEach((g, i) => {
+    const x = M + i * (cw + gap), c = cols[i];
+    s += `<rect x="${x}" y="${T}" width="${cw}" height="${hh}" rx="6" fill="${CAT_HEX[i]}"/>`;
+    s += `<text x="${x + 12}" y="${T + 37}" font-size="30" font-weight="700" fill="${ink(i)}">${i + 1}</text>`;
+    s += `<text x="${x + 42}" y="${T + 22}" font-size="13" font-weight="700" fill="${ink(i)}">${CATS[i].t}</text><text x="${x + 42}" y="${T + 39}" font-size="11" fill="${ink(i)}">Color ${g.color.toLowerCase()}</text>`;
+    s += `<rect x="${x}" y="${T + hh + 4}" width="${cw}" height="${bh}" rx="6" fill="${CAT_TINT[i]}"/>`;
+    let y = T + hh + 4 + 18;
+    const label = t => { s += `<text x="${x + 10}" y="${y}" font-size="11" font-weight="700" fill="#444">${t}</text>`; y += lh; };
+    const rows = (r, bold) => r.forEach(t => { s += `<text x="${x + 10}" y="${y}" font-size="12"${bold ? ' font-weight="700"' : ''}>${esc(t)}</text>`; y += lh; });
+    label('Efecto en el cuerpo'); rows(c.e); y += 4;
+    label('Qué hacer'); rows(c.a); y += 4;
+    label('Plazo'); rows([g.when], true);
+  });
+  // Cómo se asigna la categoría
+  s += `<text x="${M}" y="${y2}" font-size="14" font-weight="700">Cómo se asigna la categoría</text>`;
+  const py = y2 + 12, pw = (W - 2 * M - 12) / 2;
+  // a) A cada observación, por su código
+  const ex = {b: 2, a: 1, l: 4, w: 1}, k = catOf(ex);
+  s += `<rect x="${M}" y="${py}" width="${pw}" height="${ph}" rx="6" fill="none" stroke="#bbb"/>`;
+  s += `<text x="${M + 10}" y="${py + 18}" font-weight="700">A cada observación, según su código</text>`;
+  const by = py + 32, box = (x, w, t1, t2, fill = '#f2f2f2', color = '#000') => {
+    s += `<rect x="${x}" y="${by}" width="${w}" height="44" rx="5" fill="${fill}" stroke="#999" stroke-width="0.6"/>` +
+      `<text x="${x + w / 2}" y="${by + 18}" text-anchor="middle" font-size="11" fill="${color}">${t1}</text><text x="${x + w / 2}" y="${by + 35}" text-anchor="middle" font-weight="700" fill="${color}">${t2}</text>`;
+  };
+  const arrow = x => { s += `<path d="M${x} ${by + 22}h10" stroke="#000" stroke-width="1.4"/><polygon points="${x + 10},${by + 17} ${x + 16},${by + 22} ${x + 10},${by + 27}"/>`; };
+  const bx = M + 10;
+  box(bx, 76, 'Código', codeStr(ex).split('').join(' ')); arrow(bx + 80);
+  box(bx + 100, 126, 'Tabla OWAS', '252 combinaciones'); arrow(bx + 230);
+  box(bx + 250, 62, 'Categoría', String(k), CAT_HEX[k - 1], ink(k - 1));
+  svgWrap('Dígitos: espalda, brazos, piernas y carga. Ejemplo: espalda inclinada, brazos abajo, de pie con ambas rodillas flexionadas y menos de 10 kg.', 52)
+    .forEach((r, j) => { s += `<text x="${M + 10}" y="${by + 60 + j * 13}" font-size="11" fill="#444">${r}</text>`; });
+  // b) A cada parte del cuerpo, según el tiempo en cada postura (ejemplo: espalda inclinada)
+  const qx = M + pw + 12, t = BODY.b[1], bw = pw - 20, bx2 = qx + 10, bandY = py + 46;
+  s += `<rect x="${qx}" y="${py}" width="${pw}" height="${ph}" rx="6" fill="none" stroke="#bbb"/>`;
+  s += `<text x="${qx + 10}" y="${py + 18}" font-weight="700">A cada parte del cuerpo, según el tiempo</text>`;
+  s += `<text x="${qx + 10}" y="${py + 36}" font-size="11" fill="#444">Ejemplo: espalda inclinada (código 2), % del tiempo observado</text>`;
+  let cum = 0; const ticks = [0], legend = [];
+  t.forEach((w, j) => {
+    if (!w) return;
+    s += `<rect x="${bx2 + cum / 100 * bw}" y="${bandY}" width="${w / 100 * bw}" height="18" fill="${CAT_HEX[j]}"/>`;
+    s += `<text x="${bx2 + (cum + w / 2) / 100 * bw}" y="${bandY + 13}" text-anchor="middle" font-size="11" font-weight="700" fill="${ink(j)}">${j + 1}</text>`;
+    legend.push(`${cum ? (cum + w >= 100 ? `más de ${cum} %` : `${cum}–${cum + w} %`) : `hasta ${w} %`}: categoría ${j + 1}`);
+    cum += w; ticks.push(cum);
+  });
+  ticks.forEach(v => { const x = bx2 + v / 100 * bw; s += `<line x1="${x}" x2="${x}" y1="${bandY + 18}" y2="${bandY + 23}" stroke="#000"/><text x="${x}" y="${bandY + 34}" text-anchor="${v ? (v >= 100 ? 'end' : 'middle') : 'start'}" font-size="11">${v} %</text>`; });
+  svgWrap(legend.join(' · ') + '.', 60).forEach((r, j) => { s += `<text x="${qx + 10}" y="${bandY + 52 + j * 13}" font-size="11" fill="#444">${r}</text>`; });
+  return s + '</svg>';
+}
+function guideHTML(){
+  return `<div class="card guide"><h2>${ico('help')}Cómo interpretar las categorías de acción OWAS</h2>
+    <div class="guide-fig">${figGuide()}</div>
+    <ul class="small guide-list">
+      <li><b>Cada observación</b> recibe una categoría según la combinación de sus cuatro dígitos (espalda, brazos, piernas y carga) en la tabla de clasificación del método. La gráfica «Categorías de acción» muestra qué porcentaje de las observaciones, y por lo tanto aproximadamente del tiempo de trabajo, cae en cada categoría.</li>
+      <li><b>Prioridad:</b> corrija primero las posturas de categoría 4 y después las de categoría 3. Están en «Posturas por categoría» y en las imágenes, ordenadas de mayor a menor riesgo.</li>
+      <li><b>Cada parte del cuerpo</b> se clasifica además según el porcentaje del tiempo que se mantiene cada postura (gráfica «Por parte del cuerpo»): una postura poco dañina por sí sola puede requerir acciones si se mantiene durante mucho tiempo.</li>
+      <li>La categoría indica la <b>urgencia de mejorar el trabajo</b>, no un diagnóstico de salud. Los resultados son más fiables cuantas más observaciones haya y cuanto más representativo sea el periodo observado.</li>
+    </ul>
+    <p class="small muted" style="margin:0">Fuente: método OWAS (Karhu et al., 1977, 1981) y tablas de clasificación del WinOWAS original.</p></div>`;
+}
+
 function apaSections(){
   const list = filtered(), n = list.length;
   if (!n) return {cat: '', body: ''};
@@ -1921,7 +2057,9 @@ function apaSections(){
   }
   return {cat, body};
 }
-const apaRefs = () => `<div class="apa-refs"><h3>Referencias</h3><p>${APA_REF}</p></div>`;
+// Segunda referencia: el artículo que describe las categorías de acción y su aplicación
+const APA_REF2 = 'Karhu, O., Härkönen, R., Sorvali, P. y Vepsäläinen, P. (1981). Observing working postures in industry: Examples of OWAS application. <i>Applied Ergonomics, 12</i>(1), 13–17. https://doi.org/10.1016/0003-6870(81)90088-0';
+const apaRefs = () => `<div class="apa-refs"><h3>Referencias</h3><p>${APA_REF}</p><p>${APA_REF2}</p></div>`;
 function apaCard(part){
   const html = apaSections()[part];
   if (!html) return '';
@@ -1947,7 +2085,7 @@ $('#clearAll').onclick = () => { if (S.obs.length && confirm(`¿Eliminar las ${S
 async function doPrint(){
   const title = `<h1>OWAS Web — ${esc(fileName || 'Estudio OWAS')}</h1><p class="muted" style="margin-top:0">${esc(S.bg[2]||'')}</p>`;
   const apa = $('#printApa').checked ? apaSections() : null;
-  $('#print').innerHTML = title + ($('#printBg').checked ? bgBlock() : '') + resultsHTML(false) + bodyHTML() +
+  $('#print').innerHTML = title + ($('#printBg').checked ? bgBlock() : '') + resultsHTML(false, $('#printGuide').checked) + bodyHTML() +
     (apa && (apa.cat || apa.body) ? `<div class="card"><h2>Tablas y figuras</h2>${apa.cat}${apa.body}${apaRefs()}</div>` : '') +
     ($('#printImg').checked ? galleryHTML(filtered(), false, $('#printImgSize').value === 'big') : '');
   // Las imágenes deben estar cargadas y decodificadas antes de abrir el diálogo de impresión
@@ -2559,6 +2697,10 @@ async function exportWord(){
     const list = filtered(), apa = apaSections();
     let html = `<h1>OWAS Web — ${esc(fileName || 'Estudio OWAS')}</h1><p>${esc(S.bg[2] || '')}</p>`;
     if ($('#printBg').checked) html += `<h2>Información general</h2><table class="bg">` + BG_LABELS.map((l, i) => `<tr><th>${l}</th><td>${esc(S.bg[i] || '')}</td></tr>`).join('') + `<tr><th>Intervalo de tiempo</th><td>${S.interval} s</td></tr></table>`;
+    if ($('#printGuide').checked){
+      const g = document.createElement('div'); g.innerHTML = guideHTML();
+      html += `<h2>Cómo interpretar las categorías de acción OWAS</h2>${figGuide()}<ul>${g.querySelector('.guide-list').innerHTML}</ul><p>${g.querySelector('p').innerHTML}</p>`;
+    }
     if (apa.cat || apa.body) html += `<h2>Tablas y figuras</h2>${apa.cat}${apa.body}${apaRefs()}`;
     // Documento inerte: el navegador no intenta cargar las rutas de imagen del .doc
     const inert = document.implementation.createHTMLDocument(''), box = inert.createElement('div'); box.innerHTML = html;
@@ -2646,7 +2788,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.21 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.22 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
@@ -2664,7 +2806,7 @@ $('#wipeData').addEventListener('click', async () => {
   loadState(blank(), '', null); clearTimeout(persistTimer);
   try{ await idb.del('autosave'); }catch(e){}
   try{ Object.keys(localStorage).filter(k => /^(winowas|owasweb)/.test(k)).forEach(k => localStorage.removeItem(k)); }catch(e){}
-  if (vid.src){ URL.revokeObjectURL(vid.src); vid.removeAttribute('src'); vid.load(); videoName = ''; $('#videoName').textContent = 'Ningún video cargado'; $('#vidEmpty').hidden = false; $('#loadVideo').classList.add('load'); }
+  if (vid.src){ URL.revokeObjectURL(vid.src); vid.removeAttribute('src'); vid.load(); videoName = ''; videoFile = null; videoOk = false; $('#videoName').textContent = 'Ningún video cargado'; $('#vidEmpty').hidden = false; $('#loadVideo').classList.add('load'); }
   photos.forEach(ph => URL.revokeObjectURL(ph.url)); photos = []; pi = 0; $('#photo').removeAttribute('src'); $('#photoEmpty').hidden = false; $('#loadPhotos').classList.add('load'); renderThumbs();
   autosaveOn = true; $('#autosaveToggle').checked = true;
   clearOverlay(); renderAll();
