@@ -131,6 +131,9 @@ dialog#exportDlg{border:0;border-radius:12px;padding:18px 20px;max-width:min(520
 .detect-cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 16px;margin:8px 0}
 .detect-cfg label{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .detect-cfg input[type=number]{width:80px;padding:5px 8px}
+.vis-parts{width:auto;margin:6px 0 4px}
+.vis-parts th,.vis-parts td{padding:3px 14px;text-align:center}
+.vis-parts th:first-child,.vis-parts td:first-child{text-align:left;padding-left:0}
 .detect-cfg input[type=color]{width:48px;height:30px;padding:2px;border:0;border-radius:6px;background:var(--fill);cursor:pointer}
 .cfg-head{margin:12px 0 0;font-weight:700}
 .tag{display:inline-block;font-size:12px;border-radius:5px;padding:0 6px;margin-left:6px;border:1px solid var(--line);color:var(--ink-2);font-weight:500;vertical-align:middle}
@@ -488,6 +491,15 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
             <label>Caminando si la cadera se desplaza más de (% del tronco) <input type="number" data-cfg="walkDist" min="5" max="100"></label>
             <label><input type="checkbox" data-cfg="avg3"> Promediar 3 fotogramas cercanos en video (±0,1 s)</label>
           </div>
+          <p class="cfg-head">Qué se dibuja de cada parte del cuerpo</p>
+          <table class="vis-parts small">
+            <tr><th>Parte del cuerpo</th><th>Esqueleto</th><th>Ángulos</th></tr>
+            <tr><td>Cuello</td><td><input type="checkbox" data-cfg="skNeck" aria-label="Esqueleto del cuello"></td><td><input type="checkbox" data-cfg="anNeck" aria-label="Flexión del cuello"></td></tr>
+            <tr><td>Tronco (hombros y caderas)</td><td><input type="checkbox" data-cfg="skTrunk" aria-label="Esqueleto del tronco"></td><td><input type="checkbox" data-cfg="anTrunk" aria-label="Inclinación del tronco"></td></tr>
+            <tr><td>Brazos (ángulos de hombros y codos)</td><td><input type="checkbox" data-cfg="skArms" aria-label="Esqueleto de los brazos"></td><td><input type="checkbox" data-cfg="anArms" aria-label="Ángulos de hombros y codos"></td></tr>
+            <tr><td>Piernas (ángulos de caderas y rodillas)</td><td><input type="checkbox" data-cfg="skLegs" aria-label="Esqueleto de las piernas"></td><td><input type="checkbox" data-cfg="anLegs" aria-label="Ángulos de caderas y rodillas"></td></tr>
+            <tr><td>Tobillos y pies</td><td><input type="checkbox" data-cfg="skFeet" aria-label="Esqueleto de los pies"></td><td><input type="checkbox" data-cfg="anFeet" aria-label="Ángulos de los tobillos"></td></tr>
+          </table>
           <p class="cfg-head">Aspecto del esqueleto y los ángulos</p>
           <div class="detect-cfg">
             <label>Color del esqueleto <input type="color" data-cfg="skelColor"></label>
@@ -496,7 +508,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
             <label>Tamaño del texto de los ángulos (px) <input type="number" data-cfg="angSize" min="8" max="32"></label>
             <label>Color del compás <input type="color" data-cfg="arcColor"></label>
             <label>Tamaño del compás (radio en px) <input type="number" data-cfg="arcSize" min="6" max="40"></label>
-            <div class="vctrl"><button class="btn" id="styleReset" data-icon="undo">Restaurar colores y tamaños</button></div>
+            <div class="vctrl"><button class="btn" id="styleReset" data-icon="undo">Restaurar el aspecto predeterminado</button></div>
           </div>
           <p class="muted">La detección usa MediaPipe Pose y solo propone espalda, brazos y piernas. La carga se elige siempre a mano. Revise cada propuesta antes de aceptarla.</p>
         </details>
@@ -606,7 +618,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 <button class="to-top" id="toTop" data-icon="arrowUp" title="Subir al inicio" aria-label="Subir al inicio de la página" hidden></button>
 <footer class="foot">
   <p><b>OWAS Web</b> · © 2026 Leonardo Lira · Código abierto con <a href="https://github.com/leolira0568/owas-web/blob/main/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · <a href="https://github.com/leolira0568/owas-web" target="_blank" rel="noopener">Proyecto en GitHub</a> · <a href="#privacidad" id="privacyLink">Privacidad y seguridad</a></p>
-  <p>Detección de posturas: MediaPipe Pose © Google LLC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mediapipe/LICENSE" target="_blank" rel="noopener">licencia Apache 2.0</a> · Modelo Rajagopal 2016 © Stanford University, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/opensim/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · Modelo de cuerpo completo © Ross Wilkinson, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/opensim/LICENSE-wilkinson" target="_blank" rel="noopener">licencia MIT</a> · Iconos basados en <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC) · Método OWAS: Karhu et al. (1977)</p>
+  <p>Detección de posturas: MediaPipe Pose © Google LLC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mediapipe/LICENSE" target="_blank" rel="noopener">licencia Apache 2.0</a> · Modelo Rajagopal 2016 © Stanford University, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/opensim/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · Modelo de cuerpo completo © Ross Wilkinson, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/opensim/LICENSE-wilkinson" target="_blank" rel="noopener">licencia MIT</a> · mp4box.js © GPAC, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mp4box/LICENSE" target="_blank" rel="noopener">licencia BSD-3</a> · mp4-muxer © Vanilagy, <a href="https://github.com/leolira0568/owas-web/blob/main/vendor/mp4-muxer/LICENSE" target="_blank" rel="noopener">licencia MIT</a> · Iconos basados en <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide</a> (ISC) · Método OWAS: Karhu et al. (1977)</p>
 </footer>
 <div id="print"></div>
 <input type="file" id="fileOpen" accept=".ows,.OWS,.owsp" hidden>
@@ -1324,10 +1336,132 @@ function reopenVideo(){
   const note = $('#vidNote'); note.textContent = 'El navegador dejó de reproducir el video y se volvió a abrir en el mismo momento. Puede seguir trabajando.'; note.hidden = false;
   clearTimeout(reopenVideo.timer); reopenVideo.timer = setTimeout(() => { note.hidden = true; }, 12000);
 }
+/*SINAUDIO-INICIO*/
+// ---- Copia del video sin la pista de audio ----
+// Algunos videos (sobre todo de celulares) tienen fragmentos de sonido que el navegador no puede decodificar, y el video
+// falla aunque esté silenciado («Failed to send audio packet for decoding»). La aplicación no usa el sonido: se crea en
+// memoria una copia del MP4 con solo la pista de imagen, sin volver a codificarla (mp4box.js la lee y mp4-muxer la escribe).
+// El archivo original no cambia. Este bloque es igual en OWAS Web y en Análisis Postural OpenSim.
+async function loadScriptOnce(id, file, dir, name){
+  if (window[name]) return window[name];
+  const url = URL.createObjectURL(new Blob([await embedded(id, file, dir)], {type: 'text/javascript'}));
+  await new Promise((res, rej) => { const s = document.createElement('script'); s.src = url; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  return window[name];
+}
+const isMp4 = f => /\.(mp4|m4v|mov)$/i.test(f.name || '') || /mp4|quicktime/.test(f.type || '');
+async function videoWithoutAudio(file, progress = () => {}){
+  const MP4Box = await loadScriptOnce('mp4box-js', 'mp4box.all.min.js', 'mp4box', 'MP4Box');
+  const M = await loadScriptOnce('mp4-muxer', 'mp4-muxer.js', 'mp4-muxer', 'Mp4Muxer');
+  const mp4 = MP4Box.createFile(), samples = [];
+  let track = null, movieTs = 1000, failed = null;
+  mp4.onError = e => { failed = new Error(String(e)); };
+  mp4.onReady = info => {
+    track = info.videoTracks[0]; movieTs = info.timescale || 1000;
+    if (!track){ failed = new Error('el archivo no tiene pista de video'); return; }
+    mp4.setExtractionOptions(track.id, null, {nbSamples: 1000});
+    mp4.start();
+  };
+  mp4.onSamples = (id, user, list) => {
+    for (const s of list) samples.push({data: s.data, sync: s.is_sync, cts: s.cts, dts: s.dts, dur: s.duration});
+    mp4.releaseUsedSamples(id, list[list.length - 1].number + 1);
+  };
+  // Se lee por partes de 8 MB, en orden, para no cargar el archivo dos veces en memoria
+  for (let pos = 0; pos < file.size && !failed; ){
+    const buf = await file.slice(pos, pos + (8 << 20)).arrayBuffer();
+    buf.fileStart = pos; pos += buf.byteLength;
+    mp4.appendBuffer(buf);
+    progress(pos / file.size);
+  }
+  mp4.flush();
+  if (failed) throw failed;
+  if (!track || !samples.length) throw new Error('no se pudieron leer los fotogramas del video');
+  const trak = mp4.getTrackById(track.id), entry = trak.mdia.minf.stbl.stsd.entries[0];
+  const cfgBox = entry.avcC || entry.hvcC || entry.vpcC || entry.av1C;
+  let description;
+  if (cfgBox){ const ds = new DataStream(undefined, 0, DataStream.BIG_ENDIAN); cfgBox.write(ds); description = new Uint8Array(ds.buffer, 8); }
+  const c = track.codec, codec = /^avc/.test(c) ? 'avc' : /^(hvc|hev)/.test(c) ? 'hevc' : /^vp09/.test(c) ? 'vp9' : /^av01/.test(c) ? 'av1' : null;
+  if (!codec) throw new Error('formato de video no compatible (' + c + ')');
+  const w = (track.video && track.video.width) || track.track_width, h = (track.video && track.video.height) || track.track_height;
+  // Giro del video (celulares en vertical), en múltiplos de 90°
+  const mx = track.matrix, rotation = mx ? (((Math.round(Math.atan2(mx[1], mx[0]) * 180 / Math.PI / 90) * 90) % 360) + 360) % 360 : 0;
+  const ts = track.timescale, dts0 = samples[0].dts;
+  const muxer = new M.Muxer({target: new M.ArrayBufferTarget(), video: {codec, width: w, height: h, rotation}, fastStart: false, firstTimestampBehavior: 'offset'});
+  samples.forEach((s, i) => muxer.addVideoChunkRaw(s.data, s.sync ? 'key' : 'delta', s.cts / ts * 1e6, s.dur / ts * 1e6,
+    i ? undefined : {decoderConfig: {codec: c, codedWidth: w, codedHeight: h, description}}, (s.cts - s.dts) / ts * 1e6));
+  muxer.finalize();
+  let out = new Uint8Array(muxer.target.buffer);
+  // Lista de edición: el original puede empezar con un retraso (tramo vacío) o mostrar primero un fotograma posterior
+  // (fotogramas B); la copia conserva esa lista para que cada fotograma tenga el mismo tiempo que en el original
+  const entries = (trak.edts && trak.edts.elst ? trak.edts.elst.entries : []).map(e => ({dur: e.segment_duration / movieTs,
+    media: e.media_time < 0 ? -1 : Math.max(0, (e.media_time - dts0) / ts)}));
+  if (!entries.some(e => e.media >= 0) && dts0 > 0) entries.push({dur: 0, media: 0});
+  if (entries.some(e => e.media < 0 || e.media > 0.0005)) out = addEditList(out, entries);
+  const copy = new File([out], file.name, {type: 'video/mp4'});
+  copy.noAudio = true;
+  return copy;
+}
+// Inserta una lista de edición (edts/elst) en la pista de video de un MP4 con la caja moov al final.
+// entries: [{dur (s; 0 = hasta el final), media (s; -1 = tramo vacío)}]
+function addEditList(buf, entries){
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  const type = o => String.fromCharCode(buf[o + 4], buf[o + 5], buf[o + 6], buf[o + 7]);
+  const find = (from, to, name) => { for (let o = from; o + 8 <= to; ){ const sz = dv.getUint32(o); if (type(o) === name) return o; if (sz < 8) return -1; o += sz; } return -1; };
+  const moov = find(0, buf.length, 'moov'), mdat = find(0, buf.length, 'mdat');
+  if (moov < 0 || mdat < 0 || mdat > moov) return buf;   // solo si los datos van antes que moov (los desplazamientos no cambian)
+  const moovEnd = moov + dv.getUint32(moov), mvhd = find(moov + 8, moovEnd, 'mvhd'), trak = find(moov + 8, moovEnd, 'trak');
+  if (mvhd < 0 || trak < 0) return buf;
+  const tkhd = find(trak + 8, trak + dv.getUint32(trak), 'tkhd');
+  if (tkhd < 0) return buf;
+  const v1 = buf[mvhd + 8] === 1, mts = dv.getUint32(mvhd + (v1 ? 28 : 20)), total = v1 ? Number(dv.getBigUint64(mvhd + 32)) : dv.getUint32(mvhd + 24);
+  const n = entries.length, size = 24 + 12 * n, edts = new Uint8Array(size), e = new DataView(edts.buffer);
+  e.setUint32(0, size); edts.set([101, 100, 116, 115], 4);              // edts
+  e.setUint32(8, size - 8); edts.set([101, 108, 115, 116], 12);         // elst, versión 0
+  e.setUint32(20, n);
+  let used = 0;
+  entries.forEach((x, k) => {
+    // El último tramo con imagen dura hasta el final de la copia (su duración puede cambiar unas milésimas)
+    const d = x.media >= 0 && (k === n - 1 || !x.dur) ? Math.max(0, total - used) : Math.round(x.dur * mts);
+    used += d;
+    e.setUint32(24 + 12 * k, Math.min(d, 0xffffffff)); e.setInt32(28 + 12 * k, x.media < 0 ? -1 : Math.round(x.media * 57600)); e.setInt16(32 + 12 * k, 1); e.setInt16(34 + 12 * k, 0);
+  });
+  const at = tkhd + dv.getUint32(tkhd), out = new Uint8Array(buf.length + size);
+  out.set(buf.subarray(0, at)); out.set(edts, at); out.set(buf.subarray(at), at + size);
+  const od = new DataView(out.buffer);
+  od.setUint32(moov, dv.getUint32(moov) + size); od.setUint32(trak, dv.getUint32(trak) + size);
+  // La duración de la película incluye el retraso inicial
+  if (used > total){ if (v1) od.setBigUint64(mvhd + 32, BigInt(used)); else od.setUint32(mvhd + 24, used); }
+  return out;
+}
+/*SINAUDIO-FIN*/
+// Si el error viene del sonido, se abre la copia sin sonido (una vez por archivo) en el mismo momento del video
+let audioFixing = false;
+async function openWithoutAudio(){
+  if (audioFixing) return;
+  audioFixing = true;
+  const f = videoFile, t = videoT, rate = vid.playbackRate, note = $('#vidNote');
+  const say = text => { clearTimeout(reopenVideo.timer); note.textContent = text; note.hidden = false; };
+  say('El sonido de este video tiene un error que el navegador no puede leer. Preparando una copia del video sin sonido…');
+  try{
+    const copy = await videoWithoutAudio(f, p => say(`Preparando una copia del video sin sonido… ${Math.round(p * 100)} %`));
+    if (videoFile !== f) return;   // mientras tanto se cargó otro video
+    videoFile = copy; videoOk = false; reopen = {n: 0, at: 0};
+    const old = vid.src;
+    vid.src = URL.createObjectURL(copy);
+    URL.revokeObjectURL(old);
+    vid.addEventListener('loadedmetadata', () => { vid.currentTime = Math.min(t, vid.duration || t); vid.playbackRate = rate; }, {once: true});
+    say('El sonido de este video tenía un error, así que se abrió una copia sin sonido (el archivo original no cambia). Puede seguir trabajando.');
+    reopenVideo.timer = setTimeout(() => { note.hidden = true; }, 15000);
+  }catch(e){
+    console.error(e); note.hidden = true;
+    alert(`El sonido de este video tiene un error que el navegador no puede leer, y no se pudo crear una copia sin sonido (${e.message}).\n\nConvierta el video a MP4 (H.264) sin sonido, por ejemplo con HandBrake o con la opción para quitar el audio de su editor de video, y vuelva a cargarlo.`);
+  }finally{ audioFixing = false; }
+}
 vid.addEventListener('error', () => {
   if (!vid.getAttribute('src')) return;
   const err = vid.error, code = err ? err.code : 0, detail = `código ${code}${err && err.message ? ', ' + err.message : ''}`;
   console.warn('Error del video:', detail);
+  // Error en la pista de sonido: se abre una copia del video sin sonido
+  if (videoFile && /audio/i.test(detail) && !videoFile.noAudio && isMp4(videoFile)){ openWithoutAudio(); return; }
   if (videoOk && videoFile){
     const now = Date.now();
     reopen = {n: now - reopen.at < 60000 ? reopen.n + 1 : 1, at: now};
@@ -1419,7 +1553,9 @@ function loadPose(){
 }
 
 // Umbrales ajustables (se recuerdan en este navegador)
-const STYLE_DEFAULT = {skelColor: '#7fd1ff', skelWidth: 3, angColor: '#ffd54a', angSize: 12, arcColor: '#4cd964', arcSize: 15};
+const STYLE_DEFAULT = {skelColor: '#7fd1ff', skelWidth: 3, angColor: '#ffd54a', angSize: 12, arcColor: '#4cd964', arcSize: 15,
+  // Partes del cuerpo que se dibujan (esqueleto y ángulos); por defecto, todas
+  skNeck: true, anNeck: true, skTrunk: true, anTrunk: true, skArms: true, anArms: true, skLegs: true, anLegs: true, skFeet: true, anFeet: true};
 const CFG_DEFAULT = {trunk: 20, twist: 20, knee: 150, lift: 10, walk: true, walkDist: 25, avg3: true, blurBlocks: 5, ...STYLE_DEFAULT};
 let CFG = {...CFG_DEFAULT};
 try{ Object.assign(CFG, JSON.parse(localStorage.getItem('winowas.detect') || '{}')); }catch(e){}
@@ -1520,18 +1656,28 @@ function classifyOWAS(W, N){
 }
 
 // Dibuja el esqueleto en un contexto 2D de tamaño w×h
+// Parte del cuerpo de cada hueso, para mostrar u ocultar su esqueleto («Ajustes de detección»)
+const boneRegion = ([i, j]) => (i >= 13 && i <= 22) || (j >= 13 && j <= 22) ? 'Arms' : i >= 27 && j >= 27 ? 'Feet' : [i, j].every(k => [11, 12, 23, 24].includes(k)) ? 'Trunk' : 'Legs';
 function drawSkeleton(g, N, w, h, scale = 1){
   g.save();
   g.lineCap = 'round'; g.lineJoin = 'round';
   const pt = i => [N[i].x * w, N[i].y * h];
+  const line = (a, b) => {
+    g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = (CFG.skelWidth + 3) * scale; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
+    g.strokeStyle = CFG.skelColor; g.lineWidth = CFG.skelWidth * scale; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
+  };
   for (const [i, j] of BONES){
-    if ((N[i].visibility ?? 1) < 0.3 || (N[j].visibility ?? 1) < 0.3) continue;
-    const [x1, y1] = pt(i), [x2, y2] = pt(j);
-    g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = (CFG.skelWidth + 3) * scale; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
-    g.strokeStyle = CFG.skelColor; g.lineWidth = CFG.skelWidth * scale; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+    if ((N[i].visibility ?? 1) < 0.3 || (N[j].visibility ?? 1) < 0.3 || !CFG['sk' + boneRegion([i, j])]) continue;
+    line(pt(i), pt(j));
   }
+  // Cuello: de la mitad de los hombros a la mitad de las orejas
+  if (CFG.skNeck && [7, 8, 11, 12].every(i => (N[i].visibility ?? 1) >= 0.5)){
+    const mid = (a, b) => [(pt(a)[0] + pt(b)[0]) / 2, (pt(a)[1] + pt(b)[1]) / 2];
+    line(mid(11, 12), mid(7, 8));
+  }
+  const dot = i => BONES.some(b => b.includes(i) && CFG['sk' + boneRegion(b)]) || (i >= 17 && i <= 22 && CFG.skArms);
   for (let i = 11; i <= 32; i++){
-    if ((N[i].visibility ?? 1) < 0.3) continue;
+    if ((N[i].visibility ?? 1) < 0.3 || !dot(i)) continue;
     const [x, y] = pt(i);
     g.fillStyle = '#ffffff'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.5 * scale;
     g.beginPath(); g.arc(x, y, Math.max(3.5, CFG.skelWidth * 1.15) * scale, 0, Math.PI * 2); g.fill(); g.stroke();
@@ -1547,12 +1693,13 @@ function drawAngles(g, det, w, h, scale = 1){
   const midX = (N[11].x + N[12].x + N[23].x + N[24].x) / 4 * w;
   const px = i => [N[i].x * w, N[i].y * h], dir = (p, q) => Math.atan2(q[1] - p[1], q[0] - p[0]);
   const labels = [], arcs = [];
-  for (const [a, j, c] of JOINT_ANGLES.filter(t => t.every(vis))){
+  const JOINT_REGION = ['Arms', 'Arms', 'Arms', 'Arms', 'Legs', 'Legs', 'Legs', 'Legs'];   // codos, hombros, caderas, rodillas
+  for (const [a, j, c] of JOINT_ANGLES.filter((t, k) => CFG['an' + JOINT_REGION[k]] && t.every(vis))){
     const J = px(j);
     arcs.push({p: J, from: dir(J, px(a)), to: dir(J, px(c))});
     labels.push({x: J[0], y: J[1], side: J[0] >= midX ? 1 : -1, t: Math.round(V.ang(V.sub(W[a], W[j]), V.sub(W[c], W[j]))) + '°'});
   }
-  if ([11,12,23,24].every(vis) && det.m && det.m.trunk != null){
+  if (CFG.anTrunk && [11,12,23,24].every(vis) && det.m && det.m.trunk != null){
     // Tronco: entre la vertical que sube desde las caderas y la línea de caderas a hombros
     const H = [(px(23)[0] + px(24)[0]) / 2, (px(23)[1] + px(24)[1]) / 2], Sh = [(px(11)[0] + px(12)[0]) / 2, (px(11)[1] + px(12)[1]) / 2];
     arcs.push({p: H, from: -Math.PI / 2, to: dir(H, Sh), ref: Math.hypot(Sh[0] - H[0], Sh[1] - H[1]) * 0.7});
@@ -1561,19 +1708,14 @@ function drawAngles(g, det, w, h, scale = 1){
   // Tobillos: entre la pierna y el pie (90° ≈ neutro)
   [[0, 25, 27, 31], [1, 26, 28, 32]].forEach(([k, a, j, c]) => {
     const v = det.m && det.m[k ? 'ankleR' : 'ankleL'];
-    if (v == null || ![a, j, c].every(vis)) return;
+    if (!CFG.anFeet || v == null || ![a, j, c].every(vis)) return;
     const J = px(j);
     arcs.push({p: J, from: dir(J, px(a)), to: dir(J, px(c))});
     labels.push({x: J[0], y: J[1], side: J[0] >= midX ? 1 : -1, t: `${v}°`});
   });
   // Cuello: entre la prolongación del tronco (línea punteada) y la línea de los hombros a las orejas
-  if (det.m && det.m.neck != null && [7, 8, 11, 12, 23, 24].every(vis)){
+  if (CFG.anNeck && det.m && det.m.neck != null && [7, 8, 11, 12, 23, 24].every(vis)){
     const mid = (i, j) => [(px(i)[0] + px(j)[0]) / 2, (px(i)[1] + px(j)[1]) / 2], H = mid(23, 24), Sh = mid(11, 12), E = mid(7, 8);
-    g.save(); g.lineCap = 'round';
-    for (const [color, wd] of [['rgba(0,0,0,.55)', CFG.skelWidth + 3], [CFG.skelColor, CFG.skelWidth]]){
-      g.strokeStyle = color; g.lineWidth = wd * scale; g.beginPath(); g.moveTo(Sh[0], Sh[1]); g.lineTo(E[0], E[1]); g.stroke();
-    }
-    g.restore();
     arcs.push({p: Sh, from: dir(H, Sh), to: dir(Sh, E), ref: Math.hypot(E[0] - Sh[0], E[1] - Sh[1]) * 0.9});
     labels.push({x: E[0], y: E[1], side: E[0] >= midX ? 1 : -1, t: `Cuello ${det.m.neck}°`});
   }
@@ -2824,7 +2966,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.23 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.24 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
@@ -2898,5 +3040,8 @@ renderVideoUI();
 <script type="application/octet-stream" id="os-model">@@OS_MODEL@@</script>
 <script type="application/octet-stream" id="os-osim">@@OS_OSIM@@</script>
 <script type="application/octet-stream" id="os-wilk">@@OS_WILK@@</script>
+<!-- mp4box.js 0.5.4 (BSD-3-Clause) y mp4-muxer 5.2.1 (MIT): copia del video sin sonido -->
+<script type="application/octet-stream" id="mp4-muxer">@@MUXER@@</script>
+<script type="application/octet-stream" id="mp4box-js">@@MP4BOX@@</script>
 </body>
 </html>
