@@ -493,13 +493,14 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
           </div>
           <p class="cfg-head">Qué se dibuja de cada parte del cuerpo</p>
           <table class="vis-parts small">
-            <tr><th>Parte del cuerpo</th><th>Esqueleto</th><th>Ángulos</th></tr>
-            <tr><td>Cuello</td><td><input type="checkbox" data-cfg="skNeck" aria-label="Esqueleto del cuello"></td><td><input type="checkbox" data-cfg="anNeck" aria-label="Flexión del cuello"></td></tr>
-            <tr><td>Tronco (hombros y caderas)</td><td><input type="checkbox" data-cfg="skTrunk" aria-label="Esqueleto del tronco"></td><td><input type="checkbox" data-cfg="anTrunk" aria-label="Inclinación del tronco"></td></tr>
-            <tr><td>Brazos (ángulos de hombros y codos)</td><td><input type="checkbox" data-cfg="skArms" aria-label="Esqueleto de los brazos"></td><td><input type="checkbox" data-cfg="anArms" aria-label="Ángulos de hombros y codos"></td></tr>
-            <tr><td>Piernas (ángulos de caderas y rodillas)</td><td><input type="checkbox" data-cfg="skLegs" aria-label="Esqueleto de las piernas"></td><td><input type="checkbox" data-cfg="anLegs" aria-label="Ángulos de caderas y rodillas"></td></tr>
-            <tr><td>Tobillos y pies</td><td><input type="checkbox" data-cfg="skFeet" aria-label="Esqueleto de los pies"></td><td><input type="checkbox" data-cfg="anFeet" aria-label="Ángulos de los tobillos"></td></tr>
+            <tr><th>Parte del cuerpo</th><th>Esqueleto</th><th>Compás</th><th>Texto</th></tr>
+            <tr><td>Cuello</td><td><input type="checkbox" data-cfg="skNeck" aria-label="Esqueleto del cuello"></td><td><input type="checkbox" data-cfg="anNeck" aria-label="Compás de la flexión del cuello"></td><td><input type="checkbox" data-cfg="txNeck" aria-label="Texto de la flexión del cuello"></td></tr>
+            <tr><td>Tronco (hombros y caderas)</td><td><input type="checkbox" data-cfg="skTrunk" aria-label="Esqueleto del tronco"></td><td><input type="checkbox" data-cfg="anTrunk" aria-label="Compás de la inclinación del tronco"></td><td><input type="checkbox" data-cfg="txTrunk" aria-label="Texto de la inclinación del tronco"></td></tr>
+            <tr><td>Brazos (ángulos de hombros y codos)</td><td><input type="checkbox" data-cfg="skArms" aria-label="Esqueleto de los brazos"></td><td><input type="checkbox" data-cfg="anArms" aria-label="Compás de los ángulos de hombros y codos"></td><td><input type="checkbox" data-cfg="txArms" aria-label="Texto de los ángulos de hombros y codos"></td></tr>
+            <tr><td>Piernas (ángulos de caderas y rodillas)</td><td><input type="checkbox" data-cfg="skLegs" aria-label="Esqueleto de las piernas"></td><td><input type="checkbox" data-cfg="anLegs" aria-label="Compás de los ángulos de caderas y rodillas"></td><td><input type="checkbox" data-cfg="txLegs" aria-label="Texto de los ángulos de caderas y rodillas"></td></tr>
+            <tr><td>Tobillos y pies</td><td><input type="checkbox" data-cfg="skFeet" aria-label="Esqueleto de los pies"></td><td><input type="checkbox" data-cfg="anFeet" aria-label="Compás de los ángulos de los tobillos"></td><td><input type="checkbox" data-cfg="txFeet" aria-label="Texto de los ángulos de los tobillos"></td></tr>
           </table>
+          <p class="muted" style="margin:0 0 4px">«Compás» es el arco que marca dónde se mide el ángulo y «Texto», la etiqueta con los grados. Los subtítulos se ocultan aparte, con «Mostrar subtítulos».</p>
           <p class="cfg-head">Aspecto del esqueleto y los ángulos</p>
           <div class="detect-cfg">
             <label>Color del esqueleto <input type="color" data-cfg="skelColor"></label>
@@ -1555,7 +1556,9 @@ function loadPose(){
 // Umbrales ajustables (se recuerdan en este navegador)
 const STYLE_DEFAULT = {skelColor: '#7fd1ff', skelWidth: 3, angColor: '#ffd54a', angSize: 12, arcColor: '#4cd964', arcSize: 15,
   // Partes del cuerpo que se dibujan (esqueleto y ángulos); por defecto, todas
-  skNeck: true, anNeck: true, skTrunk: true, anTrunk: true, skArms: true, anArms: true, skLegs: true, anLegs: true, skFeet: true, anFeet: true};
+  // sk: esqueleto, an: compás del ángulo, tx: texto del ángulo
+  skNeck: true, anNeck: true, txNeck: true, skTrunk: true, anTrunk: true, txTrunk: true, skArms: true, anArms: true, txArms: true,
+  skLegs: true, anLegs: true, txLegs: true, skFeet: true, anFeet: true, txFeet: true};
 const CFG_DEFAULT = {trunk: 20, twist: 20, knee: 150, lift: 10, walk: true, walkDist: 25, avg3: true, blurBlocks: 5, ...STYLE_DEFAULT};
 let CFG = {...CFG_DEFAULT};
 try{ Object.assign(CFG, JSON.parse(localStorage.getItem('winowas.detect') || '{}')); }catch(e){}
@@ -1694,35 +1697,39 @@ function drawAngles(g, det, w, h, scale = 1){
   const px = i => [N[i].x * w, N[i].y * h], dir = (p, q) => Math.atan2(q[1] - p[1], q[0] - p[0]);
   const labels = [], arcs = [];
   const JOINT_REGION = ['Arms', 'Arms', 'Arms', 'Arms', 'Legs', 'Legs', 'Legs', 'Legs'];   // codos, hombros, caderas, rodillas
-  for (const [a, j, c] of JOINT_ANGLES.filter((t, k) => CFG['an' + JOINT_REGION[k]] && t.every(vis))){
+  // Cada compás y cada texto lleva su parte del cuerpo (R): se dibujan según «Qué se dibuja de cada parte del cuerpo»
+  const on = R => CFG['an' + R] || CFG['tx' + R];
+  for (const [k, [a, j, c]] of JOINT_ANGLES.entries()){
+    const R = JOINT_REGION[k];
+    if (!on(R) || ![a, j, c].every(vis)) continue;
     const J = px(j);
-    arcs.push({p: J, from: dir(J, px(a)), to: dir(J, px(c))});
-    labels.push({x: J[0], y: J[1], side: J[0] >= midX ? 1 : -1, t: Math.round(V.ang(V.sub(W[a], W[j]), V.sub(W[c], W[j]))) + '°'});
+    arcs.push({R, p: J, from: dir(J, px(a)), to: dir(J, px(c))});
+    labels.push({R, x: J[0], y: J[1], side: J[0] >= midX ? 1 : -1, t: Math.round(V.ang(V.sub(W[a], W[j]), V.sub(W[c], W[j]))) + '°'});
   }
-  if (CFG.anTrunk && [11,12,23,24].every(vis) && det.m && det.m.trunk != null){
+  if (on('Trunk') && [11,12,23,24].every(vis) && det.m && det.m.trunk != null){
     // Tronco: entre la vertical que sube desde las caderas y la línea de caderas a hombros
     const H = [(px(23)[0] + px(24)[0]) / 2, (px(23)[1] + px(24)[1]) / 2], Sh = [(px(11)[0] + px(12)[0]) / 2, (px(11)[1] + px(12)[1]) / 2];
-    arcs.push({p: H, from: -Math.PI / 2, to: dir(H, Sh), ref: Math.hypot(Sh[0] - H[0], Sh[1] - H[1]) * 0.7});
-    labels.push({x: midX, y: ((N[11].y + N[12].y) * 0.3 + (N[23].y + N[24].y) * 0.2) * h, side: 0, t: `Tronco ${det.m.trunk}°`});
+    arcs.push({R: 'Trunk', p: H, from: -Math.PI / 2, to: dir(H, Sh), ref: Math.hypot(Sh[0] - H[0], Sh[1] - H[1]) * 0.7});
+    labels.push({R: 'Trunk', x: midX, y: ((N[11].y + N[12].y) * 0.3 + (N[23].y + N[24].y) * 0.2) * h, side: 0, t: `Tronco ${det.m.trunk}°`});
   }
   // Tobillos: entre la pierna y el pie (90° ≈ neutro)
   [[0, 25, 27, 31], [1, 26, 28, 32]].forEach(([k, a, j, c]) => {
     const v = det.m && det.m[k ? 'ankleR' : 'ankleL'];
-    if (!CFG.anFeet || v == null || ![a, j, c].every(vis)) return;
+    if (!on('Feet') || v == null || ![a, j, c].every(vis)) return;
     const J = px(j);
-    arcs.push({p: J, from: dir(J, px(a)), to: dir(J, px(c))});
-    labels.push({x: J[0], y: J[1], side: J[0] >= midX ? 1 : -1, t: `${v}°`});
+    arcs.push({R: 'Feet', p: J, from: dir(J, px(a)), to: dir(J, px(c))});
+    labels.push({R: 'Feet', x: J[0], y: J[1], side: J[0] >= midX ? 1 : -1, t: `${v}°`});
   });
   // Cuello: entre la prolongación del tronco (línea punteada) y la línea de los hombros a las orejas
-  if (CFG.anNeck && det.m && det.m.neck != null && [7, 8, 11, 12, 23, 24].every(vis)){
+  if (on('Neck') && det.m && det.m.neck != null && [7, 8, 11, 12, 23, 24].every(vis)){
     const mid = (i, j) => [(px(i)[0] + px(j)[0]) / 2, (px(i)[1] + px(j)[1]) / 2], H = mid(23, 24), Sh = mid(11, 12), E = mid(7, 8);
-    arcs.push({p: Sh, from: dir(H, Sh), to: dir(Sh, E), ref: Math.hypot(E[0] - Sh[0], E[1] - Sh[1]) * 0.9});
-    labels.push({x: E[0], y: E[1], side: E[0] >= midX ? 1 : -1, t: `Cuello ${det.m.neck}°`});
+    arcs.push({R: 'Neck', p: Sh, from: dir(H, Sh), to: dir(Sh, E), ref: Math.hypot(E[0] - Sh[0], E[1] - Sh[1]) * 0.9});
+    labels.push({R: 'Neck', x: E[0], y: E[1], side: E[0] >= midX ? 1 : -1, t: `Cuello ${det.m.neck}°`});
   }
   g.save();
   // Compás: el arco va de un segmento al otro por el lado del ángulo medido
   const r = CFG.arcSize * scale;
-  for (const A of arcs){
+  for (const A of arcs.filter(A => CFG['an' + A.R])){
     const d = Math.atan2(Math.sin(A.to - A.from), Math.cos(A.to - A.from)), [x, y] = A.p;
     if (A.ref){
       g.setLineDash([5 * scale, 4 * scale]); g.strokeStyle = CFG.arcColor; g.lineWidth = 2 * scale;
@@ -1736,7 +1743,7 @@ function drawAngles(g, det, w, h, scale = 1){
   }
   const fs = Math.round(CFG.angSize * scale), pad = Math.round(CFG.angSize / 4 * scale), gap = Math.round((CFG.arcSize + 4) * scale);
   g.font = `bold ${fs}px Arial, Helvetica, sans-serif`; g.textBaseline = 'middle';
-  for (const L of labels){
+  for (const L of labels.filter(L => CFG['tx' + L.R])){
     const tw = g.measureText(L.t).width, bw = tw + pad * 2, bh = fs + pad * 2;
     const x0 = L.side > 0 ? L.x + gap : L.side < 0 ? L.x - gap - bw : L.x - bw / 2, y0 = L.y - bh / 2;
     g.fillStyle = 'rgba(0,0,0,.72)'; g.fillRect(x0, y0, bw, bh);
@@ -2966,7 +2973,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.24 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.25 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
