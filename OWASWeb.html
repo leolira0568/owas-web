@@ -507,6 +507,16 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
             <tr><td>Tobillos y pies</td><td><input type="checkbox" data-cfg="skFeet" aria-label="Esqueleto de los pies"></td><td><input type="checkbox" data-cfg="anFeet" aria-label="Compás de los ángulos de los tobillos"></td><td><input type="checkbox" data-cfg="txFeet" aria-label="Texto de los ángulos de los tobillos"></td></tr>
           </table>
           <p class="muted" style="margin:0 0 4px">«Compás» es el arco que marca dónde se mide el ángulo y «Texto», la etiqueta con los grados. Los subtítulos se ocultan aparte, con «Mostrar subtítulos».</p>
+          <p class="cfg-head">Subtítulos</p>
+          <div class="detect-cfg">
+            <label><input type="checkbox" data-cfg="subDate"> Fecha y hora (de los datos del video o de la foto)</label>
+            <label><input type="checkbox" data-cfg="subGeo"> Ubicación GPS (si el video o la foto la tiene)</label>
+            <label>Alineación <select data-cfg="subAlign"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
+            <label>Tamaño del texto (px) <input type="number" data-cfg="subSize" min="9" max="32"></label>
+            <label>Color del texto <input type="color" data-cfg="subColor"></label>
+            <label>Color de los títulos (Espalda, Brazos…) <input type="color" data-cfg="subHead"></label>
+          </div>
+          <p class="muted" style="margin:0 0 4px">La fecha, la hora y la ubicación se leen de los datos del archivo (EXIF en las fotos JPG; datos del MP4 o MOV en los videos). En un video, la hora avanza con el video desde la de inicio: la del nombre del archivo si la tiene (como 20251202_111315.mp4) o la guardada en el archivo.</p>
           <p class="cfg-head">Aspecto del esqueleto y los ángulos</p>
           <div class="detect-cfg">
             <label>Color del esqueleto <input type="color" data-cfg="skelColor"></label>
@@ -1254,7 +1264,7 @@ function grabFrame(src, det, faceDet){
   if (!w0 || !h0) return null;
   const k = Math.min(1, 800 / Math.max(w0, h0)), c = document.createElement('canvas');
   const w = Math.round(w0 * k), h = Math.round(h0 * k);
-  const sub = det ? layoutSubtitles(detLines(det.code, det.m), w) : null;
+  const sub = det ? layoutSubtitles(subLines(det), w) : null;
   c.width = w; c.height = h + (sub ? sub.height : 0);
   const g = c.getContext('2d');
   g.drawImage(src, 0, 0, w, h);
@@ -1268,25 +1278,35 @@ function grabFrame(src, det, faceDet){
 }
 // Franja de subtítulos debajo de la imagen: reparte el texto en renglones según el ancho
 function layoutSubtitles(lines, w){
-  const fs = Math.max(11, Math.round(w / 48)), pad = Math.round(fs * 0.6), lh = Math.round(fs * 1.35);
+  // El tamaño sigue al de la pantalla (16 px por defecto) en proporción al ancho de la imagen
+  const fs = Math.max(10, Math.round(w / 48 * (CFG.subSize || 16) / 16)), pad = Math.round(fs * 0.6), lh = Math.round(fs * 1.35);
   const g = document.createElement('canvas').getContext('2d');
-  g.font = `${fs}px Arial, Helvetica, sans-serif`;
+  g.font = `bold ${fs}px Arial, Helvetica, sans-serif`;
   const rows = [];
   for (const line of lines){
-    let cur = '';
+    const head = subHeadOf(line);
+    let cur = '', first = true;
     for (const word of line.split(' ')){
       const t = cur ? cur + ' ' + word : word;
-      if (g.measureText(t).width > w - pad * 2 && cur){ rows.push(cur); cur = word; } else cur = t;
+      if (g.measureText(t).width > w - pad * 2 && cur){ rows.push({t: cur, head: first ? head : ''}); first = false; cur = word; } else cur = t;
     }
-    rows.push(cur);
+    rows.push({t: cur, head: first ? head : ''});
   }
   return {rows, fs, pad, lh, height: rows.length * lh + pad * 2};
 }
 function drawSubtitles(g, sub, w, top){
   g.save();
   g.fillStyle = '#141414'; g.fillRect(0, top, w, sub.height);
-  g.font = `${sub.fs}px Arial, Helvetica, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
-  sub.rows.forEach((r, i) => g.fillText(r, w / 2, top + sub.pad + sub.lh * (i + 0.5)));
+  g.textAlign = 'left'; g.textBaseline = 'middle';
+  const font = bold => `${bold ? 'bold ' : ''}${sub.fs}px Arial, Helvetica, sans-serif`;
+  sub.rows.forEach((r, i) => {
+    const y = top + sub.pad + sub.lh * (i + 0.5), head = r.head && r.t.startsWith(r.head) ? r.head : '', rest = r.t.slice(head.length);
+    g.font = font(true); const wh = head ? g.measureText(head).width : 0;
+    g.font = font(false); const wr = g.measureText(rest).width;
+    const x = CFG.subAlign === 'center' ? (w - wh - wr) / 2 : CFG.subAlign === 'right' ? w - sub.pad - wh - wr : sub.pad;
+    if (head){ g.font = font(true); g.fillStyle = CFG.subHead; g.fillText(head, x, y); }
+    g.font = font(false); g.fillStyle = CFG.subColor; g.fillText(rest, x + wh, y);
+  });
   g.restore();
 }
 function captureMedia(){
@@ -1341,7 +1361,7 @@ function renderMarks(){
 $('#marks').addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) goToObs(+b.dataset.go); });
 $('#loadVideo').onclick = () => { const f = $('#fileVideo'); f.value = ''; f.click(); };
 // Se conserva el archivo para poder volver a abrir el video si el navegador deja de reproducirlo
-let videoFile = null, videoOk = false, videoT = 0, reopen = {n: 0, at: 0};
+let videoFile = null, videoOk = false, videoT = 0, reopen = {n: 0, at: 0}, videoMeta = null;
 function loadVideoFile(f){
   if (vid.src) URL.revokeObjectURL(vid.src);
   $('#vidNote').hidden = true;
@@ -1349,6 +1369,9 @@ function loadVideoFile(f){
   videoName = f.name; vid.src = URL.createObjectURL(f);
   $('#videoName').textContent = f.name; $('#vidEmpty').hidden = true; $('#loadVideo').classList.remove('load');
   renderJoinInfo();
+  // Fecha, hora y ubicación del archivo (en un video unido, las de cada parte)
+  videoMeta = f.joined ? {parts: f.joined} : null;
+  if (!f.joined) readVideoMeta(f).then(m => { if (videoFile === f) videoMeta = m; }).catch(() => {});
 }
 $('#fileVideo').onchange = e => { const f = e.target.files[0]; if (f) loadVideoFile(f); };
 // Video unido: botón para guardarlo (para volver a abrir el proyecto con él) y lista de los videos que contiene
@@ -1391,6 +1414,112 @@ function reopenVideo(){
   const note = $('#vidNote'); note.textContent = 'El navegador dejó de reproducir el video y se volvió a abrir en el mismo momento. Puede seguir trabajando.'; note.hidden = false;
   clearTimeout(reopenVideo.timer); reopenVideo.timer = setTimeout(() => { note.hidden = true; }, 12000);
 }
+// ---- Fecha, hora y ubicación del video o de la foto, para los subtítulos ----
+// Fotos JPG: datos EXIF (fecha de la toma, en la hora local de la cámara, y GPS). Videos MP4/MOV: fecha de inicio (la de Apple,
+// la del nombre del archivo o la de creación del MP4) y ubicación ISO 6709 (©xyz de Android o la clave de Apple)
+async function readExif(file){
+  const b = new DataView(await file.slice(0, 1 << 18).arrayBuffer());
+  if (b.byteLength < 4 || b.getUint16(0) !== 0xFFD8) return null;
+  for (let o = 2; o + 10 < b.byteLength; ){
+    const mk = b.getUint16(o), len = b.getUint16(o + 2);
+    if (mk === 0xFFE1 && b.getUint32(o + 4) === 0x45786966) return parseExifTiff(b, o + 10);   // «Exif»
+    if ((mk & 0xFF00) !== 0xFF00 || mk === 0xFFDA) break;
+    o += 2 + len;
+  }
+  return null;
+}
+function parseExifTiff(b, t){
+  const le = b.getUint16(t) === 0x4949, u16 = o => b.getUint16(t + o, le), u32 = o => b.getUint32(t + o, le);
+  const ifd = off => { const tags = {}; if (!off || t + off + 2 > b.byteLength) return tags; const n = u16(off);
+    for (let i = 0; i < n && t + off + 14 + i * 12 <= b.byteLength; i++){ const e = off + 2 + i * 12; tags[u16(e)] = {count: u32(e + 4), val: e + 8}; } return tags; };
+  const str = g => { const off = g.count > 4 ? u32(g.val) : g.val; let s = ''; for (let i = 0; i < g.count - 1 && t + off + i < b.byteLength; i++) s += String.fromCharCode(b.getUint8(t + off + i)); return s.trim(); };
+  const rats = g => { const off = u32(g.val), r = []; for (let i = 0; i < g.count; i++) r.push(u32(off + i * 8) / (u32(off + i * 8 + 4) || 1)); return r; };
+  const i0 = ifd(u32(4)), ex = i0[0x8769] ? ifd(u32(i0[0x8769].val)) : {}, gps = i0[0x8825] ? ifd(u32(i0[0x8825].val)) : {};
+  let when = null, geo = null;
+  const dt = ex[0x9003] ? str(ex[0x9003]) : i0[0x0132] ? str(i0[0x0132]) : '', m = dt.match(/(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/);
+  if (m) when = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+  if (gps[2] && gps[4]){
+    const dms = a => a[0] + (a[1] || 0) / 60 + (a[2] || 0) / 3600;
+    let lat = dms(rats(gps[2])), lon = dms(rats(gps[4]));
+    if (gps[1] && str(gps[1]) === 'S') lat = -lat;
+    if (gps[3] && str(gps[3]) === 'W') lon = -lon;
+    if (isFinite(lat) && isFinite(lon) && (lat || lon)) geo = {lat, lon};
+  }
+  return when || geo ? {when, geo} : null;
+}
+// Fecha y hora de inicio en el nombre del archivo (Android: 20251202_111315.mp4, PXL_20251202_111315123.mp4, VID_…, IMG_…)
+function nameDate(name){
+  const m = /(20\d\d)(\d\d)(\d\d)[_-]?(\d\d)(\d\d)(\d\d)/.exec(name || '');
+  if (!m || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31 || +m[4] > 23 || +m[5] > 59 || +m[6] > 59) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+}
+async function readPhotoMeta(file){
+  const m = (await readExif(file).catch(() => null)) || {}, when = m.when || nameDate(file.name);
+  return when || m.geo ? {when, geo: m.geo || null} : null;
+}
+const parseIso6709 = s => { const m = /([+-]\d+(?:\.\d+)?)([+-]\d+(?:\.\d+)?)/.exec(s || ''); return m && (+m[1] || +m[2]) ? {lat: +m[1], lon: +m[2]} : null; };
+async function readVideoMeta(file){
+  if (!file || !isMp4(file)) return null;
+  // Busca la caja moov leyendo solo las cabeceras de las cajas del primer nivel (puede estar al final del archivo)
+  let moov = null;
+  for (let pos = 0; pos + 8 <= file.size; ){
+    const h = new DataView(await file.slice(pos, pos + 16).arrayBuffer());
+    let size = h.getUint32(0); const type = String.fromCharCode(h.getUint8(4), h.getUint8(5), h.getUint8(6), h.getUint8(7));
+    if (size === 1) size = Number(h.getBigUint64(8)); else if (size === 0) size = file.size - pos;
+    if (size < 8) break;
+    if (type === 'moov'){ if (size <= 64 << 20) moov = new DataView(await file.slice(pos, pos + size).arrayBuffer()); break; }
+    pos += size;
+  }
+  if (!moov) return null;
+  const type = o => String.fromCharCode(moov.getUint8(o + 4), moov.getUint8(o + 5), moov.getUint8(o + 6), moov.getUint8(o + 7));
+  const text = (o, n) => new TextDecoder().decode(new Uint8Array(moov.buffer, moov.byteOffset + o, Math.max(0, Math.min(n, moov.byteLength - o))));
+  let when = null, apple = null, geo = null, keys = [];
+  const walk = (from, to) => {
+    for (let o = from; o + 8 <= to; ){
+      const size = moov.getUint32(o), tp = type(o);
+      if (size < 8 || o + size > to) break;
+      if (tp === 'mvhd'){ const v1 = moov.getUint8(o + 8) === 1, s = v1 ? Number(moov.getBigUint64(o + 12)) : moov.getUint32(o + 12); if (s > 0 && !when) when = new Date((s - 2082844800) * 1000); }
+      else if (tp === '\xa9xyz') geo = geo || parseIso6709(text(o + 12, moov.getUint16(o + 8)));
+      else if (tp === 'keys'){ keys = []; for (let k = o + 16, i = 0, n = moov.getUint32(o + 12); i < n && k + 8 <= o + size; i++){ const ks = moov.getUint32(k); keys.push(text(k + 8, ks - 8)); k += ks; } }
+      else if (tp === 'ilst'){
+        for (let k = o + 8; k + 24 <= o + size; ){
+          const is = moov.getUint32(k), name = keys[moov.getUint32(k + 4) - 1], val = text(k + 24, moov.getUint32(k + 8) - 16);
+          if (name === 'com.apple.quicktime.location.ISO6709') geo = parseIso6709(val) || geo;
+          if (name === 'com.apple.quicktime.creationdate'){ const d = new Date(val.replace(/([+-]\d\d)(\d\d)$/, '$1:$2')); if (!isNaN(d)) apple = d; }
+          if (is < 8) break; k += is;
+        }
+      }
+      else if (['udta', 'meta', 'trak', 'mdia'].includes(tp)) walk(o + 8 + (tp === 'meta' && !['hdlr', 'keys'].includes(type(o + 8)) ? 4 : 0), o + size);
+      o += size;
+    }
+  };
+  walk(8, moov.byteLength);
+  // Inicio de la grabación: la fecha de Apple (con su zona horaria) o la del nombre del archivo. La del MP4 (mvhd) es la
+  // última opción, porque muchos celulares Android guardan ahí la hora en que terminó la grabación, no en que empezó
+  when = apple || nameDate(file.name) || when;
+  return when || geo ? {when, geo} : null;
+}
+// Fecha y hora del fotograma actual (la del archivo más el momento del video) y ubicación; null si no hay datos
+function mediaMeta(){
+  if (mode === 'video' && vid.src){
+    const t = vid.currentTime || 0;
+    let m = videoMeta, t0 = 0;
+    if (videoMeta && videoMeta.parts){ const q = [...videoMeta.parts].reverse().find(x => t >= x.start - 1e-3); m = q && q.meta; t0 = q ? q.start : 0; }
+    return m ? {when: m.when ? new Date(m.when.getTime() + (t - t0) * 1000) : null, geo: m.geo} : null;
+  }
+  if (mode === 'photo' && photos[pi]) return photos[pi].meta || null;
+  return null;
+}
+const fmtDateTime = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+function metaLine(){
+  const m = mediaMeta(); if (!m) return null;
+  const s = [CFG.subDate && m.when && `Fecha y hora: ${fmtDateTime(m.when)}`, CFG.subGeo && m.geo && `Ubicación: ${m.geo.lat.toFixed(5)}, ${m.geo.lon.toFixed(5)}`].filter(Boolean);
+  return s.length ? s.join(' · ') : null;
+}
+// Renglones de los subtítulos: fecha, hora y ubicación, y una fila por cada parte del cuerpo
+const subLines = det => [metaLine(), ...detLines(det.code, det.m)].filter(Boolean);
+// Título de un renglón («Espalda 2:», «Cuello:»…), que se muestra en el color de los títulos
+const subHeadOf = line => { const k = line.indexOf(': '); return k > 0 && k < 24 ? line.slice(0, k + 1) : ''; };
 /*SINAUDIO-INICIO*/
 // ---- Copia del video sin la pista de audio ----
 // Algunos videos (sobre todo de celulares) tienen fragmentos de sonido que el navegador no puede decodificar, y el video
@@ -1528,6 +1657,7 @@ async function joinVideos(files, say){
     out = new Uint8Array(muxer.target.buffer);
     if (firstC0 > 0.0005) out = addEditList(out, [{dur: 0, media: firstC0}]);
   } else out = await joinEncode(files, metas, parts, say, M);
+  for (const q of parts) q.meta = await readVideoMeta(files.find(f => f.name === q.name)).catch(() => null);
   const file = new File([out], `Unido - ${files[0].name.replace(/\.[^.]+$/, '')} y ${files.length - 1} más.mp4`, {type: 'video/mp4'});
   file.noAudio = true; file.joined = parts;
   return {file, same};
@@ -1660,6 +1790,7 @@ $('#filePhotos').onchange = e => {
   if (!files.length) return;
   photos.forEach(ph => URL.revokeObjectURL(ph.url));
   photos = files.map(f => ({name: f.name, url: URL.createObjectURL(f)}));
+  photos.forEach((ph, k) => readPhotoMeta(files[k]).then(m => { ph.meta = m; if (photos[pi] === ph && lastDet && lastDet.key === mediaKey()) renderOverlay(lastDet); }).catch(() => {}));
   $('#photoEmpty').hidden = true; $('#loadPhotos').classList.remove('load'); showPhoto(0);
 };
 $('#pPrev').onclick = () => showPhoto(pi - 1); $('#pNext').onclick = () => showPhoto(pi + 1);
@@ -1713,7 +1844,9 @@ const STYLE_DEFAULT = {skelColor: '#7fd1ff', skelWidth: 3, angColor: '#ffd54a', 
   // Partes del cuerpo que se dibujan (esqueleto y ángulos); por defecto, todas
   // sk: esqueleto, an: compás del ángulo, tx: texto del ángulo
   skNeck: true, anNeck: true, txNeck: true, skTrunk: true, anTrunk: true, txTrunk: true, skArms: true, anArms: true, txArms: true,
-  skLegs: true, anLegs: true, txLegs: true, skFeet: true, anFeet: true, txFeet: true};
+  skLegs: true, anLegs: true, txLegs: true, skFeet: true, anFeet: true, txFeet: true,
+  // Subtítulos: fecha y hora, ubicación, alineación, tamaño y colores
+  subDate: true, subGeo: true, subAlign: 'left', subSize: 16, subColor: '#ffffff', subHead: '#ffe08a'};
 const CFG_DEFAULT = {trunk: 20, twist: 20, knee: 150, lift: 10, walk: true, walkDist: 25, avg3: true, blurBlocks: 5, ...STYLE_DEFAULT};
 let CFG = {...CFG_DEFAULT};
 try{ Object.assign(CFG, JSON.parse(localStorage.getItem('winowas.detect') || '{}')); }catch(e){}
@@ -1726,6 +1859,7 @@ document.addEventListener('change', e => {
   const el = e.target, k = el.dataset && el.dataset.cfg; if (!k) return;
   if (el.type === 'checkbox') CFG[k] = el.checked;
   else if (el.type === 'color') CFG[k] = /^#[0-9a-f]{6}$/i.test(el.value) ? el.value : CFG_DEFAULT[k];
+  else if (el.tagName === 'SELECT' && !Number.isFinite(parseFloat(el.value))) CFG[k] = el.value;
   else {
     const v = parseFloat(el.value);
     CFG[k] = Number.isFinite(v) ? Math.min(Math.max(v, +el.min || -Infinity), +el.max || Infinity) : CFG_DEFAULT[k];
@@ -1917,11 +2051,13 @@ function clearOverlay(){
 function detLines(code, m){
   const opt = (k, v) => PARTS.find(p => p.key === k).opts[v - 1];
   const [b, a, l] = code.split('').map(Number);
-  return [
-    `Espalda ${b}: ${opt('b', b)} (tronco ${m.trunk}°, giro ${m.twist}°, lateral ${m.side}°)` + (m.neck != null ? ` · cuello ${m.neck}°` : ''),
-    `Brazos ${a}: ${opt('a', a)} · Piernas ` + (l ? `${l}: ${opt('l', l)}` : 'no visibles') +
-      (m.kneeL != null ? ` (rodillas ${m.kneeL}° / ${m.kneeR}°${m.ankleL != null ? `, tobillos ${m.ankleL}° / ${m.ankleR}°` : ''}${m.walk != null ? `, desplazamiento ${m.walk} %` : ''})` : '')
-  ];
+  // Una fila por cada parte del cuerpo
+  const rows = [`Espalda ${b}: ${opt('b', b)} (tronco ${m.trunk}°, giro ${m.twist}°, lateral ${m.side}°)`];
+  if (m.neck != null) rows.push(`Cuello: ${m.neck}° de flexión`);
+  rows.push(`Brazos ${a}: ${opt('a', a)}`);
+  rows.push(l ? `Piernas ${l}: ${opt('l', l)}` + (m.kneeL != null ? ` (rodillas ${m.kneeL}° / ${m.kneeR}°${m.walk != null ? `, desplazamiento ${m.walk} %` : ''})` : '') : 'Piernas: no visibles');
+  if (m.ankleL != null) rows.push(`Tobillos: ${m.ankleL}° / ${m.ankleR}°`);
+  return rows;
 }
 function renderOverlay(det){
   const el = mediaEl(), c = overlayEl(), stage = el.parentElement;
@@ -1935,7 +2071,8 @@ function renderOverlay(det){
   if ($('#showAngles').checked) drawAngles(g, det, c.width, c.height, dpr);
   const subs = mode === 'video' ? $('#subsVideo') : $('#subsPhoto');
   subs.hidden = !$('#showSubs').checked;
-  subs.innerHTML = detLines(det.code, det.m).map(t => `<div>${esc(t).replace(/^(\w+ \d|Brazos \d)/, '<b>$1</b>').replace(/· Piernas (\d)/, '· <b>Piernas $1</b>')}</div>`).join('');
+  subs.style.textAlign = CFG.subAlign; subs.style.color = CFG.subColor; subs.style.fontSize = CFG.subSize + 'px';
+  subs.innerHTML = subLines(det).map(line => { const h = subHeadOf(line); return `<div>${h ? `<b style="color:${CFG.subHead}">${esc(h)}</b>` : ''}${esc(line.slice(h.length))}</div>`; }).join('');
 }
 // Clave del fotograma o la foto actual, para saber si la detección sigue vigente
 const mediaKey = () => mode === 'video' ? `${videoName}@${vid.currentTime.toFixed(3)}` : (photos[pi] ? photos[pi].name : '');
@@ -3198,6 +3335,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <li><b>Todo se procesa en este equipo.</b> Los datos que escribe, los videos, las fotografías y la detección de posturas se procesan dentro del navegador. La aplicación no envía datos a ningún servidor, no usa cookies, ni analítica, ni servicios externos. MediaPipe y su modelo van incluidos en el propio archivo.</li>
 <li><b>Sin conexiones de red.</b> Una política de seguridad de contenido (CSP) impide que la aplicación se conecte a servidores externos, envíe formularios o cargue código de otros sitios.</li>
 <li><b>Videos y fotografías.</b> Se abren desde su equipo y nunca se suben a internet. El video original no se copia en el proyecto. Las imágenes que se guardan se vuelven a codificar, por lo que no conservan metadatos como la ubicación GPS ni el modelo de la cámara.</li>
+<li><b>Fecha, hora y ubicación.</b> Los subtítulos pueden mostrar la fecha, la hora y la ubicación GPS que el celular o la cámara guardaron en el video o la foto, y quedan grabadas en las imágenes guardadas si se graban los subtítulos. La ubicación es un dato personal: desactívela en «Ajustes de detección → Subtítulos» si no debe aparecer.</li>
 <li><b>Rostros difuminados.</b> Con «Difuminar el rostro en las imágenes guardadas» (en «Ajustes de detección», activado por defecto), la cara de la persona detectada, de la frente al mentón, se pixela en las imágenes de las observaciones, los informes y los proyectos. Solo funciona cuando la detección encuentra a la persona: revise cada imagen antes de compartirla.</li>
 <li><b>Dónde quedan los datos.</b> En el autoguardado de este navegador, hasta que lo borre, y en los archivos que usted guarda o exporta (.owsp, .OWS, .doc, PDF, .trc, .mot, .sloc, .c3d y archivos de lote de 3DSSPP). Los proyectos .owsp y los informes con imágenes contienen datos personales. Los proyectos y los archivos para OpenSim y 3DSSPP (.trc, .sloc, .c3d y archivos de lote) guardan además los puntos 3D del cuerpo detectados, sin imágenes.</li>
 <li><b>Versión en línea.</b> GitHub Pages sirve el archivo de la aplicación y puede registrar datos técnicos de la visita, como la dirección IP, según la política de privacidad de GitHub. Los datos del estudio no se envían. Para la máxima privacidad, use el archivo OWASWeb.html descargado y sin conexión.</li>
@@ -3218,7 +3356,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.26 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.27 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
