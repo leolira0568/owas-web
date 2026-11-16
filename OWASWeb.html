@@ -510,7 +510,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
           <p class="cfg-head">Subtítulos</p>
           <div class="detect-cfg">
             <label><input type="checkbox" data-cfg="subDate"> Fecha y hora (de los datos del video o de la foto)</label>
-            <label><input type="checkbox" data-cfg="subGeo"> Ubicación GPS (si el video o la foto la tiene)</label>
+            <label><input type="checkbox" data-cfg="subLoc"> Ubicación GPS (si el video o la foto la tiene; desactivada por defecto)</label>
             <label>Alineación <select data-cfg="subAlign"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
             <label>Tamaño del texto (px) <input type="number" data-cfg="subSize" min="9" max="32"></label>
             <label>Color del texto <input type="color" data-cfg="subColor"></label>
@@ -1513,7 +1513,7 @@ function mediaMeta(){
 const fmtDateTime = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 function metaLine(){
   const m = mediaMeta(); if (!m) return null;
-  const s = [CFG.subDate && m.when && `Fecha y hora: ${fmtDateTime(m.when)}`, CFG.subGeo && m.geo && `Ubicación: ${m.geo.lat.toFixed(5)}, ${m.geo.lon.toFixed(5)}`].filter(Boolean);
+  const s = [CFG.subDate && m.when && `Fecha y hora: ${fmtDateTime(m.when)}`, CFG.subLoc && m.geo && `Ubicación: ${m.geo.lat.toFixed(5)}, ${m.geo.lon.toFixed(5)}`].filter(Boolean);
   return s.length ? s.join(' · ') : null;
 }
 // Renglones de los subtítulos: fecha, hora y ubicación, y una fila por cada parte del cuerpo
@@ -1846,7 +1846,7 @@ const STYLE_DEFAULT = {skelColor: '#7fd1ff', skelWidth: 3, angColor: '#ffd54a', 
   skNeck: true, anNeck: true, txNeck: true, skTrunk: true, anTrunk: true, txTrunk: true, skArms: true, anArms: true, txArms: true,
   skLegs: true, anLegs: true, txLegs: true, skFeet: true, anFeet: true, txFeet: true,
   // Subtítulos: fecha y hora, ubicación, alineación, tamaño y colores
-  subDate: true, subGeo: true, subAlign: 'left', subSize: 16, subColor: '#ffffff', subHead: '#ffe08a'};
+  subDate: true, subLoc: false, subAlign: 'left', subSize: 16, subColor: '#ffffff', subHead: '#ffe08a'};
 const CFG_DEFAULT = {trunk: 20, twist: 20, knee: 150, lift: 10, walk: true, walkDist: 25, avg3: true, blurBlocks: 5, ...STYLE_DEFAULT};
 let CFG = {...CFG_DEFAULT};
 try{ Object.assign(CFG, JSON.parse(localStorage.getItem('winowas.detect') || '{}')); }catch(e){}
@@ -2470,66 +2470,25 @@ function svgWrap(text, max){
   return cur ? [...rows, cur] : rows;
 }
 function figGuide(){
-  const W = 680, M = 6, gap = 8, cw = (W - 2 * M - 3 * gap) / 4, lh = 15, ink = i => i === 0 || i === 3 ? '#fff' : '#000';
-  const cols = CAT_GUIDE.map(g => ({e: svgWrap(g.effect, 24), a: svgWrap(g.act, 24)}));
-  const nBody = Math.max(...cols.map(c => c.e.length + c.a.length));
-  const T = 40, hh = 52, bh = 14 + (nBody + 4) * lh + 18;
-  const y2 = T + hh + bh + 30, ph = 132, H = y2 + 22 + ph + 6;
-  let s = svgOpen(W, H, 'Guía de las cuatro categorías de acción OWAS: color, efecto en el cuerpo, acción y plazo, y cómo se asigna la categoría');
-  // Flecha de urgencia, de verde a rojo
-  s += `<text x="${M}" y="12" font-size="11" fill="#444">Menor urgencia</text><text x="${W / 2}" y="12" text-anchor="middle" font-weight="700">Urgencia de la acción correctiva</text><text x="${W - M}" y="12" text-anchor="end" font-size="11" fill="#444">Mayor urgencia</text>`;
+  // Una fila por categoría: color y nombre, efecto en el cuerpo, qué hacer y plazo (la urgencia crece hacia abajo)
+  const W = 680, M = 4, lh = 15, ink = i => i === 0 || i === 3 ? '#fff' : '#000';
+  const X = [M, M + 150, M + 392, M + 550], Wc = [146];   // columnas: categoría, efecto, qué hacer y plazo
+  const rows = CAT_GUIDE.map(g => ({e: svgWrap(g.effect, 39), a: svgWrap(g.act, 25), w: svgWrap(g.when, 18)}));
+  const rh = rows.map(r => Math.max(2, r.e.length, r.a.length, r.w.length) * lh + 16), T = 26;
+  const H = T + rh.reduce((x, y) => x + y + 4, 0) + 2;
+  let s = svgOpen(W, H, 'Guía de las cuatro categorías de acción OWAS: color, efecto en el cuerpo, qué hacer y plazo');
+  ['Categoría', 'Efecto en el sistema musculoesquelético', 'Qué hacer', 'Plazo'].forEach((h, k) => { s += `<text x="${X[k] + 8}" y="17" font-size="12" font-weight="700" fill="#444">${h}</text>`; });
+  let y = T;
   CAT_GUIDE.forEach((g, i) => {
-    const x = M + i * (cw + gap), last = i === 3, x2 = last ? W - M - 12 : x + cw + gap;
-    s += `<rect x="${x}" y="19" width="${x2 - x}" height="12" fill="${CAT_HEX[i]}"/>`;
-    if (last) s += `<polygon points="${x2},14 ${W - M},25 ${x2},36" fill="${CAT_HEX[i]}"/>`;
+    const r = rows[i], h = rh[i], mid = y + h / 2;
+    s += `<rect x="${X[0]}" y="${y}" width="${Wc[0]}" height="${h}" rx="6" fill="${CAT_HEX[i]}"/>`;
+    s += `<text x="${X[0] + 10}" y="${mid + 10}" font-size="28" font-weight="700" fill="${ink(i)}">${i + 1}</text>`;
+    s += `<text x="${X[0] + 38}" y="${mid - 2}" font-size="13" font-weight="700" fill="${ink(i)}">${CATS[i].t}</text><text x="${X[0] + 38}" y="${mid + 14}" font-size="11" fill="${ink(i)}">Color ${g.color.toLowerCase()}</text>`;
+    s += `<rect x="${X[1]}" y="${y}" width="${W - M - X[1]}" height="${h}" rx="6" fill="${CAT_TINT[i]}"/>`;
+    const cell = (k, lines, bold) => { const y0 = mid - (lines.length - 1) * lh / 2 + 4; lines.forEach((l, j) => { s += `<text x="${X[k] + 8}" y="${y0 + j * lh}" font-size="12"${bold ? ' font-weight="700"' : ''}>${esc(l)}</text>`; }); };
+    cell(1, r.e); cell(2, r.a); cell(3, r.w, true);
+    y += h + 4;
   });
-  // Una columna por categoría: color, nombre, efecto, acción y plazo
-  CAT_GUIDE.forEach((g, i) => {
-    const x = M + i * (cw + gap), c = cols[i];
-    s += `<rect x="${x}" y="${T}" width="${cw}" height="${hh}" rx="6" fill="${CAT_HEX[i]}"/>`;
-    s += `<text x="${x + 12}" y="${T + 37}" font-size="30" font-weight="700" fill="${ink(i)}">${i + 1}</text>`;
-    s += `<text x="${x + 42}" y="${T + 22}" font-size="13" font-weight="700" fill="${ink(i)}">${CATS[i].t}</text><text x="${x + 42}" y="${T + 39}" font-size="11" fill="${ink(i)}">Color ${g.color.toLowerCase()}</text>`;
-    s += `<rect x="${x}" y="${T + hh + 4}" width="${cw}" height="${bh}" rx="6" fill="${CAT_TINT[i]}"/>`;
-    let y = T + hh + 4 + 18;
-    const label = t => { s += `<text x="${x + 10}" y="${y}" font-size="11" font-weight="700" fill="#444">${t}</text>`; y += lh; };
-    const rows = (r, bold) => r.forEach(t => { s += `<text x="${x + 10}" y="${y}" font-size="12"${bold ? ' font-weight="700"' : ''}>${esc(t)}</text>`; y += lh; });
-    label('Efecto en el cuerpo'); rows(c.e); y += 4;
-    label('Qué hacer'); rows(c.a); y += 4;
-    label('Plazo'); rows([g.when], true);
-  });
-  // Cómo se asigna la categoría
-  s += `<text x="${M}" y="${y2}" font-size="14" font-weight="700">Cómo se asigna la categoría</text>`;
-  const py = y2 + 12, pw = (W - 2 * M - 12) / 2;
-  // a) A cada observación, por su código
-  const ex = {b: 2, a: 1, l: 4, w: 1}, k = catOf(ex);
-  s += `<rect x="${M}" y="${py}" width="${pw}" height="${ph}" rx="6" fill="none" stroke="#bbb"/>`;
-  s += `<text x="${M + 10}" y="${py + 18}" font-weight="700">A cada observación, según su código</text>`;
-  const by = py + 32, box = (x, w, t1, t2, fill = '#f2f2f2', color = '#000') => {
-    s += `<rect x="${x}" y="${by}" width="${w}" height="44" rx="5" fill="${fill}" stroke="#999" stroke-width="0.6"/>` +
-      `<text x="${x + w / 2}" y="${by + 18}" text-anchor="middle" font-size="11" fill="${color}">${t1}</text><text x="${x + w / 2}" y="${by + 35}" text-anchor="middle" font-weight="700" fill="${color}">${t2}</text>`;
-  };
-  const arrow = x => { s += `<path d="M${x} ${by + 22}h10" stroke="#000" stroke-width="1.4"/><polygon points="${x + 10},${by + 17} ${x + 16},${by + 22} ${x + 10},${by + 27}"/>`; };
-  const bx = M + 10;
-  box(bx, 76, 'Código', codeStr(ex).split('').join(' ')); arrow(bx + 80);
-  box(bx + 100, 126, 'Tabla OWAS', '252 combinaciones'); arrow(bx + 230);
-  box(bx + 250, 62, 'Categoría', String(k), CAT_HEX[k - 1], ink(k - 1));
-  svgWrap('Dígitos: espalda, brazos, piernas y carga. Ejemplo: espalda inclinada, brazos abajo, de pie con ambas rodillas flexionadas y menos de 10 kg.', 52)
-    .forEach((r, j) => { s += `<text x="${M + 10}" y="${by + 60 + j * 13}" font-size="11" fill="#444">${r}</text>`; });
-  // b) A cada parte del cuerpo, según el tiempo en cada postura (ejemplo: espalda inclinada)
-  const qx = M + pw + 12, t = BODY.b[1], bw = pw - 20, bx2 = qx + 10, bandY = py + 46;
-  s += `<rect x="${qx}" y="${py}" width="${pw}" height="${ph}" rx="6" fill="none" stroke="#bbb"/>`;
-  s += `<text x="${qx + 10}" y="${py + 18}" font-weight="700">A cada parte del cuerpo, según el tiempo</text>`;
-  s += `<text x="${qx + 10}" y="${py + 36}" font-size="11" fill="#444">Ejemplo: espalda inclinada (código 2), % del tiempo observado</text>`;
-  let cum = 0; const ticks = [0], legend = [];
-  t.forEach((w, j) => {
-    if (!w) return;
-    s += `<rect x="${bx2 + cum / 100 * bw}" y="${bandY}" width="${w / 100 * bw}" height="18" fill="${CAT_HEX[j]}"/>`;
-    s += `<text x="${bx2 + (cum + w / 2) / 100 * bw}" y="${bandY + 13}" text-anchor="middle" font-size="11" font-weight="700" fill="${ink(j)}">${j + 1}</text>`;
-    legend.push(`${cum ? (cum + w >= 100 ? `más de ${cum} %` : `${cum}–${cum + w} %`) : `hasta ${w} %`}: categoría ${j + 1}`);
-    cum += w; ticks.push(cum);
-  });
-  ticks.forEach(v => { const x = bx2 + v / 100 * bw; s += `<line x1="${x}" x2="${x}" y1="${bandY + 18}" y2="${bandY + 23}" stroke="#000"/><text x="${x}" y="${bandY + 34}" text-anchor="${v ? (v >= 100 ? 'end' : 'middle') : 'start'}" font-size="11">${v} %</text>`; });
-  svgWrap(legend.join(' · ') + '.', 60).forEach((r, j) => { s += `<text x="${qx + 10}" y="${bandY + 52 + j * 13}" font-size="11" fill="#444">${r}</text>`; });
   return s + '</svg>';
 }
 function guideHTML(){
@@ -3335,7 +3294,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <li><b>Todo se procesa en este equipo.</b> Los datos que escribe, los videos, las fotografías y la detección de posturas se procesan dentro del navegador. La aplicación no envía datos a ningún servidor, no usa cookies, ni analítica, ni servicios externos. MediaPipe y su modelo van incluidos en el propio archivo.</li>
 <li><b>Sin conexiones de red.</b> Una política de seguridad de contenido (CSP) impide que la aplicación se conecte a servidores externos, envíe formularios o cargue código de otros sitios.</li>
 <li><b>Videos y fotografías.</b> Se abren desde su equipo y nunca se suben a internet. El video original no se copia en el proyecto. Las imágenes que se guardan se vuelven a codificar, por lo que no conservan metadatos como la ubicación GPS ni el modelo de la cámara.</li>
-<li><b>Fecha, hora y ubicación.</b> Los subtítulos pueden mostrar la fecha, la hora y la ubicación GPS que el celular o la cámara guardaron en el video o la foto, y quedan grabadas en las imágenes guardadas si se graban los subtítulos. La ubicación es un dato personal: desactívela en «Ajustes de detección → Subtítulos» si no debe aparecer.</li>
+<li><b>Fecha, hora y ubicación.</b> Los subtítulos pueden mostrar la fecha, la hora y la ubicación GPS que el celular o la cámara guardaron en el video o la foto, y quedan grabadas en las imágenes guardadas si se graban los subtítulos. La ubicación es un dato personal: está desactivada por defecto y se activa en «Ajustes de detección → Subtítulos».</li>
 <li><b>Rostros difuminados.</b> Con «Difuminar el rostro en las imágenes guardadas» (en «Ajustes de detección», activado por defecto), la cara de la persona detectada, de la frente al mentón, se pixela en las imágenes de las observaciones, los informes y los proyectos. Solo funciona cuando la detección encuentra a la persona: revise cada imagen antes de compartirla.</li>
 <li><b>Dónde quedan los datos.</b> En el autoguardado de este navegador, hasta que lo borre, y en los archivos que usted guarda o exporta (.owsp, .OWS, .doc, PDF, .trc, .mot, .sloc, .c3d y archivos de lote de 3DSSPP). Los proyectos .owsp y los informes con imágenes contienen datos personales. Los proyectos y los archivos para OpenSim y 3DSSPP (.trc, .sloc, .c3d y archivos de lote) guardan además los puntos 3D del cuerpo detectados, sin imágenes.</li>
 <li><b>Versión en línea.</b> GitHub Pages sirve el archivo de la aplicación y puede registrar datos técnicos de la visita, como la dirección IP, según la política de privacidad de GitHub. Los datos del estudio no se envían. Para la máxima privacidad, use el archivo OWASWeb.html descargado y sin conexión.</li>
@@ -3356,7 +3315,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.27 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.28 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
