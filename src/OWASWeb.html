@@ -109,6 +109,11 @@ dialog#exportDlg{border:0;border-radius:12px;padding:18px 20px;max-width:min(520
 .export-opt{display:grid;grid-template-columns:160px 1fr;gap:12px;align-items:center;margin:12px 0}
 .export-opt p{margin:0}
 .export-opt .btn{white-space:nowrap}
+.exp-sel{border:0;background:var(--fill);border-radius:6px;padding:8px 10px;margin:10px 0}
+.exp-sel legend{padding:0;float:left;width:100%;margin-bottom:6px}
+.exp-sel-row{clear:both;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.exp-sel-row label,.exp-cats label{display:inline-flex;align-items:center;gap:5px}
+.exp-cats{display:inline-flex;gap:10px}
 .export-opt .btn-col{display:flex;flex-direction:column;gap:6px}
 .export-opt .btn-col .btn{white-space:normal;text-align:left;justify-content:flex-start}
 @media (max-width:520px){.export-opt{grid-template-columns:1fr}}
@@ -471,6 +476,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
       <div class="detect">
         <div class="vctrl">
           <button class="btn primary" id="detectBtn" data-icon="scan">Detectar postura <span class="kbd">D</span></button>
+          <button class="btn" id="detectOther" data-icon="scanOther" title="Si hay varias personas en la imagen, analiza a la siguiente (O)">Detectar otro <span class="kbd">O</span></button>
         </div>
         <details class="small">
           <summary>Ajustes de detección</summary>
@@ -517,8 +523,11 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
       <div id="videoPane">
         <div class="media-top">
           <button class="btn load" id="loadVideo" data-icon="video">Cargar video</button>
+          <button class="btn" id="joinVideos" data-icon="layers" title="Unir varios videos cortos en uno, uno tras otro">Unir videos</button>
           <span class="muted small" id="videoName">Ningún video cargado</span>
           <span class="warn-soft small" id="vidNote" role="status" hidden></span>
+          <button class="btn" id="saveJoined" data-icon="download" hidden>Guardar el video unido</button>
+          <p class="small muted" id="joinInfo" style="flex-basis:100%;margin:0" hidden></p>
         </div>
         <div class="stage"><video id="vid" playsinline muted preload="auto"></video><canvas class="overlay" id="ovVideo" aria-hidden="true"></canvas><p class="stage-empty" id="vidEmpty">Cargue un video (MP4 o WebM) para revisarlo fotograma a fotograma.</p></div>
         <div class="subs" id="subsVideo" role="status" hidden></div>
@@ -625,6 +634,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 <input type="file" id="fileOpen" accept=".ows,.OWS,.owsp" hidden>
 <input type="file" id="fileJoin" accept=".ows,.OWS,.owsp" hidden>
 <input type="file" id="fileVideo" accept="video/*" hidden>
+<input type="file" id="fileJoinVideos" accept="video/*" multiple hidden>
 <input type="file" id="filePhotos" accept="image/*" multiple hidden>
 <dialog id="exportDlg" aria-labelledby="exportTitle">
   <h2 id="exportTitle">Exportar resultados</h2>
@@ -637,6 +647,21 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
     <button class="btn primary" id="expPdf" data-icon="print">PDF</button>
     <p class="small muted">Abre el diálogo de impresión: elija «Guardar como PDF» como destino.</p>
   </div>
+  <fieldset class="exp-sel small">
+    <legend><b>Observaciones que se exportan a OpenSim y 3DSSPP</b></legend>
+    <div class="exp-sel-row">
+      <label><input type="radio" name="expSel" value="all" checked> Todas</label>
+      <label><input type="radio" name="expSel" value="sel"> Solo las seleccionadas en la lista de observaciones <span id="expSelN" class="muted"></span></label>
+      <label><input type="radio" name="expSel" value="cat"> Solo las de categoría:</label>
+      <span class="exp-cats">
+        <label><input type="checkbox" id="expCat1"> <span class="cat"><i class="k1">1</i></span></label>
+        <label><input type="checkbox" id="expCat2"> <span class="cat"><i class="k2">2</i></span></label>
+        <label><input type="checkbox" id="expCat3" checked> <span class="cat"><i class="k3">3</i></span></label>
+        <label><input type="checkbox" id="expCat4" checked> <span class="cat"><i class="k4">4</i></span></label>
+      </span>
+    </div>
+    <p class="muted" style="margin:4px 0 0">También se aplica el filtro de tarea de la sección «Resultados». Las observaciones se seleccionan con las casillas de la lista de observaciones.</p>
+  </fieldset>
   <div class="export-opt">
     <button class="btn primary" id="expTrc" data-icon="body">OpenSim (.trc)</button>
     <p class="small muted">Descarga las posturas detectadas como marcadores 3D, un fotograma por observación. No incluye imágenes.</p>
@@ -769,6 +794,8 @@ const ICONS = {
   fileText:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
   moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  // Una persona detectada (en el recuadro) y otra sin detectar (discontinua)
+  scanOther:'<path d="M1.5 6V3.5H4"/><path d="M10.5 3.5H13V6"/><path d="M13 17.5V20h-2.5"/><path d="M4 20H1.5v-2.5"/><circle cx="7.25" cy="7" r="1.6"/><path d="M7.25 8.8v4.6"/><path d="M4.8 10.6h4.9"/><path d="m7.25 13.4-1.8 4"/><path d="m7.25 13.4 1.8 4"/><g stroke-dasharray="1.6 1.6"><circle cx="18.75" cy="7" r="1.6"/><path d="M18.75 8.8v4.6"/><path d="M16.3 10.6h4.9"/><path d="m18.75 13.4-1.8 4"/><path d="m18.75 13.4 1.8 4"/></g>',
   scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="7.5" r="1.5"/><path d="M8.5 11h7"/><path d="M12 9.5v4"/><path d="m9.5 17.5 2.5-4 2.5 4"/>'
 };
 // Pictogramas de postura: clave = parte + código (b1…b4, a1…a3, l1…l7, w1…w3)
@@ -1134,6 +1161,7 @@ document.addEventListener('keydown', e => {
     if (k === 'b' || k === 'B'){ gotoSample(-1); return; }
   }
   if (mode !== 'live' && (k === 'd' || k === 'D')){ detectPose(); return; }
+  if (mode !== 'live' && (k === 'o' || k === 'O')){ detectOther(); return; }
   if (mode === 'photo' && photos.length){
     if (k === 'ArrowLeft'){ showPhoto(pi - 1); e.preventDefault(); return; }
     if (k === 'ArrowRight'){ showPhoto(pi + 1); e.preventDefault(); return; }
@@ -1230,7 +1258,7 @@ function grabFrame(src, det, faceDet){
   c.width = w; c.height = h + (sub ? sub.height : 0);
   const g = c.getContext('2d');
   g.drawImage(src, 0, 0, w, h);
-  if (faceDet) pixelateFace(g, faceDet.N, w, h);
+  if (faceDet) [faceDet.N, ...(faceDet.others || [])].forEach(N => pixelateFace(g, N, w, h));
   if (det){
     drawSkeleton(g, det.N, w, h, w / 640);
     if ($('#showAngles').checked) drawAngles(g, det, w, h, w / 640);
@@ -1314,12 +1342,38 @@ $('#marks').addEventListener('click', e => { const b = e.target.closest('[data-g
 $('#loadVideo').onclick = () => { const f = $('#fileVideo'); f.value = ''; f.click(); };
 // Se conserva el archivo para poder volver a abrir el video si el navegador deja de reproducirlo
 let videoFile = null, videoOk = false, videoT = 0, reopen = {n: 0, at: 0};
-$('#fileVideo').onchange = e => {
-  const f = e.target.files[0]; if (!f) return;
+function loadVideoFile(f){
   if (vid.src) URL.revokeObjectURL(vid.src);
-  videoFile = f; videoOk = false; videoT = 0; reopen = {n: 0, at: 0};
+  $('#vidNote').hidden = true;
+  videoFile = f; videoOk = false; videoT = 0; reopen = {n: 0, at: 0}; follow = null;
   videoName = f.name; vid.src = URL.createObjectURL(f);
   $('#videoName').textContent = f.name; $('#vidEmpty').hidden = true; $('#loadVideo').classList.remove('load');
+  renderJoinInfo();
+}
+$('#fileVideo').onchange = e => { const f = e.target.files[0]; if (f) loadVideoFile(f); };
+// Video unido: botón para guardarlo (para volver a abrir el proyecto con él) y lista de los videos que contiene
+function renderJoinInfo(){
+  const parts = videoFile && videoFile.joined;
+  $('#saveJoined').hidden = $('#joinInfo').hidden = !parts;
+  if (parts) $('#joinInfo').textContent = 'Video unido: ' + parts.map((q, i) => `${i + 1}. ${q.name} (desde ${fmtTime(q.start)})`).join(' · ');
+}
+$('#saveJoined').onclick = () => { if (videoFile && videoFile.joined) downloadBlob(videoFile, videoFile.name); };
+$('#joinVideos').onclick = () => { const f = $('#fileJoinVideos'); f.value = ''; f.click(); };
+$('#fileJoinVideos').onchange = async e => {
+  const files = [...e.target.files].sort((a, b) => a.name.localeCompare(b.name, 'es', {numeric: true}));
+  if (files.length < 2){ alert('Elija dos o más videos para unirlos (mantenga pulsada la tecla Ctrl o Mayús al elegirlos).'); return; }
+  if (!confirm(`Se unirán ${files.length} videos en este orden (por nombre de archivo):\n\n${files.map((f, i) => `${i + 1}. ${f.name}`).join('\n')}\n\nEl video unido se crea en este equipo y no tiene sonido. ¿Continuar?`)) return;
+  const note = $('#vidNote'), btn = $('#joinVideos');
+  const say = (text, q) => { clearTimeout(reopenVideo.timer); note.textContent = `${text} ${Math.round(q * 100)} %`; note.hidden = false; };
+  btn.disabled = true;
+  try{
+    const r = await joinVideos(files, say);
+    setMode('video'); loadVideoFile(r.file);
+    note.textContent = (r.same ? 'Videos unidos sin volver a codificar la imagen.' : 'Videos unidos: se volvieron a codificar porque tenían formatos distintos.') +
+      ' Guárdelo con «Guardar el video unido» para poder volver a abrir el proyecto con él.';
+    note.hidden = false;
+  }catch(err){ console.error(err); note.hidden = true; alert(`No se pudieron unir los videos: ${err.message}.`); }
+  finally{ btn.disabled = false; }
 };
 vid.addEventListener('loadedmetadata', () => { videoOk = true; renderVideoUI(); renderMarks(); });
 ['timeupdate', 'seeked', 'play', 'pause'].forEach(ev => vid.addEventListener(ev, renderVideoUI));
@@ -1350,15 +1404,17 @@ async function loadScriptOnce(id, file, dir, name){
   return window[name];
 }
 const isMp4 = f => /\.(mp4|m4v|mov)$/i.test(f.name || '') || /mp4|quicktime/.test(f.type || '');
-async function videoWithoutAudio(file, progress = () => {}){
+// Lee la pista de imagen de un MP4: formato, tamaño, giro, configuración del decodificador y, salvo con {meta: true},
+// todas sus muestras. Las listas de edición se devuelven en segundos, contados desde el primer tiempo de decodificación
+async function readMp4Video(file, progress = () => {}, {meta = false} = {}){
   const MP4Box = await loadScriptOnce('mp4box-js', 'mp4box.all.min.js', 'mp4box', 'MP4Box');
-  const M = await loadScriptOnce('mp4-muxer', 'mp4-muxer.js', 'mp4-muxer', 'Mp4Muxer');
   const mp4 = MP4Box.createFile(), samples = [];
   let track = null, movieTs = 1000, failed = null;
   mp4.onError = e => { failed = new Error(String(e)); };
   mp4.onReady = info => {
     track = info.videoTracks[0]; movieTs = info.timescale || 1000;
-    if (!track){ failed = new Error('el archivo no tiene pista de video'); return; }
+    if (!track){ failed = new Error(`«${file.name}» no tiene pista de video`); return; }
+    if (meta) return;
     mp4.setExtractionOptions(track.id, null, {nbSamples: 1000});
     mp4.start();
   };
@@ -1367,7 +1423,7 @@ async function videoWithoutAudio(file, progress = () => {}){
     mp4.releaseUsedSamples(id, list[list.length - 1].number + 1);
   };
   // Se lee por partes de 8 MB, en orden, para no cargar el archivo dos veces en memoria
-  for (let pos = 0; pos < file.size && !failed; ){
+  for (let pos = 0; pos < file.size && !failed && !(meta && track); ){
     const buf = await file.slice(pos, pos + (8 << 20)).arrayBuffer();
     buf.fileStart = pos; pos += buf.byteLength;
     mp4.appendBuffer(buf);
@@ -1375,27 +1431,32 @@ async function videoWithoutAudio(file, progress = () => {}){
   }
   mp4.flush();
   if (failed) throw failed;
-  if (!track || !samples.length) throw new Error('no se pudieron leer los fotogramas del video');
+  if (!track || (!meta && !samples.length)) throw new Error(`no se pudieron leer los fotogramas de «${file.name}»`);
   const trak = mp4.getTrackById(track.id), entry = trak.mdia.minf.stbl.stsd.entries[0];
   const cfgBox = entry.avcC || entry.hvcC || entry.vpcC || entry.av1C;
   let description;
   if (cfgBox){ const ds = new DataStream(undefined, 0, DataStream.BIG_ENDIAN); cfgBox.write(ds); description = new Uint8Array(ds.buffer, 8); }
-  const c = track.codec, codec = /^avc/.test(c) ? 'avc' : /^(hvc|hev)/.test(c) ? 'hevc' : /^vp09/.test(c) ? 'vp9' : /^av01/.test(c) ? 'av1' : null;
-  if (!codec) throw new Error('formato de video no compatible (' + c + ')');
+  const c = track.codec, kind = /^avc/.test(c) ? 'avc' : /^(hvc|hev)/.test(c) ? 'hevc' : /^vp09/.test(c) ? 'vp9' : /^av01/.test(c) ? 'av1' : null;
+  if (!kind) throw new Error(`formato de video no compatible (${c})`);
   const w = (track.video && track.video.width) || track.track_width, h = (track.video && track.video.height) || track.track_height;
   // Giro del video (celulares en vertical), en múltiplos de 90°
   const mx = track.matrix, rotation = mx ? (((Math.round(Math.atan2(mx[1], mx[0]) * 180 / Math.PI / 90) * 90) % 360) + 360) % 360 : 0;
-  const ts = track.timescale, dts0 = samples[0].dts;
-  const muxer = new M.Muxer({target: new M.ArrayBufferTarget(), video: {codec, width: w, height: h, rotation}, fastStart: false, firstTimestampBehavior: 'offset'});
-  samples.forEach((s, i) => muxer.addVideoChunkRaw(s.data, s.sync ? 'key' : 'delta', s.cts / ts * 1e6, s.dur / ts * 1e6,
-    i ? undefined : {decoderConfig: {codec: c, codedWidth: w, codedHeight: h, description}}, (s.cts - s.dts) / ts * 1e6));
+  const ts = track.timescale, dts0 = samples.length ? samples[0].dts : 0;
+  const edits = (trak.edts && trak.edts.elst ? trak.edts.elst.entries : []).map(e => ({dur: e.segment_duration / movieTs,
+    media: e.media_time < 0 ? -1 : Math.max(0, (e.media_time - dts0) / ts)}));
+  return {name: file.name, codec: c, kind, w, h, rotation, description, ts, samples, dts0, edits, nb: track.nb_samples, duration: track.duration / ts};
+}
+async function videoWithoutAudio(file, progress = () => {}){
+  const v = await readMp4Video(file, progress), M = await loadScriptOnce('mp4-muxer', 'mp4-muxer.js', 'mp4-muxer', 'Mp4Muxer');
+  const muxer = new M.Muxer({target: new M.ArrayBufferTarget(), video: {codec: v.kind, width: v.w, height: v.h, rotation: v.rotation}, fastStart: false, firstTimestampBehavior: 'offset'});
+  v.samples.forEach((s, i) => muxer.addVideoChunkRaw(s.data, s.sync ? 'key' : 'delta', s.cts / v.ts * 1e6, s.dur / v.ts * 1e6,
+    i ? undefined : {decoderConfig: {codec: v.codec, codedWidth: v.w, codedHeight: v.h, description: v.description}}, (s.cts - s.dts) / v.ts * 1e6));
   muxer.finalize();
   let out = new Uint8Array(muxer.target.buffer);
   // Lista de edición: el original puede empezar con un retraso (tramo vacío) o mostrar primero un fotograma posterior
   // (fotogramas B); la copia conserva esa lista para que cada fotograma tenga el mismo tiempo que en el original
-  const entries = (trak.edts && trak.edts.elst ? trak.edts.elst.entries : []).map(e => ({dur: e.segment_duration / movieTs,
-    media: e.media_time < 0 ? -1 : Math.max(0, (e.media_time - dts0) / ts)}));
-  if (!entries.some(e => e.media >= 0) && dts0 > 0) entries.push({dur: 0, media: 0});
+  const entries = v.edits.slice();
+  if (!entries.some(e => e.media >= 0) && v.dts0 > 0) entries.push({dur: 0, media: 0});
   if (entries.some(e => e.media < 0 || e.media > 0.0005)) out = addEditList(out, entries);
   const copy = new File([out], file.name, {type: 'video/mp4'});
   copy.noAudio = true;
@@ -1434,6 +1495,99 @@ function addEditList(buf, entries){
   return out;
 }
 /*SINAUDIO-FIN*/
+// ---- Unir varios videos cortos en uno ----
+// Si todos tienen el mismo formato (lo normal si salen de la misma cámara), se copian sus fotogramas uno tras otro sin
+// volver a codificarlos; si no, se decodifican y se vuelven a codificar en H.264 (WebCodecs). El video unido no tiene sonido
+const sameBytes = (a, b) => (!a && !b) || (!!a && !!b && a.length === b.length && a.every((v, i) => v === b[i]));
+async function joinVideos(files, say){
+  for (const f of files) if (!isMp4(f)) throw new Error(`«${f.name}» no es un video MP4 o MOV`);
+  const metas = [];
+  for (const [k, f] of files.entries()) metas.push(await readMp4Video(f, q => say(`Revisando los videos: ${k + 1} de ${files.length}…`, (k + q) / files.length * 0.1), {meta: true}));
+  const a = metas[0], same = metas.every(m => m.codec === a.codec && m.w === a.w && m.h === a.h && m.rotation === a.rotation && sameBytes(m.description, a.description));
+  const M = await loadScriptOnce('mp4-muxer', 'mp4-muxer.js', 'mp4-muxer', 'Mp4Muxer'), parts = [];
+  let out;
+  if (same){
+    const muxer = new M.Muxer({target: new M.ArrayBufferTarget(), video: {codec: a.kind, width: a.w, height: a.h, rotation: a.rotation}, fastStart: false, firstTimestampBehavior: 'offset'});
+    let base = 0, firstC0 = null;
+    for (const [k, f] of files.entries()){
+      const v = await readMp4Video(f, q => say(`Uniendo ${k + 1} de ${files.length}: ${f.name}`, 0.1 + (k + q) / files.length * 0.88));
+      // Cada video empieza donde termina el anterior; c0: retraso de su primer fotograma visible (fotogramas B)
+      const c0 = (Math.min(...v.samples.map(s => s.cts)) - v.dts0) / v.ts;
+      if (firstC0 == null) firstC0 = c0;
+      parts.push({name: f.name, start: base + c0 - firstC0});
+      let end = base;
+      v.samples.forEach((s, i) => {
+        const dts = base + (s.dts - v.dts0) / v.ts, off = (s.cts - s.dts) / v.ts, dur = s.dur / v.ts;
+        muxer.addVideoChunkRaw(s.data, s.sync ? 'key' : 'delta', (dts + off) * 1e6, dur * 1e6,
+          k === 0 && i === 0 ? {decoderConfig: {codec: v.codec, codedWidth: v.w, codedHeight: v.h, description: v.description}} : undefined, off * 1e6);
+        end = Math.max(end, dts + dur);
+      });
+      base = end;
+    }
+    muxer.finalize();
+    out = new Uint8Array(muxer.target.buffer);
+    if (firstC0 > 0.0005) out = addEditList(out, [{dur: 0, media: firstC0}]);
+  } else out = await joinEncode(files, metas, parts, say, M);
+  const file = new File([out], `Unido - ${files[0].name.replace(/\.[^.]+$/, '')} y ${files.length - 1} más.mp4`, {type: 'video/mp4'});
+  file.noAudio = true; file.joined = parts;
+  return {file, same};
+}
+// Videos con formatos distintos: se decodifica cada fotograma, se dibuja al tamaño del primero (con su giro) y se codifica en H.264
+async function joinEncode(files, metas, parts, say, M){
+  if (!window.VideoDecoder || !window.VideoEncoder) throw new Error('los videos tienen formatos distintos y este navegador no puede volver a codificarlos; use Chrome o Edge actualizados');
+  const disp = m => m.rotation % 180 ? [m.h, m.w] : [m.w, m.h];
+  let [W, H] = disp(metas[0]);
+  const k0 = Math.min(1, 1920 / Math.max(W, H)); W = Math.round(W * k0 / 2) * 2; H = Math.round(H * k0 / 2) * 2;
+  const fps = Math.min(60, Math.max(1, Math.round(metas[0].nb / (metas[0].duration || 1))));
+  let cfg = null;
+  for (const codec of ['avc1.640033', 'avc1.640028', 'avc1.4d0028', 'avc1.42e028']){
+    const c = {codec, width: W, height: H, framerate: fps, bitrate: Math.round(Math.min(20e6, Math.max(2e6, W * H * fps * 0.15))), avc: {format: 'avc'}};
+    try{ if ((await VideoEncoder.isConfigSupported(c)).supported){ cfg = c; break; } }catch(e){}
+  }
+  if (!cfg) throw new Error('este navegador no puede codificar video H.264 de este tamaño');
+  const muxer = new M.Muxer({target: new M.ArrayBufferTarget(), video: {codec: 'avc', width: W, height: H}, fastStart: false, firstTimestampBehavior: 'offset'});
+  let failed = null, base = 0, count = 0;
+  const enc = new VideoEncoder({output: (ch, meta) => muxer.addVideoChunk(ch, meta), error: e => { failed = e; }});
+  enc.configure(cfg);
+  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+  const g = canvas.getContext('2d'), pause = () => new Promise(r => setTimeout(r, 4));
+  for (const [k, f] of files.entries()){
+    const v = await readMp4Video(f, q => say(`Leyendo ${k + 1} de ${files.length}: ${f.name}`, 0.1 + (k + q * 0.2) / files.length * 0.88));
+    const cfgD = {codec: v.codec, codedWidth: v.w, codedHeight: v.h, description: v.description};
+    if (!(await VideoDecoder.isConfigSupported(cfgD)).supported) throw new Error(`este navegador no puede decodificar «${f.name}» (${v.codec})`);
+    const minCts = Math.min(...v.samples.map(s => s.cts)), queue = [];
+    const dec = new VideoDecoder({output: fr => queue.push(fr), error: e => { failed = e; }});
+    dec.configure(cfgD);
+    parts.push({name: f.name, start: base});
+    const [dw, dh] = disp(v), sc = Math.min(W / dw, H / dh), rot = v.rotation * Math.PI / 180;
+    let end = base;
+    const drain = async () => {
+      while (queue.length){
+        const fr = queue.shift(), tt = base + (fr.timestamp / 1e6 - minCts / v.ts), d = (fr.duration || 1e6 / fps) / 1e6;
+        g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+        g.save(); g.translate(W / 2, H / 2); g.rotate(rot); g.scale(sc, sc); g.drawImage(fr, -v.w / 2, -v.h / 2, v.w, v.h); g.restore();
+        fr.close();
+        const vf = new VideoFrame(canvas, {timestamp: Math.round(tt * 1e6), duration: Math.round(d * 1e6)});
+        enc.encode(vf, {keyFrame: count % (fps * 2) === 0}); vf.close(); count++;
+        end = Math.max(end, tt + d);
+        while (enc.encodeQueueSize > 6) await pause();
+      }
+    };
+    for (const [i, s] of v.samples.entries()){
+      if (failed) throw failed;
+      dec.decode(new EncodedVideoChunk({type: s.sync ? 'key' : 'delta', timestamp: Math.round(s.cts / v.ts * 1e6), duration: Math.round(s.dur / v.ts * 1e6), data: s.data}));
+      while (dec.decodeQueueSize > 6) await pause();
+      await drain();
+      if (i % 30 === 0) say(`Volviendo a codificar ${k + 1} de ${files.length}: ${f.name}`, 0.1 + (k + 0.2 + 0.8 * i / v.samples.length) / files.length * 0.88);
+    }
+    await dec.flush(); await drain(); dec.close();
+    if (failed) throw failed;
+    base = end;
+  }
+  await enc.flush(); if (failed) throw failed; enc.close();
+  muxer.finalize();
+  return new Uint8Array(muxer.target.buffer);
+}
 // Si el error viene del sonido, se abre la copia sin sonido (una vez por archivo) en el mismo momento del video
 let audioFixing = false;
 async function openWithoutAudio(){
@@ -1501,6 +1655,7 @@ function renderThumbs(){
 $('#thumbs').addEventListener('click', e => { const b = e.target.closest('[data-pi]'); if (b) showPhoto(+b.dataset.pi); });
 $('#loadPhotos').onclick = () => { const f = $('#filePhotos'); f.value = ''; f.click(); };
 $('#filePhotos').onchange = e => {
+  follow = null;
   const files = [...e.target.files].sort((a, b) => a.name.localeCompare(b.name, 'es', {numeric:true}));
   if (!files.length) return;
   photos.forEach(ph => URL.revokeObjectURL(ph.url));
@@ -1547,7 +1702,7 @@ function loadPose(){
     const vision = await import(blobUrl(bundle, 'text/javascript'));
     const fileset = {wasmLoaderPath: blobUrl(loader, 'text/javascript'), wasmBinaryPath: blobUrl(wasm, 'application/wasm')};
     POSE.lm = await vision.PoseLandmarker.createFromOptions(fileset, {
-      baseOptions: {modelAssetBuffer: model, delegate: 'CPU'}, runningMode: 'IMAGE', numPoses: 1,
+      baseOptions: {modelAssetBuffer: model, delegate: 'CPU'}, runningMode: 'IMAGE', numPoses: 2,
       minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5});
     return POSE.lm;
   })().catch(e => { POSE.loading = null; throw e; }));
@@ -1775,6 +1930,7 @@ function renderOverlay(det){
   c.style.width = r.width + 'px'; c.style.height = r.height + 'px';
   c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
   const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+  (det.others || []).forEach(N => drawGhost(g, N, c.width, c.height, dpr));
   drawSkeleton(g, det.N, c.width, c.height, dpr);
   if ($('#showAngles').checked) drawAngles(g, det, c.width, c.height, dpr);
   const subs = mode === 'video' ? $('#subsVideo') : $('#subsPhoto');
@@ -1796,6 +1952,75 @@ const seekTo = t => new Promise(res => {
   vid.currentTime = t;
 });
 
+// Varias personas en la imagen: se detectan hasta 4 y se analiza una. Por defecto, la más grande; después se sigue a la
+// misma persona (la más cercana a la anterior) al cambiar de fotograma, y «Detectar otro» pasa a la siguiente
+let follow = null;   // centro (x, y en la imagen, de 0 a 1) de la persona elegida
+const poseCenter = N => ({x: (N[11].x + N[12].x + N[23].x + N[24].x) / 4, y: (N[11].y + N[12].y + N[23].y + N[24].y) / 4});
+const poseArea = N => {
+  const v = N.filter(q => (q.visibility ?? 1) > 0.3); if (!v.length) return 0;
+  const xs = v.map(q => q.x), ys = v.map(q => q.y);
+  return (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
+};
+// Elige entre varias personas (listas de puntos N): la más cercana a «near» o, sin referencia, la más grande
+function pickPose(L, near){
+  if (!L.length) return -1;
+  let best = 0;
+  if (near){ let bd = Infinity; L.forEach((N, k) => { const c = poseCenter(N), d = Math.hypot(c.x - near.x, c.y - near.y); if (d < bd){ bd = d; best = k; } }); }
+  else L.forEach((N, k) => { if (poseArea(N) > poseArea(L[best])) best = k; });
+  return best;
+}
+// Detecta a todas las personas de la imagen, hasta 4. El detector de MediaPipe suele devolver solo una aunque haya varias:
+// tras cada detección se tapa a esa persona con un rectángulo gris y se vuelve a detectar en el resto de la imagen
+const sameCenter = (a, b, d = 0.05) => Math.hypot(a.x - b.x, a.y - b.y) < d;
+function detectPeople(lm, el, first){
+  const w = el.videoWidth || el.naturalWidth, h = el.videoHeight || el.naturalHeight;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); g.drawImage(el, 0, 0, w, h); g.fillStyle = '#808080';
+  const people = [];
+  let res = first || lm.detect(c);
+  for (let n = 0; n < 4; n++){
+    const found = (res.landmarks || []).map((N, k) => ({N, W: res.worldLandmarks[k]}))
+      .filter(q => !people.some(o => sameCenter(poseCenter(o.N), poseCenter(q.N))));
+    if (!found.length) break;
+    for (const q of found){
+      people.push(q);
+      const v = q.N.filter(o => (o.visibility ?? 1) > 0.2), xs = v.map(o => o.x), ys = v.map(o => o.y);
+      if (!v.length) continue;
+      const x0 = Math.max(0, Math.min(...xs) - 0.04) * w, x1 = Math.min(1, Math.max(...xs) + 0.04) * w;
+      const y0 = Math.max(0, Math.min(...ys) - 0.08) * h, y1 = Math.min(1, Math.max(...ys) + 0.04) * h;
+      g.fillRect(x0, y0, x1 - x0, y1 - y0);
+    }
+    if (people.length >= 4) break;
+    res = lm.detect(c);
+  }
+  return people;
+}
+// La persona más cercana a «near» en otro fotograma (para promediar y para «caminando»); null si no está
+function detectNear(lm, el, near){
+  const res = lm.detect(el), L = res.landmarks || [], k = pickPose(L, near);
+  if (k >= 0 && (!near || sameCenter(poseCenter(L[k]), near, 0.12))) return {N: L[k], W: res.worldLandmarks[k]};
+  if (!near) return null;
+  const all = detectPeople(lm, el, res), j = pickPose(all.map(q => q.N), near);
+  return j >= 0 && sameCenter(poseCenter(all[j].N), near, 0.25) ? all[j] : null;
+}
+// Pasa a la siguiente persona de la imagen, de izquierda a derecha
+function detectOther(){
+  const d = lastDet && lastDet.key === mediaKey() ? lastDet : null;
+  if (!d){ setDetectStatus('Detecte primero la postura.'); return; }
+  if (!d.others || !d.others.length){ setDetectStatus('Solo se detecta una persona en esta imagen.'); return; }
+  const all = [d.N, ...d.others].map(poseCenter), cur = all[0], order = all.slice().sort((p, q) => p.x - q.x);
+  follow = order[(order.indexOf(cur) + 1) % order.length];
+  detectPose();
+}
+// Otras personas detectadas: esqueleto blanco discontinuo, para saber que «Detectar otro» puede pasar a ellas
+function drawGhost(g, N, w, h, scale = 1){
+  g.save(); g.setLineDash([4 * scale, 4 * scale]); g.lineWidth = 2 * scale; g.strokeStyle = 'rgba(255,255,255,.6)';
+  for (const [i, j] of BONES){
+    if ((N[i].visibility ?? 1) < 0.3 || (N[j].visibility ?? 1) < 0.3) continue;
+    g.beginPath(); g.moveTo(N[i].x * w, N[i].y * h); g.lineTo(N[j].x * w, N[j].y * h); g.stroke();
+  }
+  g.restore();
+}
 // Promedio punto a punto de varias detecciones de la misma persona
 function averageLandmarks(sets){
   return sets[0].map((_, j) => {
@@ -1815,9 +2040,9 @@ async function detectPose(){
     if (!POSE.lm) setDetectStatus('Preparando el detector de posturas (solo la primera vez, unos segundos)…');
     const lm = await loadPose();
     setDetectStatus('Detectando…');
-    const key = mediaKey(), res = lm.detect(el);
-    let N = res.landmarks && res.landmarks[0], W = res.worldLandmarks && res.worldLandmarks[0], used = N ? 1 : 0;
-    const drawN = N;
+    const key = mediaKey(), people = detectPeople(lm, el), k0 = pickPose(people.map(q => q.N), follow);
+    let N = k0 >= 0 ? people[k0].N : null, W = k0 >= 0 ? people[k0].W : null, used = N ? 1 : 0;
+    const drawN = N, others = people.filter((_, k) => k !== k0).map(q => q.N), near = N ? poseCenter(N) : follow;
     // En video, se promedian los puntos del cuerpo del fotograma y de sus vecinos a ±0,1 s:
     // una sola imagen siempre da el mismo resultado, pero los fotogramas cercanos atenúan los errores puntuales
     if (mode === 'video' && CFG.avg3){
@@ -1825,8 +2050,8 @@ async function detectPose(){
       for (const t of [t0 - 0.1, t0 + 0.1]){
         if (t < 0 || t > vid.duration) continue;
         await seekTo(t);
-        const rr = frameReady() ? lm.detect(vid) : {};
-        if (rr.landmarks && rr.landmarks.length) sets.push([rr.landmarks[0], rr.worldLandmarks[0]]);
+        const q = frameReady() ? detectNear(lm, vid, near) : null;
+        if (q) sets.push([q.N, q.W]);
       }
       await seekTo(t0);
       if (sets.length){ N = averageLandmarks(sets.map(x => x[0])); W = averageLandmarks(sets.map(x => x[1])); used = sets.length; }
@@ -1841,10 +2066,10 @@ async function detectPose(){
       const t0 = vid.currentTime, t1 = t0 + 0.5 <= vid.duration ? t0 + 0.5 : t0 - 0.5;
       if (t1 >= 0){
         await seekTo(t1);
-        const r2 = frameReady() ? lm.detect(vid) : {};
+        const q2 = frameReady() ? detectNear(lm, vid, near) : null;
         await seekTo(t0);
-        if (r2.landmarks && r2.landmarks.length){
-          const N2 = r2.landmarks[0], hip = n => [(n[23].x + n[24].x) / 2, (n[23].y + n[24].y) / 2];
+        if (q2){
+          const N2 = q2.N, hip = n => [(n[23].x + n[24].x) / 2, (n[23].y + n[24].y) / 2];
           const torso = Math.hypot((N[11].x + N[12].x) / 2 - hip(N)[0], (N[11].y + N[12].y) / 2 - hip(N)[1]) || 1;
           r.m.walk = Math.hypot(hip(N2)[0] - hip(N)[0], hip(N2)[1] - hip(N)[1]) / torso * 100;
           if (r.m.walk >= CFG.walkDist) r.l = 7;
@@ -1857,7 +2082,8 @@ async function detectPose(){
     if (r.m.ankleL != null){ dm.ankleL = rd(r.m.ankleL); dm.ankleR = rd(r.m.ankleR); }
     if (r.m.neck != null) dm.neck = rd(r.m.neck);
     if (r.m.walk != null) dm.walk = rd(r.m.walk);
-    lastDet = {key, N: drawN || N, W, code: `${r.b}${r.a}${r.l || 0}`, m: dm};
+    lastDet = {key, N: drawN || N, W, code: `${r.b}${r.a}${r.l || 0}`, m: dm, others};
+    follow = poseCenter(drawN || N);
     // No se sobrescriben las partes que el usuario ya eligió a mano ni las de un fotograma registrado
     // (se mira el fotograma actual, porque «locked» puede ser aún el del fotograma anterior)
     if (regIndex() < 0){
@@ -1868,7 +2094,7 @@ async function detectPose(){
     renderObserve();
     renderOverlay(lastDet);
     // Bajo «Aceptar postura» solo se avisa de los problemas de la detección (los ángulos van en los subtítulos)
-    setDetectStatus(''); detWarn = r.warn; renderDetWarn();
+    setDetectStatus(others.length ? `<span class="warn-soft">Hay ${others.length + 1} personas en la imagen: se analiza la del esqueleto de color. «Detectar otro» (tecla O) pasa a la siguiente.</span>` : ''); detWarn = r.warn; renderDetWarn();
   }catch(e){
     console.error(e);
     // Si el detector de MediaPipe falla, queda inutilizable: se descarta y se vuelve a crear en la próxima detección
@@ -1888,6 +2114,7 @@ function renderDetWarn(){
   $('#detWarn').innerHTML = pending.map(w => `<span class="warn">Atención: ${w.t}</span>`).join('');
 }
 $('#detectBtn').onclick = detectPose;
+$('#detectOther').onclick = detectOther;
 // La propuesta deja de valer al cambiar de fotograma o de foto
 vid.addEventListener('seeking', () => { if (!detecting){ clearOverlay(); resetManual(); if (lastDet) setDetectStatus(''); } });
 vid.addEventListener('seeked', () => { if (!detecting) renderObserve(); });
@@ -2255,11 +2482,21 @@ function apaCard(part){
 
 // ---- Lista de observaciones ----
 function renderList(){
+  const nSel = S.obs.filter(o => o.sel).length;
+  $('#expSelN').textContent = nSel ? `(${nSel})` : '(ninguna)';
   if (!S.obs.length){ $('#obsTable').innerHTML = '<div class="empty">No hay observaciones.</div>'; return; }
   const withImg = S.obs.some(o => o.img);
-  $('#obsTable').innerHTML = `<table><tr><th class="n">#</th>${withImg ? '<th>Imagen</th>' : ''}<th>Código</th><th>Postura</th><th>Tarea</th><th>Categoría</th><th></th></tr>` +
-    S.obs.map((o,i) => [o,i]).reverse().map(([o,i]) => `<tr><td class="n">${i+1}</td>${withImg ? `<td>${o.img ? `<button class="thumb" data-view="${i}" aria-label="Ver imagen de la observación ${i+1}"><img src="${o.img}" alt="" loading="lazy"></button>` : '<span class="muted">—</span>'}</td>` : ''}<td><b>${codeStr(o)}</b>${detTag(o)}</td><td class="postura" title="${esc(describe(codeStr(o)))}">${PARTS.map(p => pict(p.key, o[p.key])).join('')}<span class="sr">${esc(describe(codeStr(o)))}</span></td><td class="small">${esc(phaseName(o.p))}${o.t != null ? `<br><span class="muted">${fmtTime(o.t)}</span>` : ''}</td><td>${catBadge(catOf(o),false)}</td><td><button class="btn danger icon-only" data-del="${i}" title="Eliminar observación" aria-label="Eliminar observación ${i+1}">${ico('trash')}</button></td></tr>`).join('') + '</table>';
+  $('#obsTable').innerHTML = `<table><tr><th><input type="checkbox" id="selAll" aria-label="Seleccionar todas las observaciones"${S.obs.every(o => o.sel) ? ' checked' : ''}></th><th class="n">#</th>${withImg ? '<th>Imagen</th>' : ''}<th>Código</th><th>Postura</th><th>Tarea</th><th>Categoría</th><th></th></tr>` +
+    S.obs.map((o,i) => [o,i]).reverse().map(([o,i]) => `<tr><td><input type="checkbox" data-sel="${i}"${o.sel ? ' checked' : ''} aria-label="Seleccionar la observación ${i+1}"></td><td class="n">${i+1}</td>${withImg ? `<td>${o.img ? `<button class="thumb" data-view="${i}" aria-label="Ver imagen de la observación ${i+1}"><img src="${o.img}" alt="" loading="lazy"></button>` : '<span class="muted">—</span>'}</td>` : ''}<td><b>${codeStr(o)}</b>${detTag(o)}</td><td class="postura" title="${esc(describe(codeStr(o)))}">${PARTS.map(p => pict(p.key, o[p.key])).join('')}<span class="sr">${esc(describe(codeStr(o)))}</span></td><td class="small">${esc(phaseName(o.p))}${o.t != null ? `<br><span class="muted">${fmtTime(o.t)}</span>` : ''}</td><td>${catBadge(catOf(o),false)}</td><td><button class="btn danger icon-only" data-del="${i}" title="Eliminar observación" aria-label="Eliminar observación ${i+1}">${ico('trash')}</button></td></tr>`).join('') + '</table>';
 }
+// Selección de observaciones (para exportar solo algunas a OpenSim y 3DSSPP)
+$('#obsTable').addEventListener('change', e => {
+  const c = e.target;
+  if (c.id === 'selAll') S.obs.forEach(o => { o.sel = c.checked; });
+  else if (c.dataset.sel != null) S.obs[+c.dataset.sel].sel = c.checked;
+  else return;
+  changed(); renderList();
+});
 $('#obsTable').addEventListener('click', e => {
   const b = e.target.closest('[data-del]'); if (!b) return;
   S.obs.splice(+b.dataset.del, 1); changed(); renderList(); renderObserve();
@@ -2335,12 +2572,20 @@ function buildTRC(list, name){
   rows.forEach((r, i) => lines.push([i + 1, r.t.toFixed(4), ...TRC_MARKERS.flatMap(m => r.pts[m[1]].map(f))].join(T)));
   return lines.join('\n') + '\n';
 }
+// Observaciones que se exportan a OpenSim y 3DSSPP: todas, las seleccionadas en la lista o las de ciertas categorías
+const expMode = () => (document.querySelector('input[name="expSel"]:checked') || {}).value || 'all';
+function exportObs(){
+  const mode = expMode(), cats = [1, 2, 3, 4].filter(k => $('#expCat' + k).checked);
+  return filtered().filter(o => mode === 'sel' ? o.sel : mode === 'cat' ? cats.includes(catOf(o)) : true);
+}
+const noObsMsg = () => expMode() === 'sel' && !exportObs().length ? 'No hay observaciones seleccionadas: márquelas en la lista de observaciones.'
+  : expMode() === 'cat' && !exportObs().length ? 'No hay observaciones de las categorías elegidas.' : 'No hay observaciones con postura detectada para exportar.';
 function exportTRC(){
-  const list = filtered().filter(o => o.w3);
-  if (!list.length){ $('#expStatus').innerHTML = '<span class="warn-box">No hay observaciones con postura detectada para exportar.</span>'; return; }
+  const list = exportObs().filter(o => o.w3);
+  if (!list.length){ $('#expStatus').innerHTML = `<span class="warn-box">${noObsMsg()}</span>`; return; }
   const name = (fileName || 'estudio').replace(/\.(ows|owsp)$/i, '') + ' - posturas.trc';
   downloadBlob(new Blob([buildTRC(list, name)], {type: 'text/plain'}), name);
-  const skipped = filtered().length - list.length;
+  const skipped = exportObs().length - list.length;
   $('#expStatus').textContent = `Archivo descargado con ${list.length} posturas.` + (skipped ? ` ${skipped} observaciones sin detección no se incluyeron.` : '');
 }
 /*3DSSPP-INICIO*/
@@ -2470,13 +2715,13 @@ function buildC3D(list, rate){
 // Observaciones con postura detectada, como posturas para 3DSSPP y C3D
 function sspList(){
   const owas = $('#sspOwas').checked, F = Math.min(2000, Math.max(0, parseFloat($('#sspF').value) || 0));
-  const list = filtered().filter(o => o.w3).map((o, i) => ({t: o.t != null ? o.t : i * S.interval, w3: o.w3, label: `Observacion ${S.obs.indexOf(o) + 1}`,
+  const list = exportObs().filter(o => o.w3).map((o, i) => ({t: o.t != null ? o.t : i * S.interval, w3: o.w3, label: `Observacion ${S.obs.indexOf(o) + 1}`,
     seated: o.l === 1, force: owas ? [5, 15, 25][o.w - 1] * 9.81 / 2 : F}));
   return {list, F, owas};
 }
 function export3DSSPP(kind){
-  const {list, F, owas} = sspList(), skipped = filtered().length - list.length;
-  if (!list.length){ $('#expStatus').innerHTML = '<span class="warn-box">No hay observaciones con postura detectada para exportar.</span>'; return; }
+  const {list, F, owas} = sspList(), skipped = exportObs().length - list.length;
+  if (!list.length){ $('#expStatus').innerHTML = `<span class="warn-box">${noObsMsg()}</span>`; return; }
   try{
     let blob, name;
     if (kind === 'sloc'){ name = exportBase() + ' - 3DSSPP.sloc'; blob = new Blob([buildSloc(list, F)], {type: 'text/plain'}); }
@@ -2776,9 +3021,9 @@ const MOT_HELP = {
 };
 const exportBase = () => (fileName || 'estudio').replace(/\.(ows|owsp)$/i, '');
 async function exportMOT(){
-  const list = filtered().filter(o => o.w3), btn = $('#expMot');
+  const list = exportObs().filter(o => o.w3), btn = $('#expMot');
   $('#motPanel').hidden = true; ikResult = null;
-  if (!list.length){ $('#expStatus').innerHTML = '<span class="warn-box">No hay observaciones con postura detectada para exportar.</span>'; return; }
+  if (!list.length){ $('#expStatus').innerHTML = `<span class="warn-box">${noObsMsg()}</span>`; return; }
   btn.disabled = true;
   try{
     const key = $('#motModel').value, cfg = IK_MODELS[key];
@@ -2791,7 +3036,7 @@ async function exportMOT(){
       const f = ikFrame(s, s.aligned[i], prev);
       prev = f.p; frames.push({...f, o: rows[i].o});
     }
-    ikResult = {s, key, frames, skipped: filtered().length - list.length};
+    ikResult = {s, key, frames, skipped: exportObs().length - list.length};
     renderMot();
   }catch(e){
     console.error(e);
@@ -2935,12 +3180,12 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <ol><li>En <b>1 · Proyecto</b>, rellene la información del estudio, el intervalo de observación y las tareas.</li>
 <li>En <b>2 · Observación</b>, elija el modo:
   <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar postura</b>.</li>
-  <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado.</li>
+  <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado. Con <b>Unir videos</b> se juntan varios videos cortos en uno, en orden de nombre de archivo: si tienen el mismo formato (lo normal si son de la misma cámara) se unen al instante y sin perder calidad; si no, se vuelven a codificar. El video unido no tiene sonido y se guarda con «Guardar el video unido», para volver a abrir el proyecto con él.</li>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
-<li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
+<li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
 <li>Consulte <b>3 · Resultados</b>: categorías de acción, partes del cuerpo y tablas APA, que se actualizan solos al guardar cada postura. Puede filtrar por tarea.</li>
 <li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original, e <b>Imprimir</b> para imprimir o guardar en PDF.</li>
-<li>En <b>Exportar resultados</b>, las posturas detectadas también se pueden llevar a OpenSim (.trc y .mot) y a 3DSSPP, el programa de análisis biomecánico de la Universidad de Míchigan: como archivo de ubicaciones <b>.sloc</b> (<i>Animation → Import LOC File</i>), como <b>archivo de lote</b> que analiza cada observación con la persona y la carga indicadas (<i>Task Input → Run Batch File</i>) o como <b>.c3d</b> con los 21 centros articulares que pide 3DSSPP (<i>Animation → Import C3D File</i>), que también abren OpenSim y otros programas. La carga de cada observación puede tomarse de su código OWAS. La cabeza, C7/T1, el esternón, L5/S1 y el centro de agarre se estiman a partir de los puntos detectados: revise las posturas en 3DSSPP antes de usar sus resultados. 3DSSPP es software de la University of Michigan. OWAS Web no está afiliada a ella ni incluye 3DSSPP: los archivos siguen el formato de importación descrito en el manual de 3DSSPP 7.1, y su uso requiere la licencia correspondiente de 3DSSPP. C3D es un formato abierto (c3d.org).</li></ol>
+<li>En <b>Exportar resultados</b>, las posturas detectadas también se pueden llevar a OpenSim (.trc y .mot) y a 3DSSPP, el programa de análisis biomecánico de la Universidad de Míchigan: como archivo de ubicaciones <b>.sloc</b> (<i>Animation → Import LOC File</i>), como <b>archivo de lote</b> que analiza cada observación con la persona y la carga indicadas (<i>Task Input → Run Batch File</i>) o como <b>.c3d</b> con los 21 centros articulares que pide 3DSSPP (<i>Animation → Import C3D File</i>), que también abren OpenSim y otros programas. La carga de cada observación puede tomarse de su código OWAS. Se pueden exportar todas las observaciones, solo las marcadas con las casillas de la lista de observaciones o solo las de ciertas categorías de riesgo. La cabeza, C7/T1, el esternón, L5/S1 y el centro de agarre se estiman a partir de los puntos detectados: revise las posturas en 3DSSPP antes de usar sus resultados. 3DSSPP es software de la University of Michigan. OWAS Web no está afiliada a ella ni incluye 3DSSPP: los archivos siguen el formato de importación descrito en el manual de 3DSSPP 7.1, y su uso requiere la licencia correspondiente de 3DSSPP. C3D es un formato abierto (c3d.org).</li></ol>
 <h3>Categorías de acción</h3>
 <div class="legend" style="margin-bottom:14px">${CATS.map((k,i) => `<div>${catBadge(i+1,false)}<div><b>${k.t}</b><p>${k.d}</p></div></div>`).join('')}</div>
 <h3>Códigos</h3>
@@ -2973,7 +3218,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.25 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.26 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
