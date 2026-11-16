@@ -202,7 +202,7 @@ main{max-width:1440px}
 .foot a{color:var(--accent)}
 .foot p{margin:0}
 .btn.danger{color:var(--danger)}
-/* «Cargar video» y «Cargar fotografías» destacan en gris oscuro hasta que se carga algo */
+/* «Cargar videos» y «Cargar fotografías» destacan en gris oscuro hasta que se carga algo */
 .btn.load{background:#3f3f3f;border-color:#3f3f3f;color:#fff;font-weight:600}
 .btn.load:hover{background:#2f2f2f;border-color:#2f2f2f}
 :root[data-theme="dark"] .btn.load{background:#5a5a5a;border-color:#6a6a6a}
@@ -219,12 +219,20 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .phase-row input{flex:1}
 .phase-row input.dup{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
 .phase-row .dup-msg{font-size:12px;padding:1px 7px}
-/* Varios videos en el mismo estudio */
-.playlist{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;margin:0 0 6px}
-.pl-item{display:inline-flex;gap:2px}
-.pl-item .btn{min-height:28px;padding:2px 8px;font-size:13px}
-.pl-item .btn.icon-only{padding:2px 4px}
-.pl-item.on .btn:first-child{background:var(--accent);color:var(--accent-ink)}
+/* Varios videos: solo el número del actual; la lista aparece al pasar el cursor (o con el teclado) */
+.playlist{position:relative;display:inline-block}
+.playlist .pl-menu{display:none;position:absolute;left:0;top:100%;z-index:30;min-width:280px;max-width:min(460px,90vw);max-height:60vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.22);padding:6px}
+.playlist:hover .pl-menu,.playlist:focus-within .pl-menu{display:block}
+.pl-menu p{margin:0 0 4px;padding:0 6px}
+.pl-row{display:flex;align-items:center;gap:2px}
+.pl-go{flex:1;display:flex;gap:6px;align-items:center;text-align:left;background:none;border:0;padding:4px 6px;border-radius:6px;cursor:pointer;color:inherit;font:inherit;font-size:13px;min-width:0}
+.pl-go .pl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-go .pl-dur{margin-left:auto;padding-left:10px;opacity:.75;white-space:nowrap}
+.pl-go:hover{background:var(--accent-soft)}
+.pl-row.on .pl-go{background:var(--accent);color:var(--accent-ink)}
+.pl-x{background:none;border:0;cursor:pointer;color:var(--ink-3);padding:2px;display:flex;border-radius:4px}
+.pl-x:hover{color:var(--danger)}
+.pl-x .ico{width:14px;height:14px}
 /* Quitar una imagen de los resultados y del informe */
 .gallery figure{position:relative}
 .gallery .img-x{position:absolute;top:4px;right:4px;min-height:0;padding:2px;border-radius:6px;background:rgba(0,0,0,.55);color:#fff;border:0;cursor:pointer;display:flex}
@@ -579,15 +587,12 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
       </div>
       <div id="videoPane">
         <div class="media-top">
-          <button class="btn load" id="loadVideo" data-icon="video">Cargar video</button>
+          <button class="btn load" id="loadVideo" data-icon="video">Cargar videos</button>
           <button class="btn" id="addVideo" data-icon="plus" title="Añadir otro video al final de la lista: los videos se reproducen uno tras otro" hidden>Añadir video</button>
-          <button class="btn" id="joinVideos" data-icon="layers" title="Unir varios videos cortos en un solo archivo, uno tras otro">Unir videos</button>
+          <div class="playlist" id="playlist" hidden></div>
           <span class="muted small" id="videoName">Ningún video cargado</span>
           <span class="warn-soft small" id="vidNote" role="status" hidden></span>
-          <button class="btn" id="saveJoined" data-icon="download" hidden>Guardar el video unido</button>
-          <p class="small muted" id="joinInfo" style="flex-basis:100%;margin:0" hidden></p>
         </div>
-        <div class="playlist small" id="playlist" hidden></div>
         <div class="stage"><video id="vid" playsinline muted preload="auto"></video><canvas class="overlay" id="ovVideo" aria-hidden="true"></canvas><p class="stage-empty" id="vidEmpty">Cargue un video (MP4 o WebM) para revisarlo fotograma a fotograma.</p></div>
         <div class="subs" id="subsVideo" role="status" hidden></div>
         <div class="timeline"><input type="range" id="seek" min="0" max="0" step="0.01" value="0" aria-label="Posición del video"><div class="marks" id="marks"></div></div>
@@ -712,7 +717,6 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 <input type="file" id="fileJoin" accept=".ows,.OWS,.owsp" hidden>
 <input type="file" id="fileVideo" accept="video/*" multiple hidden>
 <input type="file" id="fileAddVideo" accept="video/*" multiple hidden>
-<input type="file" id="fileJoinVideos" accept="video/*" multiple hidden>
 <input type="file" id="filePhotos" accept="image/*" multiple hidden>
 <dialog id="exportDlg" aria-labelledby="exportTitle">
   <h2 id="exportTitle">Exportar resultados</h2>
@@ -1090,8 +1094,10 @@ async function saveFile(as){
     } else throw new Error('no fs api');
   }catch(e){
     if (e.name === 'AbortError') return;
-    let n = name;
-    if (as || !fileName){ n = prompt('Nombre del archivo (.owsp guarda las imágenes, .OWS solo los datos):', name); if (!n) return; if (!/\.(ows|owsp)$/i.test(n)) n += hasImg ? '.owsp' : '.OWS'; }
+    // Sin el explorador de archivos del navegador (o si falla): se descarga con el nombre propuesto, y el navegador
+    // pregunta dónde guardarlo si está configurado así. No se pide el nombre antes en un cuadro de texto
+    console.warn('Se guarda como descarga:', e);
+    const n = name;
     const bytes = studyBytes(n);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([bytes], {type:'application/octet-stream'}));
@@ -1181,8 +1187,8 @@ function renderInterval(){
   if (document.activeElement !== $('#nObs')) $('#nObs').value = S.nObs || '';
   $('#interval').disabled = count; $('#nObs').disabled = !count;
   $('#ivInfo').textContent = count
-    ? (d ? `${many ? `${playlist.length} videos, ${fmtTime(d)} en total` : `Video de ${fmtTime(d)}`}: una observación cada ${fmtNum(S.interval)} s.` : 'Cargue el video para calcular el intervalo a partir de su duración.')
-    : (d ? `En ${many ? `los ${playlist.length} videos (${fmtTime(d)} en total)` : `el video de ${fmtTime(d)}`} caben ${Math.floor(d / S.interval + 1e-6) + 1} observaciones con este intervalo.` : '');
+    ? (d ? `${many ? `Duración total de los ${playlist.length} videos` : 'Duración del video'}: ${fmtTime(d)} (${fmtNum(d)} s) ÷ ${S.nObs} observaciones = una observación cada ${fmtNum(S.interval)} s.` : 'Cargue el video (o los videos) para calcular el intervalo a partir de su duración total.')
+    : (d ? `${many ? `Duración total de los ${playlist.length} videos` : 'Duración del video'}: ${fmtTime(d)} (${fmtNum(d)} s) ÷ ${fmtNum(S.interval)} s = ${Math.floor(d / S.interval + 1e-6) + 1} observaciones con este intervalo (contando la del inicio).` : '');
 }
 document.addEventListener('change', e => {
   if (e.target.name !== 'ivMode') return;
@@ -1601,10 +1607,9 @@ function loadVideoFile(f){
   videoFile = f; videoOk = false; videoT = 0; reopen = {n: 0, at: 0}; follow = null;
   videoName = f.name; vid.src = URL.createObjectURL(f);
   $('#videoName').textContent = f.name; $('#vidEmpty').hidden = true; $('#loadVideo').classList.remove('load');
-  renderJoinInfo();
-  // Fecha, hora y ubicación del archivo (en un video unido, las de cada parte)
-  videoMeta = f.joined ? {parts: f.joined} : null;
-  if (!f.joined) readVideoMeta(f).then(m => { if (videoFile === f) videoMeta = m; }).catch(() => {});
+  // Fecha, hora y ubicación del archivo
+  videoMeta = null;
+  readVideoMeta(f).then(m => { if (videoFile === f) videoMeta = m; }).catch(() => {});
 }
 // Varios videos en el mismo estudio: se reproducen uno tras otro, sin unirlos. Los elegidos a la vez se ordenan por nombre
 // de archivo; «Añadir video» pone los nuevos al final. Cada observación recuerda de qué video es
@@ -1634,12 +1639,15 @@ function switchVideo(k, t = 0, play = false){
   renderPlaylist();
 }
 function renderPlaylist(){
-  const box = $('#playlist');
-  $('#addVideo').hidden = !playlist.length;
-  box.hidden = playlist.length < 2;
+  const box = $('#playlist'), n = playlist.length;
+  $('#addVideo').hidden = !n;
+  box.hidden = n < 2;
   if (box.hidden){ box.innerHTML = ''; return; }
-  box.innerHTML = `<span class="muted">${playlist.length} videos, se reproducen uno tras otro:</span>` + playlist.map((q, k) =>
-    `<span class="pl-item${k === vi ? ' on' : ''}"><button class="btn" data-vi="${k}" title="Ver ${esc(q.file.name)}"><b>${k + 1}</b>&nbsp;${esc(q.file.name)}${q.dur ? ' · ' + fmtTime(q.dur) : ''}</button><button class="btn icon-only" data-vrm="${k}" title="Quitar de la lista (sus observaciones se conservan)" aria-label="Quitar ${esc(q.file.name)} de la lista">${ico('close')}</button></span>`).join('');
+  const total = playlist.reduce((s, q) => s + (q.dur || 0), 0);
+  box.innerHTML = `<button class="btn" aria-haspopup="true" title="${esc(playlist[vi].file.name)}">${ico('video')}Video ${vi + 1} de ${n}</button>` +
+    `<div class="pl-menu" role="menu"><p class="small muted">Se reproducen uno tras otro${total ? ` · ${fmtTime(total)} en total` : ''}</p>` +
+    playlist.map((q, k) => `<div class="pl-row${k === vi ? ' on' : ''}"><button class="pl-go" role="menuitem" data-vi="${k}" title="${esc(q.file.name)}"><b>${k + 1}</b><span class="pl-name">${esc(q.file.name)}</span><span class="pl-dur">${q.dur ? fmtTime(q.dur) : ''}</span></button>` +
+      `<button class="pl-x" data-vrm="${k}" title="Quitar de la lista" aria-label="Quitar ${esc(q.file.name)} de la lista">${ico('close')}</button></div>`).join('') + '</div>';
 }
 $('#playlist').addEventListener('click', e => {
   const a = e.target.closest('[data-vi]'), r = e.target.closest('[data-vrm]');
@@ -1655,30 +1663,6 @@ vid.addEventListener('ended', () => { if (vi < playlist.length - 1) switchVideo(
 $('#fileVideo').onchange = e => { if (e.target.files.length) setPlaylist(byName(e.target.files)); };
 $('#addVideo').onclick = () => { const f = $('#fileAddVideo'); f.value = ''; f.click(); };
 $('#fileAddVideo').onchange = e => { if (e.target.files.length) setPlaylist(byName(e.target.files), true); };
-// Video unido: botón para guardarlo (para volver a abrir el proyecto con él) y lista de los videos que contiene
-function renderJoinInfo(){
-  const parts = videoFile && videoFile.joined;
-  $('#saveJoined').hidden = $('#joinInfo').hidden = !parts;
-  if (parts) $('#joinInfo').textContent = 'Video unido: ' + parts.map((q, i) => `${i + 1}. ${q.name} (desde ${fmtTime(q.start)})`).join(' · ');
-}
-$('#saveJoined').onclick = () => { if (videoFile && videoFile.joined) downloadBlob(videoFile, videoFile.name); };
-$('#joinVideos').onclick = () => { const f = $('#fileJoinVideos'); f.value = ''; f.click(); };
-$('#fileJoinVideos').onchange = async e => {
-  const files = [...e.target.files].sort((a, b) => a.name.localeCompare(b.name, 'es', {numeric: true}));
-  if (files.length < 2){ alert('Elija dos o más videos para unirlos (mantenga pulsada la tecla Ctrl o Mayús al elegirlos).'); return; }
-  if (!confirm(`Se unirán ${files.length} videos en este orden (por nombre de archivo):\n\n${files.map((f, i) => `${i + 1}. ${f.name}`).join('\n')}\n\nEl video unido se crea en este equipo y no tiene sonido. ¿Continuar?`)) return;
-  const note = $('#vidNote'), btn = $('#joinVideos');
-  const say = (text, q) => { clearTimeout(reopenVideo.timer); note.textContent = `${text} ${Math.round(q * 100)} %`; note.hidden = false; };
-  btn.disabled = true;
-  try{
-    const r = await joinVideos(files, say);
-    setMode('video'); setPlaylist([r.file]);
-    note.textContent = (r.same ? 'Videos unidos sin volver a codificar la imagen.' : 'Videos unidos: se volvieron a codificar porque tenían formatos distintos.') +
-      ' Guárdelo con «Guardar el video unido» para poder volver a abrir el proyecto con él.';
-    note.hidden = false;
-  }catch(err){ console.error(err); note.hidden = true; alert(`No se pudieron unir los videos: ${err.message}.`); }
-  finally{ btn.disabled = false; }
-};
 vid.addEventListener('loadedmetadata', () => { videoOk = true; renderVideoUI(); renderMarks(); applyIntervalPlan(); });
 ['timeupdate', 'seeked', 'play', 'pause'].forEach(ev => vid.addEventListener(ev, renderVideoUI));
 // Momento del video al que volver si hay que reabrirlo (no cuentan los saltos internos de la detección)
@@ -1784,8 +1768,7 @@ async function readVideoMeta(file){
 function mediaMeta(){
   if (mode === 'video' && vid.src){
     const t = vid.currentTime || 0;
-    let m = videoMeta, t0 = 0;
-    if (videoMeta && videoMeta.parts){ const q = [...videoMeta.parts].reverse().find(x => t >= x.start - 1e-3); m = q && q.meta; t0 = q ? q.start : 0; }
+    const m = videoMeta, t0 = 0;
     return m ? {when: m.when ? new Date(m.when.getTime() + (t - t0) * 1000) : null, geo: m.geo} : null;
   }
   if (mode === 'photo' && photos[pi]) return photos[pi].meta || null;
@@ -1905,100 +1888,6 @@ function addEditList(buf, entries){
   return out;
 }
 /*SINAUDIO-FIN*/
-// ---- Unir varios videos cortos en uno ----
-// Si todos tienen el mismo formato (lo normal si salen de la misma cámara), se copian sus fotogramas uno tras otro sin
-// volver a codificarlos; si no, se decodifican y se vuelven a codificar en H.264 (WebCodecs). El video unido no tiene sonido
-const sameBytes = (a, b) => (!a && !b) || (!!a && !!b && a.length === b.length && a.every((v, i) => v === b[i]));
-async function joinVideos(files, say){
-  for (const f of files) if (!isMp4(f)) throw new Error(`«${f.name}» no es un video MP4 o MOV`);
-  const metas = [];
-  for (const [k, f] of files.entries()) metas.push(await readMp4Video(f, q => say(`Revisando los videos: ${k + 1} de ${files.length}…`, (k + q) / files.length * 0.1), {meta: true}));
-  const a = metas[0], same = metas.every(m => m.codec === a.codec && m.w === a.w && m.h === a.h && m.rotation === a.rotation && sameBytes(m.description, a.description));
-  const M = await loadScriptOnce('mp4-muxer', 'mp4-muxer.js', 'mp4-muxer', 'Mp4Muxer'), parts = [];
-  let out;
-  if (same){
-    const muxer = new M.Muxer({target: new M.ArrayBufferTarget(), video: {codec: a.kind, width: a.w, height: a.h, rotation: a.rotation}, fastStart: false, firstTimestampBehavior: 'offset'});
-    let base = 0, firstC0 = null;
-    for (const [k, f] of files.entries()){
-      const v = await readMp4Video(f, q => say(`Uniendo ${k + 1} de ${files.length}: ${f.name}`, 0.1 + (k + q) / files.length * 0.88));
-      // Cada video empieza donde termina el anterior; c0: retraso de su primer fotograma visible (fotogramas B)
-      const c0 = (Math.min(...v.samples.map(s => s.cts)) - v.dts0) / v.ts;
-      if (firstC0 == null) firstC0 = c0;
-      parts.push({name: f.name, start: base + c0 - firstC0});
-      let end = base;
-      v.samples.forEach((s, i) => {
-        const dts = base + (s.dts - v.dts0) / v.ts, off = (s.cts - s.dts) / v.ts, dur = s.dur / v.ts;
-        muxer.addVideoChunkRaw(s.data, s.sync ? 'key' : 'delta', (dts + off) * 1e6, dur * 1e6,
-          k === 0 && i === 0 ? {decoderConfig: {codec: v.codec, codedWidth: v.w, codedHeight: v.h, description: v.description}} : undefined, off * 1e6);
-        end = Math.max(end, dts + dur);
-      });
-      base = end;
-    }
-    muxer.finalize();
-    out = new Uint8Array(muxer.target.buffer);
-    if (firstC0 > 0.0005) out = addEditList(out, [{dur: 0, media: firstC0}]);
-  } else out = await joinEncode(files, metas, parts, say, M);
-  for (const q of parts) q.meta = await readVideoMeta(files.find(f => f.name === q.name)).catch(() => null);
-  const file = new File([out], `Unido - ${files[0].name.replace(/\.[^.]+$/, '')} y ${files.length - 1} más.mp4`, {type: 'video/mp4'});
-  file.noAudio = true; file.joined = parts;
-  return {file, same};
-}
-// Videos con formatos distintos: se decodifica cada fotograma, se dibuja al tamaño del primero (con su giro) y se codifica en H.264
-async function joinEncode(files, metas, parts, say, M){
-  if (!window.VideoDecoder || !window.VideoEncoder) throw new Error('los videos tienen formatos distintos y este navegador no puede volver a codificarlos; use Chrome o Edge actualizados');
-  const disp = m => m.rotation % 180 ? [m.h, m.w] : [m.w, m.h];
-  let [W, H] = disp(metas[0]);
-  const k0 = Math.min(1, 1920 / Math.max(W, H)); W = Math.round(W * k0 / 2) * 2; H = Math.round(H * k0 / 2) * 2;
-  const fps = Math.min(60, Math.max(1, Math.round(metas[0].nb / (metas[0].duration || 1))));
-  let cfg = null;
-  for (const codec of ['avc1.640033', 'avc1.640028', 'avc1.4d0028', 'avc1.42e028']){
-    const c = {codec, width: W, height: H, framerate: fps, bitrate: Math.round(Math.min(20e6, Math.max(2e6, W * H * fps * 0.15))), avc: {format: 'avc'}};
-    try{ if ((await VideoEncoder.isConfigSupported(c)).supported){ cfg = c; break; } }catch(e){}
-  }
-  if (!cfg) throw new Error('este navegador no puede codificar video H.264 de este tamaño');
-  const muxer = new M.Muxer({target: new M.ArrayBufferTarget(), video: {codec: 'avc', width: W, height: H}, fastStart: false, firstTimestampBehavior: 'offset'});
-  let failed = null, base = 0, count = 0;
-  const enc = new VideoEncoder({output: (ch, meta) => muxer.addVideoChunk(ch, meta), error: e => { failed = e; }});
-  enc.configure(cfg);
-  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
-  const g = canvas.getContext('2d'), pause = () => new Promise(r => setTimeout(r, 4));
-  for (const [k, f] of files.entries()){
-    const v = await readMp4Video(f, q => say(`Leyendo ${k + 1} de ${files.length}: ${f.name}`, 0.1 + (k + q * 0.2) / files.length * 0.88));
-    const cfgD = {codec: v.codec, codedWidth: v.w, codedHeight: v.h, description: v.description};
-    if (!(await VideoDecoder.isConfigSupported(cfgD)).supported) throw new Error(`este navegador no puede decodificar «${f.name}» (${v.codec})`);
-    const minCts = Math.min(...v.samples.map(s => s.cts)), queue = [];
-    const dec = new VideoDecoder({output: fr => queue.push(fr), error: e => { failed = e; }});
-    dec.configure(cfgD);
-    parts.push({name: f.name, start: base});
-    const [dw, dh] = disp(v), sc = Math.min(W / dw, H / dh), rot = v.rotation * Math.PI / 180;
-    let end = base;
-    const drain = async () => {
-      while (queue.length){
-        const fr = queue.shift(), tt = base + (fr.timestamp / 1e6 - minCts / v.ts), d = (fr.duration || 1e6 / fps) / 1e6;
-        g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
-        g.save(); g.translate(W / 2, H / 2); g.rotate(rot); g.scale(sc, sc); g.drawImage(fr, -v.w / 2, -v.h / 2, v.w, v.h); g.restore();
-        fr.close();
-        const vf = new VideoFrame(canvas, {timestamp: Math.round(tt * 1e6), duration: Math.round(d * 1e6)});
-        enc.encode(vf, {keyFrame: count % (fps * 2) === 0}); vf.close(); count++;
-        end = Math.max(end, tt + d);
-        while (enc.encodeQueueSize > 6) await pause();
-      }
-    };
-    for (const [i, s] of v.samples.entries()){
-      if (failed) throw failed;
-      dec.decode(new EncodedVideoChunk({type: s.sync ? 'key' : 'delta', timestamp: Math.round(s.cts / v.ts * 1e6), duration: Math.round(s.dur / v.ts * 1e6), data: s.data}));
-      while (dec.decodeQueueSize > 6) await pause();
-      await drain();
-      if (i % 30 === 0) say(`Volviendo a codificar ${k + 1} de ${files.length}: ${f.name}`, 0.1 + (k + 0.2 + 0.8 * i / v.samples.length) / files.length * 0.88);
-    }
-    await dec.flush(); await drain(); dec.close();
-    if (failed) throw failed;
-    base = end;
-  }
-  await enc.flush(); if (failed) throw failed; enc.close();
-  muxer.finalize();
-  return new Uint8Array(muxer.target.buffer);
-}
 // Si el error viene del sonido, se abre la copia sin sonido (una vez por archivo) en el mismo momento del video
 let audioFixing = false;
 async function openWithoutAudio(){
@@ -3614,7 +3503,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <ol><li>En <b>1 · Proyecto</b>, rellene la información del estudio, el intervalo de observación y las tareas. El intervalo se puede indicar en segundos o como <b>número total de observaciones</b>: en ese caso se calcula a partir de la duración del video (por ejemplo, 400 observaciones en 10 minutos: una cada 1,5 s), y «Muestra siguiente» recorre exactamente ese número de muestras. En «Resultados», la tabla de frecuencias por tarea muestra cuántas observaciones hubo de cada tarea, su porcentaje del total y su tiempo estimado.</li>
 <li>En <b>2 · Observación</b>, elija el modo:
   <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar postura</b>.</li>
-  <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado. Para revisar varios videos en el mismo estudio sin unirlos, elíjalos todos en <b>Cargar video</b> (se ordenan por nombre de archivo) o añádalos con <b>Añadir video</b>: se reproducen uno tras otro, «Muestra siguiente» pasa al video siguiente cuando hace falta y el intervalo por número de observaciones usa la duración total. Con <b>Unir videos</b> se juntan varios videos cortos en uno, en orden de nombre de archivo: si tienen el mismo formato (lo normal si son de la misma cámara) se unen al instante y sin perder calidad; si no, se vuelven a codificar. El video unido no tiene sonido y se guarda con «Guardar el video unido», para volver a abrir el proyecto con él.</li>
+  <li><b>Video</b>: cargue uno o varios videos MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado. Para revisar varios videos en el mismo estudio, elíjalos todos en <b>Cargar videos</b> (se ordenan por nombre de archivo) o añádalos con <b>Añadir video</b>: se reproducen uno tras otro, «Muestra siguiente» pasa al video siguiente cuando hace falta y el intervalo por número de observaciones usa la duración total, que se muestra en «Intervalo». El botón «Video 1 de 3» indica el video actual; al pasar el cursor por encima aparece la lista con el nombre y la duración de cada uno.</li>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
 <li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. Si no se detecta a nadie, se propone el código 1111 en la tarea «N/A» (se crea la primera vez y se puede renombrar): revíselo y pulse <b>Aceptar postura</b> si es correcto; al volver a detectar a una persona se recupera la tarea anterior. Si se detecta una postura falsa en una imagen sin personas, <b>No detectar</b> (tecla <span class="kbd">X</span>) la quita y hace la misma propuesta. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
 <li>Al volver a un fotograma o una foto ya registrados, sus códigos quedan bloqueados. El lápiz (tecla <span class="kbd">E</span>) los desbloquea para corregirlos: cámbielos y pulse <b>Guardar cambios</b>. La papelera (tecla <span class="kbd">Supr</span>) elimina la observación de ese fotograma o, si no hay ninguna, deshace la última. Los cambios se ven al momento en la barra de tiempo, la lista de observaciones y los resultados.</li>
@@ -3654,7 +3543,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.33 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.34 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
