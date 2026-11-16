@@ -1100,10 +1100,21 @@ function downloadStudy(n){
 async function saveFile(as){
   // Formato según los datos: .OWS (compatible con el WinOWAS original) si basta; si no, proyecto .owsp, que lo guarda todo
   const loses = owsLoses(), needP = loses.length > 0, lost = loses.join(', ');
-  if (!as && fileName && !isProject(fileName) && needP &&
-      confirm(`El formato .OWS no guarda ${lost}.\n\nAceptar: guardar como proyecto .owsp, con todo.\nCancelar: guardar solo los códigos en ${fileName}.`)) as = true;
+  // Un .OWS abierto que ahora tiene datos que .OWS no guarda pasa a proyecto .owsp (con otro nombre de archivo)
+  if (!as && fileName && !isProject(fileName) && needP) as = true;
   const base = (fileName || 'OWAS').replace(/\.(ows|owsp)$/i, '');
-  const name = as || !fileName ? base + (needP ? '.owsp' : '.OWS') : fileName;
+  // Por defecto, proyecto .owsp (lo guarda todo); .OWS solo si se elige a mano, para el WinOWAS original
+  const name = as || !fileName ? base + '.owsp' : fileName;
+  // Sin el explorador de archivos de la aplicación: se pide el nombre del proyecto y después el navegador
+  // pregunta dónde guardar la descarga. «Guardar» con un nombre ya elegido no lo vuelve a pedir
+  const askName = () => {
+    if (!as && fileName) return fileName;
+    let n = prompt('Nombre del proyecto (.owsp guarda todo; .OWS solo los códigos, para el WinOWAS original):', name);
+    if (!n || !n.trim()) return null;
+    n = n.trim(); if (!/\.(ows|owsp)$/i.test(n)) n += '.owsp';
+    if (!isProject(n) && needP && !confirm(`El formato .OWS no guarda ${lost}. ¿Guardar solo los códigos en «${n}»?`)) return null;
+    return n;
+  };
   // Ya guardado en este equipo: se sobrescribe el mismo archivo, sin volver a pedir el nombre ni la carpeta
   if (!as && fileHandle){
     try{
@@ -1115,24 +1126,27 @@ async function saveFile(as){
     if (err){ if (confirm(writeFailMsg(fileName, err))) downloadStudy(fileName); return; }
   } else if (window.showSaveFilePicker){
     // Primera vez o «Guardar como»: el explorador para elegir el nombre, la carpeta y el formato
-    const opts = {suggestedName: name, types: needP ? [FILE_TYPES.owsp, FILE_TYPES.ows] : [FILE_TYPES.ows, FILE_TYPES.owsp]};
+    const typed = askName(); if (!typed) return;
+    const prevName = fileName; fileName = typed; renderHeader();
+    const opts = {suggestedName: typed, types: isProject(typed) ? [FILE_TYPES.owsp, FILE_TYPES.ows] : [FILE_TYPES.ows, FILE_TYPES.owsp]};
     if (fileHandle) opts.startIn = fileHandle;
     let h;
     try{ h = await showSaveFilePicker(opts); }
     catch(e){
-      if (e.name === 'AbortError') return;
-      // El navegador no deja usar su explorador: se descarga con el nombre propuesto
+      if (e.name === 'AbortError'){ fileName = prevName; renderHeader(); return; }
+      // El navegador no deja usar su explorador: se pide el nombre y se descarga
       console.warn('Se guarda como descarga:', e);
-      downloadStudy(name); fileName = name; dirty = false; persist(); renderHeader(); return;
+      downloadStudy(typed); fileHandle = null; dirty = false; persist(); renderHeader(); return;
     }
-    if (!isProject(h.name) && needP && !confirm(`Eligió el formato .OWS, que no guarda ${lost}. ¿Guardar solo los códigos en «${h.name}»?\n\nPara guardarlo todo, cancele y elija «.owsp» en el tipo de archivo.`)) return;
+    if (!isProject(h.name) && isProject(typed) && needP && !confirm(`Eligió el formato .OWS, que no guarda ${lost}. ¿Guardar solo los códigos en «${h.name}»?\n\nPara guardarlo todo, cancele y elija «.owsp» en el tipo de archivo.`)) return;
     // El nombre elegido se ve al momento y «Guardar» ya no lo vuelve a pedir
     fileHandle = h; fileName = h.name; renderHeader();
     const err = await writeHandle(h, studyBytes(h.name));
     if (err){ persist(); if (confirm(writeFailMsg(h.name, err))) downloadStudy(h.name); return; }
   } else {
     // Navegador sin explorador de archivos (por ejemplo, Firefox): se descarga y el navegador pregunta dónde, si está configurado así
-    downloadStudy(name); fileName = name;
+    const n = askName(); if (!n) return;
+    downloadStudy(n); fileName = n; fileHandle = null;
   }
   dirty = false; persist(); renderHeader();
 }
@@ -3572,7 +3586,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.35 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.36 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
