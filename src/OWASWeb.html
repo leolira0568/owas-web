@@ -121,8 +121,8 @@ dialog#exportDlg{border:0;border-radius:12px;padding:18px 20px;max-width:min(520
 
 /* Detección automática de postura */
 .stage canvas.overlay{position:absolute;left:0;top:0;pointer-events:none}
-.subs{text-align:center;color:#fff;background:#141414;border-radius:8px;padding:8px 12px;margin-top:6px;font-size:16px;line-height:1.45}
-.subs b{color:#ffe08a}
+.subs{text-align:left;color:#fff;background:#141414;border-radius:6px;padding:4px 8px;margin-top:4px;font-size:8px;line-height:1.3}
+.subs b{color:#ffe08a;font-weight:400}
 @media (max-width:640px){.subs{font-size:13px;padding:6px 8px}}
 .gallery .det-cap{display:block;width:100%;font-size:12px;color:var(--ink-2);line-height:1.35}
 .detect{border-bottom:1px solid var(--line-soft);margin-bottom:12px;padding-bottom:6px}
@@ -249,7 +249,25 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .parts.locked .opt.sel:disabled{opacity:1}
 .warn-soft svg{width:14px;height:14px;vertical-align:-2px;margin-right:4px}
 #loadWarn + #taskWarn{margin-top:4px}
-#detWarn{display:flex;gap:6px;flex-wrap:wrap}
+/* Controles del video y de las fotografías, compactos */
+#videoPane .vctrl,#photoPane .vctrl{gap:4px;margin-top:6px}
+#videoPane .vctrl .btn,#photoPane .vctrl .btn{min-height:30px;padding:3px 9px;font-size:14px}
+#videoPane .vctrl .btn.icon-only,#photoPane .vctrl .btn.icon-only{min-width:30px;padding:3px 5px}
+#videoPane .vctrl .btn .ico,#photoPane .vctrl .btn .ico{width:16px;height:16px}
+#videoPane .vctrl label{font-size:13px;margin-left:4px;gap:4px}
+#videoPane .vctrl select,#videoPane .vctrl input[type=number]{padding:2px 6px;font-size:13px}
+#videoPane .vctrl input[type=number]{width:58px}
+#videoPane .tc{font-size:14px;padding:0 4px}
+/* Avisos compactos a la derecha del código */
+.code-warns{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.code-warns > span{display:block;line-height:1}
+.code-warns .warn-box,.code-warns .warn{display:inline-block;font-size:12px;line-height:1.35;padding:1px 7px;font-weight:600;border-radius:6px;color:var(--danger);background:var(--danger-bg)}
+.code-warns:not(:has(> :not([hidden]):not(:empty))){display:none}
+#detWarn{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+/* «No detectar»: rojo */
+.btn.nodetect{background:var(--c4);color:#fff;font-weight:600}
+.btn.nodetect:hover{background:#b52f2f}
+.btn.nodetect .kbd{background:rgba(255,255,255,.18);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.6)}
 #detWarn:empty,#detectStatus:empty{display:none}
 .obs-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 /* Aviso sobre la detección automática y avisos suaves */
@@ -489,6 +507,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
         <div class="vctrl">
           <button class="btn primary" id="detectBtn" data-icon="scan">Detectar postura <span class="kbd">D</span></button>
           <button class="btn" id="detectOther" data-icon="scanOther" title="Si hay varias personas en la imagen, analiza a la siguiente (O)">Detectar otro <span class="kbd">O</span></button>
+          <button class="btn nodetect" id="noDetect" data-icon="scanOff" title="No hay ninguna persona: quita la postura detectada y propone 1111 en la tarea N/A (X)">No detectar <span class="kbd">X</span></button>
         </div>
         <details class="small">
           <summary>Ajustes de detección</summary>
@@ -524,7 +543,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
             <label><input type="checkbox" data-cfg="subDate"> Fecha y hora (de los datos del video o de la foto)</label>
             <label><input type="checkbox" data-cfg="subLoc"> Ubicación GPS (si el video o la foto la tiene; desactivada por defecto)</label>
             <label>Alineación <select data-cfg="subAlign"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select></label>
-            <label>Tamaño del texto (px) <input type="number" data-cfg="subSize" min="9" max="32"></label>
+            <label>Tamaño del texto (px) <input type="number" data-cfg="subFont" min="6" max="32"></label>
             <label>Color del texto <input type="color" data-cfg="subColor"></label>
             <label>Color de los títulos (Espalda, Brazos…) <input type="color" data-cfg="subHead"></label>
           </div>
@@ -593,10 +612,13 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
         <div class="code-display">
           <div class="code-digits" id="digits"></div>
           <span id="liveCat"></span>
+          <div class="code-warns">
+            <span id="loadWarn"><span class="warn-box">Seleccione la carga</span></span>
+            <span id="taskWarn"><span class="warn-box">Seleccione la tarea</span></span>
+            <span id="detWarn" role="status"></span>
+          </div>
         </div>
       </div>
-      <p class="small task-warn" id="loadWarn"><span class="warn-box">Seleccione la carga</span></p>
-      <p class="small task-warn" id="taskWarn"><span class="warn-box">Seleccione la tarea</span></p>
       <p class="small task-warn" id="dupWarn" hidden></p>
       <div class="obs-actions">
         <span class="accept-wrap" id="acceptWrap"><button class="btn ok" id="accept" data-icon="check" aria-describedby="acceptTip">Aceptar postura <span class="kbd">Enter</span></button><span class="tip" id="acceptTip" role="tooltip">La detección automática puede tener errores y debe ser revisada por un profesional en Ergonomía.</span></span><span class="sr" id="saveLive" aria-live="polite"></span>
@@ -606,7 +628,6 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
         <span class="muted small" style="align-self:center" id="obsCount"></span>
       </div>
       <p class="small detect-status" id="detectStatus" role="status"></p>
-      <p class="small detect-status" id="detWarn" role="status"></p>
     </div>
     </div><div class="obs-right">
     <div class="parts" id="parts"></div>
@@ -825,6 +846,8 @@ const ICONS = {
   fileText:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
   moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  // Recuadro de detección tachado: no hay ninguna persona
+  scanOff:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="7.5" r="1.5"/><path d="M8.5 11h7"/><path d="M12 9.5v4"/><path d="m9.5 17.5 2.5-4 2.5 4"/><path d="M4 4l16 16"/>',
   // Una persona detectada (en el recuadro) y otra sin detectar (discontinua)
   scanOther:'<path d="M1.5 6V3.5H4"/><path d="M10.5 3.5H13V6"/><path d="M13 17.5V20h-2.5"/><path d="M4 20H1.5v-2.5"/><circle cx="7.25" cy="7" r="1.6"/><path d="M7.25 8.8v4.6"/><path d="M4.8 10.6h4.9"/><path d="m7.25 13.4-1.8 4"/><path d="m7.25 13.4 1.8 4"/><g stroke-dasharray="1.6 1.6"><circle cx="18.75" cy="7" r="1.6"/><path d="M18.75 8.8v4.6"/><path d="M16.3 10.6h4.9"/><path d="m18.75 13.4-1.8 4"/><path d="m18.75 13.4 1.8 4"/></g>',
   scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="7.5" r="1.5"/><path d="M8.5 11h7"/><path d="M12 9.5v4"/><path d="m9.5 17.5 2.5-4 2.5 4"/>'
@@ -1255,6 +1278,7 @@ document.addEventListener('keydown', e => {
   }
   if (mode !== 'live' && (k === 'd' || k === 'D')){ detectPose(); return; }
   if (mode !== 'live' && (k === 'o' || k === 'O')){ detectOther(); return; }
+  if (mode !== 'live' && (k === 'x' || k === 'X')){ noDetect(); return; }
   if (mode === 'photo' && photos.length){
     if (k === 'ArrowLeft'){ showPhoto(pi - 1); e.preventDefault(); return; }
     if (k === 'ArrowRight'){ showPhoto(pi + 1); e.preventDefault(); return; }
@@ -1363,9 +1387,9 @@ function grabFrame(src, det, faceDet){
 // Franja de subtítulos debajo de la imagen: reparte el texto en renglones según el ancho
 function layoutSubtitles(lines, w){
   // El tamaño sigue al de la pantalla (16 px por defecto) en proporción al ancho de la imagen
-  const fs = Math.max(10, Math.round(w / 48 * (CFG.subSize || 16) / 16)), pad = Math.round(fs * 0.6), lh = Math.round(fs * 1.35);
+  const fs = Math.max(7, Math.round(w / 48 * (CFG.subFont || 8) / 16)), pad = Math.round(fs * 0.5), lh = Math.round(fs * 1.3);
   const g = document.createElement('canvas').getContext('2d');
-  g.font = `bold ${fs}px Arial, Helvetica, sans-serif`;
+  g.font = `${fs}px Arial, Helvetica, sans-serif`;
   const rows = [];
   for (const line of lines){
     const head = subHeadOf(line);
@@ -1382,7 +1406,8 @@ function drawSubtitles(g, sub, w, top){
   g.save();
   g.fillStyle = '#141414'; g.fillRect(0, top, w, sub.height);
   g.textAlign = 'left'; g.textBaseline = 'middle';
-  const font = bold => `${bold ? 'bold ' : ''}${sub.fs}px Arial, Helvetica, sans-serif`;
+  // Sin negritas: los títulos solo cambian de color
+  const font = () => `${sub.fs}px Arial, Helvetica, sans-serif`;
   sub.rows.forEach((r, i) => {
     const y = top + sub.pad + sub.lh * (i + 0.5), head = r.head && r.t.startsWith(r.head) ? r.head : '', rest = r.t.slice(head.length);
     g.font = font(true); const wh = head ? g.measureText(head).width : 0;
@@ -1930,7 +1955,7 @@ const STYLE_DEFAULT = {skelColor: '#7fd1ff', skelWidth: 3, angColor: '#ffd54a', 
   skNeck: true, anNeck: true, txNeck: true, skTrunk: true, anTrunk: true, txTrunk: true, skArms: true, anArms: true, txArms: true,
   skLegs: true, anLegs: true, txLegs: true, skFeet: true, anFeet: true, txFeet: true,
   // Subtítulos: fecha y hora, ubicación, alineación, tamaño y colores
-  subDate: true, subLoc: false, subAlign: 'left', subSize: 16, subColor: '#ffffff', subHead: '#ffe08a'};
+  subDate: true, subLoc: false, subAlign: 'left', subFont: 8, subColor: '#ffffff', subHead: '#ffe08a'};
 const CFG_DEFAULT = {trunk: 20, twist: 20, knee: 150, lift: 10, walk: true, walkDist: 25, avg3: true, blurBlocks: 5, ...STYLE_DEFAULT};
 let CFG = {...CFG_DEFAULT};
 try{ Object.assign(CFG, JSON.parse(localStorage.getItem('winowas.detect') || '{}')); }catch(e){}
@@ -2155,8 +2180,8 @@ function renderOverlay(det){
   if ($('#showAngles').checked) drawAngles(g, det, c.width, c.height, dpr);
   const subs = mode === 'video' ? $('#subsVideo') : $('#subsPhoto');
   subs.hidden = !$('#showSubs').checked;
-  subs.style.textAlign = CFG.subAlign; subs.style.color = CFG.subColor; subs.style.fontSize = CFG.subSize + 'px';
-  subs.innerHTML = subLines(det).map(line => { const h = subHeadOf(line); return `<div>${h ? `<b style="color:${CFG.subHead}">${esc(h)}</b>` : ''}${esc(line.slice(h.length))}</div>`; }).join('');
+  subs.style.textAlign = CFG.subAlign; subs.style.color = CFG.subColor; subs.style.fontSize = CFG.subFont + 'px';
+  subs.innerHTML = subLines(det).map(line => { const h = subHeadOf(line); return `<div>${h ? `<span style="color:${CFG.subHead}">${esc(h)}</span>` : ''}${esc(line.slice(h.length))}</div>`; }).join('');
 }
 // Clave del fotograma o la foto actual, para saber si la detección sigue vigente
 const mediaKey = () => mode === 'video' ? `${videoName}@${vid.currentTime.toFixed(3)}` : (photos[pi] ? photos[pi].name : '');
@@ -2336,10 +2361,18 @@ function setDetectStatus(html){ $('#detectStatus').innerHTML = html; }
 let detWarn = [];
 function renderDetWarn(){
   const pending = locked ? [] : detWarn.filter(w => !manual[w.k]);
-  $('#detWarn').innerHTML = pending.map(w => `<span class="warn">Atención: ${w.t}</span>`).join('');
+  $('#detWarn').innerHTML = pending.map(w => `<span class="warn" title="${esc(w.t)}">${esc(w.t.replace(/: .*$/, ''))}</span>`).join('');
 }
 $('#detectBtn').onclick = detectPose;
 $('#detectOther').onclick = detectOther;
+// «No detectar»: la postura detectada es falsa (no hay nadie). Se quita el esqueleto y se propone 1111 en la tarea N/A
+function noDetect(){
+  if (mode === 'live') return;
+  lastDet = null; clearOverlay();
+  if (proposeNA()) setDetectStatus(`<span class="warn">Sin persona: se propone 1111 en la tarea «${esc(phaseName(S.naTask))}». Revíselo y pulse «Aceptar postura» si es correcto.</span>`);
+  else setDetectStatus('Este fotograma ya está registrado.');
+}
+$('#noDetect').onclick = noDetect;
 // La propuesta deja de valer al cambiar de fotograma o de foto
 vid.addEventListener('seeking', () => { if (!detecting){ clearOverlay(); resetManual(); if (lastDet) setDetectStatus(''); } });
 vid.addEventListener('seeked', () => { if (!detecting) renderObserve(); });
@@ -3396,7 +3429,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
   <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar postura</b>.</li>
   <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado. Con <b>Unir videos</b> se juntan varios videos cortos en uno, en orden de nombre de archivo: si tienen el mismo formato (lo normal si son de la misma cámara) se unen al instante y sin perder calidad; si no, se vuelven a codificar. El video unido no tiene sonido y se guarda con «Guardar el video unido», para volver a abrir el proyecto con él.</li>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
-<li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. Si no se detecta a nadie, se propone el código 1111 en la tarea «N/A» (se crea la primera vez y se puede renombrar): revíselo y pulse <b>Aceptar postura</b> si es correcto; al volver a detectar a una persona se recupera la tarea anterior. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
+<li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. Si no se detecta a nadie, se propone el código 1111 en la tarea «N/A» (se crea la primera vez y se puede renombrar): revíselo y pulse <b>Aceptar postura</b> si es correcto; al volver a detectar a una persona se recupera la tarea anterior. Si se detecta una postura falsa en una imagen sin personas, <b>No detectar</b> (tecla <span class="kbd">X</span>) la quita y hace la misma propuesta. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
 <li>Consulte <b>3 · Resultados</b>: categorías de acción, partes del cuerpo y tablas APA, que se actualizan solos al guardar cada postura. Puede filtrar por tarea. En <b>Ajustes de resultados</b> se desmarcan los resultados que no se quieren mostrar ni incluir en el informe (impresión, PDF y Word).</li>
 <li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original, e <b>Imprimir</b> para imprimir o guardar en PDF.</li>
 <li>En <b>Exportar resultados</b>, las posturas detectadas también se pueden llevar a OpenSim (.trc y .mot) y a 3DSSPP, el programa de análisis biomecánico de la Universidad de Míchigan: como archivo de ubicaciones <b>.sloc</b> (<i>Animation → Import LOC File</i>), como <b>archivo de lote</b> que analiza cada observación con la persona y la carga indicadas (<i>Task Input → Run Batch File</i>) o como <b>.c3d</b> con los 21 centros articulares que pide 3DSSPP (<i>Animation → Import C3D File</i>), que también abren OpenSim y otros programas. La carga de cada observación puede tomarse de su código OWAS. Se pueden exportar todas las observaciones, solo las marcadas con las casillas de la lista de observaciones o solo las de ciertas categorías de riesgo. La cabeza, C7/T1, el esternón, L5/S1 y el centro de agarre se estiman a partir de los puntos detectados: revise las posturas en 3DSSPP antes de usar sus resultados. 3DSSPP es software de la University of Michigan. OWAS Web no está afiliada a ella ni incluye 3DSSPP: los archivos siguen el formato de importación descrito en el manual de 3DSSPP 7.1, y su uso requiere la licencia correspondiente de 3DSSPP. C3D es un formato abierto (c3d.org).</li></ol>
@@ -3433,7 +3466,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.30 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.31 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
