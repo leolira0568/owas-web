@@ -217,6 +217,22 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .phase-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .phase-row .num{width:28px;color:var(--ink-3);text-align:right}
 .phase-row input{flex:1}
+.phase-row input.dup{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
+.phase-row .dup-msg{font-size:12px;padding:1px 7px}
+/* Varios videos en el mismo estudio */
+.playlist{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;margin:0 0 6px}
+.pl-item{display:inline-flex;gap:2px}
+.pl-item .btn{min-height:28px;padding:2px 8px;font-size:13px}
+.pl-item .btn.icon-only{padding:2px 4px}
+.pl-item.on .btn:first-child{background:var(--accent);color:var(--accent-ink)}
+/* Quitar una imagen de los resultados y del informe */
+.gallery figure{position:relative}
+.gallery .img-x{position:absolute;top:4px;right:4px;min-height:0;padding:2px;border-radius:6px;background:rgba(0,0,0,.55);color:#fff;border:0;cursor:pointer;display:flex}
+.gallery .img-x:hover{background:var(--danger)}
+.img-cats{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+.img-cats label{display:inline-flex;align-items:center;gap:4px}
+#dupWarn .warn-soft{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+#dupWarn .btn{min-height:26px;padding:2px 6px}
 
 /* Observación */
 .obs-head{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
@@ -564,12 +580,14 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
       <div id="videoPane">
         <div class="media-top">
           <button class="btn load" id="loadVideo" data-icon="video">Cargar video</button>
-          <button class="btn" id="joinVideos" data-icon="layers" title="Unir varios videos cortos en uno, uno tras otro">Unir videos</button>
+          <button class="btn" id="addVideo" data-icon="plus" title="Añadir otro video al final de la lista: los videos se reproducen uno tras otro" hidden>Añadir video</button>
+          <button class="btn" id="joinVideos" data-icon="layers" title="Unir varios videos cortos en un solo archivo, uno tras otro">Unir videos</button>
           <span class="muted small" id="videoName">Ningún video cargado</span>
           <span class="warn-soft small" id="vidNote" role="status" hidden></span>
           <button class="btn" id="saveJoined" data-icon="download" hidden>Guardar el video unido</button>
           <p class="small muted" id="joinInfo" style="flex-basis:100%;margin:0" hidden></p>
         </div>
+        <div class="playlist small" id="playlist" hidden></div>
         <div class="stage"><video id="vid" playsinline muted preload="auto"></video><canvas class="overlay" id="ovVideo" aria-hidden="true"></canvas><p class="stage-empty" id="vidEmpty">Cargue un video (MP4 o WebM) para revisarlo fotograma a fotograma.</p></div>
         <div class="subs" id="subsVideo" role="status" hidden></div>
         <div class="timeline"><input type="range" id="seek" min="0" max="0" step="0.01" value="0" aria-label="Posición del video"><div class="marks" id="marks"></div></div>
@@ -623,7 +641,8 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
       <div class="obs-actions">
         <span class="accept-wrap" id="acceptWrap"><button class="btn ok" id="accept" data-icon="check" aria-describedby="acceptTip">Aceptar postura <span class="kbd">Enter</span></button><span class="tip" id="acceptTip" role="tooltip">La detección automática puede tener errores y debe ser revisada por un profesional en Ergonomía.</span></span><span class="sr" id="saveLive" aria-live="polite"></span>
         <button class="btn icon-only" id="repeat" data-icon="repeat" title="Repetir la postura anterior (R)" aria-label="Repetir la postura anterior"></button>
-        <button class="btn icon-only" id="takeback" data-icon="undo" title="Deshacer la última observación (Supr)" aria-label="Deshacer la última observación"></button>
+        <button class="btn icon-only" id="editObs" title="Editar la observación de este fotograma o fotografía (E)" aria-label="Editar la observación registrada" disabled></button>
+        <button class="btn icon-only" id="takeback" data-icon="undo" title="Eliminar la observación de este fotograma o fotografía; si no hay, deshacer la última (Supr)" aria-label="Eliminar la observación de este fotograma o deshacer la última"></button>
         <button class="btn icon-only" id="clearSel" data-icon="eraser" title="Limpiar la selección (Esc)" aria-label="Limpiar la selección"></button>
         <span class="muted small" style="align-self:center" id="obsCount"></span>
       </div>
@@ -650,6 +669,12 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
         <label><input type="checkbox" id="showBody" checked autocomplete="off"> Por parte del cuerpo</label>
         <label><input type="checkbox" id="showAgree" autocomplete="off"> Tablas de la detección automática (concordancia y mediciones)</label>
         <label><input type="checkbox" id="printImg" checked autocomplete="off"> Imágenes de las observaciones</label>
+        <div class="img-cats">Imágenes de la categoría
+          <label><input type="checkbox" id="imgCat1" checked autocomplete="off"> 1</label>
+          <label><input type="checkbox" id="imgCat2" checked autocomplete="off"> 2</label>
+          <label><input type="checkbox" id="imgCat3" checked autocomplete="off"> 3</label>
+          <label><input type="checkbox" id="imgCat4" checked autocomplete="off"> 4</label>
+        </div>
         <label>Tamaño de las imágenes en el informe <select id="printImgSize"><option value="small">Pequeñas (cuadrícula)</option><option value="big">Grandes (una por fila, como en el visor)</option></select></label>
         <label><input type="checkbox" id="printApa" checked autocomplete="off"> Tablas y figuras en formato APA</label>
       </div>
@@ -685,7 +710,8 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
 <div id="print"></div>
 <input type="file" id="fileOpen" accept=".ows,.OWS,.owsp" hidden>
 <input type="file" id="fileJoin" accept=".ows,.OWS,.owsp" hidden>
-<input type="file" id="fileVideo" accept="video/*" hidden>
+<input type="file" id="fileVideo" accept="video/*" multiple hidden>
+<input type="file" id="fileAddVideo" accept="video/*" multiple hidden>
 <input type="file" id="fileJoinVideos" accept="video/*" multiple hidden>
 <input type="file" id="filePhotos" accept="image/*" multiple hidden>
 <dialog id="exportDlg" aria-labelledby="exportTitle">
@@ -824,6 +850,7 @@ const ICONS = {
   stop:'<rect x="5" y="5" width="14" height="14" rx="2"/>',
   check:'<path d="M20 6 9 17l-5-5"/>',
   lock:'<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  pencil:'<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
   repeat:'<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
   undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   eraser:'<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
@@ -907,6 +934,15 @@ const phaseName = i => (S.phases[i] && S.phases[i].trim()) || `Tarea ${i+1}`;
 let refreshTimer = null;
 function scheduleRefresh(){ clearTimeout(refreshTimer); refreshTimer = setTimeout(() => { renderResults(); renderBodyParts(); renderList(); }, 400); }
 function changed(){ dirty = true; persist(); renderHeader(); scheduleRefresh(); }
+// Al añadir, cambiar o eliminar observaciones se actualiza todo a la vez: códigos, marcas de la barra de tiempo,
+// lista de observaciones, resultados, partes del cuerpo y número de observaciones de cada tarea
+function obsChanged(){
+  changed(); clearTimeout(refreshTimer);
+  renderObserve(); renderList(); renderResults(); renderBodyParts();
+  const a = document.activeElement;
+  if (!(a && a.dataset && a.dataset.phase != null)) renderPhases();
+  if ($('#viewer').open) $('#viewer').close();
+}
 // Autoguardado en IndexedDB (las imágenes no caben en localStorage)
 const idb = (() => {
   let p;
@@ -973,7 +1009,7 @@ function encode1252(str){ const out = new Uint8Array(str.length); for (let i = 0
 // ---- Archivos ----
 function confirmDiscard(){ return !dirty || confirm('¿Desea descartar los cambios sin guardar?'); }
 function loadState(st, name, handle){
-  S = st; fileName = name; fileHandle = handle || null; dirty = false; phaseFilter = -1;
+  S = st; fileName = name; fileHandle = handle || null; dirty = false; phaseFilter = -1; editing = -1;
   sel = {b:0, a:0, l:0, w:0, p:-1};
   $('#restored').hidden = true;
   persist(); renderAll();
@@ -1014,10 +1050,15 @@ async function openFile(){
 async function joinFile(){
   const r = await pickFile($('#fileJoin')); if (!r) return;
   let o; try{ o = await readStudy(r.file); } catch(e){ alert(`"${r.file.name}" no es un archivo OWAS.`); return; }
-  if (o.phases.length > S.phases.length){
-    if (!confirm('El archivo a unir tiene más tareas. ¿Continuar?')) return;
-    for (let i = S.phases.length; i < o.phases.length; i++) S.phases.push(o.phases[i]);
-  }
+  // Las tareas se unen por su nombre: una tarea que ya existe no se crea otra vez
+  const key = s => s.trim().replace(/\s+/g, ' ').toLocaleLowerCase('es');
+  const map = o.phases.map((q, i) => {
+    const name = (q || '').trim() || `Tarea ${i + 1}`;
+    let j = S.phases.findIndex((_, k) => key(phaseName(k)) === key(name));
+    if (j < 0){ S.phases.push(q); j = S.phases.length - 1; }
+    return j;
+  });
+  o.obs.forEach(x => { x.p = map[x.p] ?? x.p; });
   S.obs.push(...o.obs); changed(); renderAll();
   alert(`Se añadieron ${o.obs.length} observaciones de "${r.file.name}".`);
 }
@@ -1033,9 +1074,17 @@ async function saveFile(as){
   const name = as || !fileName ? base + (hasImg ? '.owsp' : '.OWS') : fileName;
   try{
     if (!as && fileHandle){
+      // Ya guardado en este equipo: se sobrescribe el mismo archivo, sin volver a pedir la ubicación. Si el navegador
+      // aún no tiene permiso para escribir en él, su propio aviso hace de advertencia; si no, se avisa aquí
+      const perm = fileHandle.queryPermission ? await fileHandle.queryPermission({mode: 'readwrite'}) : 'granted';
+      if (perm === 'granted'){ if (!confirm(`Se sobrescribirá el archivo «${fileName}» con los cambios actuales. ¿Continuar?`)) return; }
+      else if ((await fileHandle.requestPermission({mode: 'readwrite'})) !== 'granted') return;
       const w = await fileHandle.createWritable(); await w.write(studyBytes(fileName)); await w.close();
     } else if (window.showSaveFilePicker){
-      const h = await showSaveFilePicker({suggestedName:name, types: hasImg ? [FILE_TYPES.owsp, FILE_TYPES.ows] : [FILE_TYPES.ows, FILE_TYPES.owsp]});
+      // Primera vez o «Guardar como»: el explorador para elegir el nombre y la carpeta (empieza en la del archivo actual)
+      const opts = {suggestedName:name, types: hasImg ? [FILE_TYPES.owsp, FILE_TYPES.ows] : [FILE_TYPES.ows, FILE_TYPES.owsp]};
+      if (fileHandle) opts.startIn = fileHandle;
+      const h = await showSaveFilePicker(opts);
       const w = await h.createWritable(); await w.write(studyBytes(h.name)); await w.close();
       fileHandle = h; fileName = h.name;
     } else throw new Error('no fs api');
@@ -1081,13 +1130,37 @@ function renderPhases(){
   const used = S.phases.map((_,i) => S.obs.filter(o => o.p === i).length);
   $('#phases').innerHTML = S.phases.map((p,i) =>
     `<div class="phase-row"><span class="num">${i+1}</span><input type="text" data-phase="${i}" value="${esc(p)}" placeholder="Tarea ${i+1}">
+     <span class="dup-msg warn-box" hidden></span>
      <span class="small muted" style="min-width:60px">${used[i]} obs.</span>
      <button class="btn danger icon-only" data-delphase="${i}" ${S.phases.length < 2 || used[i] ? 'disabled' : ''} title="Eliminar tarea" aria-label="Eliminar tarea ${i+1}">${ico('trash')}</button></div>`).join('');
+  markDupTasks();
 }
+// Tareas con el mismo nombre (sin distinguir mayúsculas): una misma tarea no debe registrarse dos veces
+const taskKey = i => phaseName(i).trim().replace(/\s+/g, ' ').toLocaleLowerCase('es');
+const dupTask = i => S.phases.findIndex((_, j) => j !== i && taskKey(j) === taskKey(i));
+function markDupTasks(){
+  $$('#phases [data-phase]').forEach(inp => {
+    const i = +inp.dataset.phase, j = dupTask(i), msg = inp.parentElement.querySelector('.dup-msg');
+    inp.classList.toggle('dup', j >= 0);
+    if (msg){ msg.hidden = j < 0; msg.textContent = j >= 0 ? `Repetida: igual que la tarea ${j + 1}` : ''; }
+  });
+}
+// Las tareas cambian en todas partes al momento: botones de la observación, filtros y resultados
+function tasksChanged(){ changed(); markDupTasks(); fillPhaseFilters(); renderObserve(); }
+$('#phases').addEventListener('focusin', e => { if (e.target.dataset.phase != null) e.target.dataset.prev = e.target.value; });
+$('#phases').addEventListener('change', e => {
+  const inp = e.target; if (inp.dataset.phase == null) return;
+  const i = +inp.dataset.phase, j = dupTask(i); if (j < 0) return;
+  alert(`Ya existe la tarea «${phaseName(j)}» (tarea ${j + 1}). Escriba otro nombre: las observaciones de una misma tarea deben registrarse en una sola tarea.`);
+  // Vuelve al nombre anterior (o al predeterminado, «Tarea N», si también estuviera repetido)
+  S.phases[i] = inp.dataset.prev != null ? inp.dataset.prev : '';
+  if (dupTask(i) >= 0) S.phases[i] = '';
+  inp.value = S.phases[i]; tasksChanged();
+});
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset.bg !== undefined){ S.bg[+t.dataset.bg] = t.value; changed(); }
-  else if (t.dataset.phase !== undefined){ S.phases[+t.dataset.phase] = t.value; changed(); }
+  else if (t.dataset.phase !== undefined){ S.phases[+t.dataset.phase] = t.value; tasksChanged(); }
   else if (t.id === 'interval'){ const v = parseFloat(t.value); if (v > 0){ S.interval = Math.round(v * 1000) / 1000; changed(); renderInterval(); } }
   else if (t.id === 'nObs'){ const v = parseInt(t.value); if (v > 0){ S.nObs = v; changed(); applyIntervalPlan(); } }
 });
@@ -1095,21 +1168,21 @@ document.addEventListener('input', e => {
 const fmtNum = (v, d = 2) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('es', {maximumFractionDigits: d});
 const fmtDur = s => { if (s < 59.95) return `${fmtNum(s, 1)} s`; s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), q = s % 60; return h ? `${h} h ${pad(m)} min` : m ? `${m} min ${pad(q)} s` : `${q} s`; };
 function applyIntervalPlan(){
-  if (S.ivMode === 'count' && vid.src && vid.duration && S.nObs > 0){
-    const iv = Math.round(vid.duration / S.nObs * 1000) / 1000;
+  if (S.ivMode === 'count' && vid.src && totalDur() && S.nObs > 0){
+    const iv = Math.round(totalDur() / S.nObs * 1000) / 1000;
     if (iv > 0 && iv !== S.interval){ S.interval = iv; changed(); }
   }
   renderInterval();
 }
 function renderInterval(){
-  const count = S.ivMode === 'count', d = vid.src && vid.duration;
+  const count = S.ivMode === 'count', d = vid.src && totalDur(), many = playlist.length > 1;
   $$('input[name="ivMode"]').forEach(r => { r.checked = r.value === (count ? 'count' : 'sec'); });
   if (document.activeElement !== $('#interval')) $('#interval').value = S.interval;
   if (document.activeElement !== $('#nObs')) $('#nObs').value = S.nObs || '';
   $('#interval').disabled = count; $('#nObs').disabled = !count;
   $('#ivInfo').textContent = count
-    ? (d ? `Video de ${fmtTime(d)}: una observación cada ${fmtNum(S.interval)} s.` : 'Cargue el video para calcular el intervalo a partir de su duración.')
-    : (d ? `En el video de ${fmtTime(d)} caben ${Math.floor(d / S.interval + 1e-6) + 1} observaciones con este intervalo.` : '');
+    ? (d ? `${many ? `${playlist.length} videos, ${fmtTime(d)} en total` : `Video de ${fmtTime(d)}`}: una observación cada ${fmtNum(S.interval)} s.` : 'Cargue el video para calcular el intervalo a partir de su duración.')
+    : (d ? `En ${many ? `los ${playlist.length} videos (${fmtTime(d)} en total)` : `el video de ${fmtTime(d)}`} caben ${Math.floor(d / S.interval + 1e-6) + 1} observaciones con este intervalo.` : '');
 }
 document.addEventListener('change', e => {
   if (e.target.name !== 'ivMode') return;
@@ -1119,13 +1192,14 @@ document.addEventListener('change', e => {
 const planText = () => S.ivMode === 'count' && S.nObs
   ? `Plan de muestreo: ${S.nObs} observaciones, una cada ${fmtNum(S.interval)} s; se registraron ${S.obs.length} (${pctFmt(S.obs.length / S.nObs * 100)} del plan).`
   : `Una observación cada ${fmtNum(S.interval)} s.`;
-$('#addPhase').onclick = () => { S.phases.push(''); changed(); renderPhases(); fillPhaseFilters(); };
+$('#addPhase').onclick = () => { S.phases.push(''); renderPhases(); tasksChanged(); const ins = $$('#phases [data-phase]'); if (ins.length) ins[ins.length - 1].focus(); };
 $('#phases').addEventListener('click', e => {
   const b = e.target.closest('[data-delphase]'); if (!b) return;
   const k = +b.dataset.delphase;
   S.phases.splice(k, 1); S.obs.forEach(o => { if (o.p > k) o.p--; });
   if (S.naTask === k) S.naTask = null; else if (S.naTask > k) S.naTask--;
-  changed(); renderPhases(); fillPhaseFilters();
+  if (sel.p === k) sel.p = -1; else if (sel.p > k) sel.p--;
+  renderPhases(); tasksChanged();
 });
 
 // ---- Observación ----
@@ -1151,8 +1225,16 @@ function renderParts(view){
 function renderObserve(){
   if (sel.p >= S.phases.length) sel.p = -1;
   // Un fotograma o una foto ya registrados muestran los códigos de su observación, bloqueados
-  const ri = regIndex(), view = ri >= 0 ? S.obs[ri] : sel;
-  locked = ri >= 0;
+  const ri = regIndex();
+  if (editing >= 0 && editing !== ri) editing = -1;
+  const view = ri >= 0 && editing !== ri ? S.obs[ri] : sel;
+  locked = ri >= 0 && editing !== ri;
+  if (!$('#accept').classList.contains('saved')) $('#accept').innerHTML = acceptLabel();
+  const eb = $('#editObs');
+  eb.disabled = ri < 0; eb.classList.toggle('on', editing >= 0);
+  eb.innerHTML = ico(editing >= 0 ? 'close' : 'pencil');
+  eb.title = editing >= 0 ? 'Cancelar la edición (E)' : 'Editar la observación de este fotograma o fotografía (E)';
+  eb.setAttribute('aria-label', editing >= 0 ? 'Cancelar la edición' : 'Editar la observación registrada');
   renderParts(view);
   const nf = locked ? null : nextField();
   $('#digits').innerHTML = PARTS.map(p => `<span class="${nf===p.key?'next':''}" title="${p.name}">${view[p.key]||''}</span>`).join('');
@@ -1163,7 +1245,7 @@ function renderObserve(){
   $('#taskWarn').hidden = locked || sel.p >= 0;
   renderDetWarn();
   renderDup(ri);
-  $('#repeat').disabled = locked || !S.obs.length;
+  $('#repeat').disabled = ri >= 0 || !S.obs.length;
   $('#takeback').disabled = !S.obs.length;
   $("#obsCount").textContent = S.obs.length === 1 ? "1 observación" : `${S.obs.length} observaciones`;
   renderMarks(); renderThumbs();
@@ -1174,7 +1256,7 @@ function renderObserve(){
 let autoNA = null;   // {task, prev, w}: tarea N/A puesta automáticamente, la tarea anterior y si la carga la puso la aplicación
 function naTaskIndex(){
   if (!(S.naTask >= 0 && S.naTask < S.phases.length)){
-    const k = S.phases.findIndex(q => q.trim() === 'N/A');
+    const k = S.phases.findIndex(q => q.trim().toUpperCase() === 'N/A');
     if (k >= 0) S.naTask = k;
     else { S.phases.push('N/A'); S.naTask = S.phases.length - 1; changed(); renderPhases(); fillPhaseFilters(); }
   }
@@ -1215,28 +1297,38 @@ function regIndex(){
 }
 function renderDup(i){
   $('#dupWarn').hidden = i < 0;
-  if (i >= 0) $('#dupWarn').innerHTML = `<span class="warn-soft">${ico('lock')}${mode === 'video' ? 'Este fotograma ya está registrado' : 'Esta fotografía ya está registrada'} (observación ${i + 1}). Sus códigos están bloqueados: para cambiarlos, elimine la observación en la lista de observaciones.</span>`;
+  if (i >= 0 && editing === i) $('#dupWarn').innerHTML = `<span class="warn-soft">${ico('pencil')}Editando la observación ${i + 1}: cambie los códigos y pulse «Guardar cambios». <button class="btn icon-only" data-editobs title="Cancelar la edición (E)" aria-label="Cancelar la edición">${ico('close')}</button></span>`;
+  else if (i >= 0) $('#dupWarn').innerHTML = `<span class="warn-soft">${ico('lock')}${mode === 'video' ? 'Este fotograma ya está registrado' : 'Esta fotografía ya está registrada'} (observación ${i + 1}). Sus códigos están bloqueados. <button class="btn icon-only" data-editobs title="Editar esta observación (E)" aria-label="Editar la observación ${i + 1}">${ico('pencil')}</button></span>`;
 }
 // Añade una observación; en modo video o fotografías guarda también la imagen y su origen
 function addObs(code){
   const {b, a, l, w, p} = code;
   S.obs.push({b, a, l, w, p, ...captureMedia()});
-  changed();
+  obsChanged();
   if (mode === 'video' && $('#vAuto').checked) gotoSample(1);
   if (mode === 'photo' && $('#pAuto').checked) nextPendingPhoto();
 }
 function accept(){
   if (locked || nextField() || sel.p < 0) return;
+  if (editing >= 0){
+    if (editing !== regIndex()) return;
+    const o = S.obs[editing];
+    Object.assign(o, {b: sel.b, a: sel.a, l: sel.l, w: sel.w, p: sel.p});
+    editing = -1; sel = {b:0, a:0, l:0, w:0, p:o.p}; resetManual();
+    obsChanged(); flashSaved(); return;
+  }
   // Tras aceptar una observación «N/A» propuesta por la aplicación, la siguiente vuelve a la tarea anterior
   const nextP = autoNA && sel.p === autoNA.task ? autoNA.prev : sel.p; autoNA = null;
   addObs(sel); sel = {b:0, a:0, l:0, w:0, p:nextP};   // la carga no se arrastra: se elige en cada observación
   resetManual(); renderObserve(); flashSaved();
 }
-function repeatLast(){ if (!S.obs.length || locked) return; addObs(S.obs[S.obs.length-1]); renderObserve(); flashSaved(); }
+function repeatLast(){ if (!S.obs.length || regIndex() >= 0) return; addObs(S.obs[S.obs.length-1]); renderObserve(); flashSaved(); }
 // Al pulsar una observación de la lista se va a su fotograma o a su fotografía
 function goToObs(i){
   const o = S.obs[i]; if (!o) return;
   if (o.t != null && o.src && o.src === videoName && vid.src){ setMode('video'); setVideoTime(o.t); return; }
+  const kv = o.t != null ? playlist.findIndex(q => q.file.name === o.src) : -1;
+  if (kv >= 0){ setMode('video'); switchVideo(kv, o.t); return; }
   const k = photos.findIndex(ph => ph.name === o.src);
   if (k >= 0){ setMode('photo'); showPhoto(k); return; }
   if (o.img) openViewer(i);
@@ -1256,13 +1348,40 @@ function flashSaved(){
   setReady(false); b.classList.add('saved'); b.innerHTML = ico('check') + 'Postura guardada';
   $('#saveLive').textContent = 'Postura guardada';
   savedTimer = setTimeout(() => {
-    b.classList.remove('saved'); b.innerHTML = ico('check') + 'Aceptar postura <span class="kbd">Enter</span>';
+    b.classList.remove('saved'); b.innerHTML = acceptLabel();
     $('#saveLive').textContent = '';
   }, 1500);
 }
-function takeBack(){ if (!S.obs.length) return; S.obs.pop(); changed(); renderObserve(); }
+// Supr / botón de la papelera: en un fotograma o una foto registrados elimina SU observación; si no, deshace la última
+function takeBack(){
+  const ri = regIndex();
+  if (ri >= 0){
+    if (!confirm(`¿Eliminar la observación ${ri + 1} (${codeStr(S.obs[ri])}) ${mode === 'video' ? 'de este fotograma' : 'de esta fotografía'}?`)) return;
+    removeObs(ri); return;
+  }
+  if (S.obs.length) removeObs(S.obs.length - 1);
+}
+function removeObs(i){
+  S.obs.splice(i, 1);
+  if (editing === i) editing = -1; else if (editing > i) editing--;
+  obsChanged();
+}
+// Editar una observación ya registrada: se desbloquean sus códigos y «Guardar cambios» los sustituye (la imagen se conserva)
+let editing = -1;
+function toggleEdit(){
+  const ri = regIndex();
+  if (ri < 0) return;
+  if (editing === ri){ editing = -1; sel = {b:0, a:0, l:0, w:0, p:sel.p}; resetManual(); renderObserve(); return; }
+  const o = S.obs[ri];
+  editing = ri; autoNA = null;
+  sel = {b:o.b, a:o.a, l:o.l, w:o.w, p:o.p}; manual = {b:true, a:true, l:true};
+  renderObserve();
+}
+const acceptLabel = () => ico('check') + (editing >= 0 ? 'Guardar cambios' : 'Aceptar postura') + ' <span class="kbd">Enter</span>';
 function clearSel(){ sel = {b:0,a:0,l:0,w:0,p:sel.p}; resetManual(); renderObserve(); }
 $('#accept').onclick = accept; $('#repeat').onclick = repeatLast; $('#takeback').onclick = takeBack; $('#clearSel').onclick = clearSel;
+$('#editObs').onclick = toggleEdit;
+$('#dupWarn').addEventListener('click', e => { if (e.target.closest('[data-editobs]')) toggleEdit(); });
 let phaseDigitPending = false;
 document.addEventListener('keydown', e => {
   if (!$('#tab-observar').classList.contains('on')) return;
@@ -1279,6 +1398,7 @@ document.addEventListener('keydown', e => {
   if (mode !== 'live' && (k === 'd' || k === 'D')){ detectPose(); return; }
   if (mode !== 'live' && (k === 'o' || k === 'O')){ detectOther(); return; }
   if (mode !== 'live' && (k === 'x' || k === 'X')){ noDetect(); return; }
+  if (mode !== 'live' && (k === 'e' || k === 'E')){ toggleEdit(); return; }
   if (mode === 'photo' && photos.length){
     if (k === 'ArrowLeft'){ showPhoto(pi - 1); e.preventDefault(); return; }
     if (k === 'ArrowRight'){ showPhoto(pi + 1); e.preventDefault(); return; }
@@ -1444,11 +1564,15 @@ function seekBy(dt){ if (vid.src) setVideoTime(vid.currentTime + dt); }
 // Salta a la siguiente o anterior muestra según el intervalo de observación
 function gotoSample(dir){
   if (!vid.src) return;
-  const iv = S.interval || 30, n = Math.round(vid.currentTime / iv * 1000) / 1000;
-  const k = dir > 0 ? Math.floor(n) + 1 : Math.ceil(n) - 1;
-  if (k * iv > (vid.duration || 0) + 1e-3 || (S.ivMode === 'count' && k >= S.nObs)){ alert('No hay más muestras en este video.'); return; }
+  // Con varios videos, las muestras siguen el tiempo total de la lista: la siguiente puede estar en otro video
+  const iv = S.interval || 30, off = vOffset(vi), n = Math.round((off + vid.currentTime) / iv * 1000) / 1000;
+  const k = dir > 0 ? Math.floor(n) + 1 : Math.ceil(n) - 1, T = k * iv;
+  if (k < 0 || T > totalDur() + 1e-3 || (S.ivMode === 'count' && k >= S.nObs)){ alert(playlist.length > 1 ? 'No hay más muestras en estos videos.' : 'No hay más muestras en este video.'); return; }
   autoPending = true;
-  setVideoTime(k * iv);
+  let j = vi;
+  while (j < playlist.length - 1 && playlist[j].dur && T >= vOffset(j + 1) - 1e-3) j++;
+  while (j > 0 && T < vOffset(j) - 1e-3) j--;
+  if (j !== vi) switchVideo(j, T - vOffset(j)); else setVideoTime(T - off);
 }
 function togglePlay(){ if (!vid.src) return; vid.paused ? vid.play() : vid.pause(); }
 function renderVideoUI(){
@@ -1482,7 +1606,55 @@ function loadVideoFile(f){
   videoMeta = f.joined ? {parts: f.joined} : null;
   if (!f.joined) readVideoMeta(f).then(m => { if (videoFile === f) videoMeta = m; }).catch(() => {});
 }
-$('#fileVideo').onchange = e => { const f = e.target.files[0]; if (f) loadVideoFile(f); };
+// Varios videos en el mismo estudio: se reproducen uno tras otro, sin unirlos. Los elegidos a la vez se ordenan por nombre
+// de archivo; «Añadir video» pone los nuevos al final. Cada observación recuerda de qué video es
+let playlist = [], vi = 0;   // {file, dur}
+const byName = files => [...files].sort((a, b) => a.name.localeCompare(b.name, 'es', {numeric: true}));
+function probeDuration(item){
+  const v = document.createElement('video'), u = URL.createObjectURL(item.file);
+  v.preload = 'metadata'; v.muted = true;
+  v.onloadedmetadata = () => { item.dur = v.duration || 0; URL.revokeObjectURL(u); v.removeAttribute('src'); renderPlaylist(); applyIntervalPlan(); };
+  v.onerror = () => URL.revokeObjectURL(u);
+  v.src = u;
+}
+function setPlaylist(files, append = false){
+  const items = files.map(file => ({file, dur: 0}));
+  if (append && playlist.length) playlist.push(...items);
+  else { playlist = items; vi = 0; loadVideoFile(items[0].file); }
+  items.forEach(probeDuration);
+  renderPlaylist();
+}
+// Comienzo de cada video en el tiempo total de la lista, y duración total
+const vOffset = k => playlist.slice(0, k).reduce((s, q) => s + (q.dur || 0), 0);
+const totalDur = () => playlist.length > 1 ? playlist.reduce((s, q) => s + (q.dur || 0), 0) : (vid.duration || 0);
+function switchVideo(k, t = 0, play = false){
+  if (k < 0 || k >= playlist.length) return;
+  vi = k; loadVideoFile(playlist[k].file);
+  vid.addEventListener('loadedmetadata', () => { vid.currentTime = Math.min(Math.max(0, t), vid.duration || 0); if (play) vid.play(); }, {once: true});
+  renderPlaylist();
+}
+function renderPlaylist(){
+  const box = $('#playlist');
+  $('#addVideo').hidden = !playlist.length;
+  box.hidden = playlist.length < 2;
+  if (box.hidden){ box.innerHTML = ''; return; }
+  box.innerHTML = `<span class="muted">${playlist.length} videos, se reproducen uno tras otro:</span>` + playlist.map((q, k) =>
+    `<span class="pl-item${k === vi ? ' on' : ''}"><button class="btn" data-vi="${k}" title="Ver ${esc(q.file.name)}"><b>${k + 1}</b>&nbsp;${esc(q.file.name)}${q.dur ? ' · ' + fmtTime(q.dur) : ''}</button><button class="btn icon-only" data-vrm="${k}" title="Quitar de la lista (sus observaciones se conservan)" aria-label="Quitar ${esc(q.file.name)} de la lista">${ico('close')}</button></span>`).join('');
+}
+$('#playlist').addEventListener('click', e => {
+  const a = e.target.closest('[data-vi]'), r = e.target.closest('[data-vrm]');
+  if (a){ switchVideo(+a.dataset.vi); return; }
+  if (!r || playlist.length < 2) return;
+  const k = +r.dataset.vrm;
+  playlist.splice(k, 1);
+  if (k === vi) switchVideo(Math.min(k, playlist.length - 1)); else { if (k < vi) vi--; renderPlaylist(); }
+  applyIntervalPlan();
+});
+// Al terminar un video, sigue el siguiente
+vid.addEventListener('ended', () => { if (vi < playlist.length - 1) switchVideo(vi + 1, 0, true); });
+$('#fileVideo').onchange = e => { if (e.target.files.length) setPlaylist(byName(e.target.files)); };
+$('#addVideo').onclick = () => { const f = $('#fileAddVideo'); f.value = ''; f.click(); };
+$('#fileAddVideo').onchange = e => { if (e.target.files.length) setPlaylist(byName(e.target.files), true); };
 // Video unido: botón para guardarlo (para volver a abrir el proyecto con él) y lista de los videos que contiene
 function renderJoinInfo(){
   const parts = videoFile && videoFile.joined;
@@ -1500,7 +1672,7 @@ $('#fileJoinVideos').onchange = async e => {
   btn.disabled = true;
   try{
     const r = await joinVideos(files, say);
-    setMode('video'); loadVideoFile(r.file);
+    setMode('video'); setPlaylist([r.file]);
     note.textContent = (r.same ? 'Videos unidos sin volver a codificar la imagen.' : 'Videos unidos: se volvieron a codificar porque tenían formatos distintos.') +
       ' Guárdelo con «Guardar el video unido» para poder volver a abrir el proyecto con él.';
     note.hidden = false;
@@ -1839,6 +2011,7 @@ async function openWithoutAudio(){
     const copy = await videoWithoutAudio(f, p => say(`Preparando una copia del video sin sonido… ${Math.round(p * 100)} %`));
     if (videoFile !== f) return;   // mientras tanto se cargó otro video
     videoFile = copy; videoOk = false; reopen = {n: 0, at: 0};
+    if (playlist[vi] && playlist[vi].file === f) playlist[vi].file = copy;
     const old = vid.src;
     vid.src = URL.createObjectURL(copy);
     URL.revokeObjectURL(old);
@@ -1912,13 +2085,18 @@ function openViewer(i){
   $('#viewImg').src = o.img; $('#viewImg').alt = `Observación ${i+1}`;
   $('#viewInfo').innerHTML = `<p style="margin:0 0 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>Observación ${i+1} · ${codeStr(o)}</b>${catBadge(catOf(o))}</p>
     <p class="small muted" style="margin:0">${esc(describe(codeStr(o)))}<br>${esc(phaseName(o.p))}${o.src ? ' · ' + esc(o.src) : ''}${o.t != null ? ' · ' + fmtTime(o.t) : ''}</p>${o.det ? `<p class="small" style="margin:6px 0 0">Propuesta automática: <b>${o.det.split('').join(' ')}</b>${detTag(o)}</p>` : ''}${o.det && o.dm ? `<p class="small muted" style="margin:2px 0 0">${detLines(o.det, o.dm).map(esc).join('<br>')}</p>` : ''}`;
-  $('#viewJump').hidden = !(o.t != null && o.src === videoName && vid.src);
+  $('#viewJump').hidden = !(o.t != null && (o.src === videoName && vid.src || playlist.some(q => q.file.name === o.src)));
   $('#viewer').showModal();
 }
 $('#viewClose').onclick = () => $('#viewer').close();
 $('#viewer').addEventListener('click', e => { if (e.target === $('#viewer')) $('#viewer').close(); });
-$('#viewJump').onclick = () => { const o = S.obs[viewIdx]; $('#viewer').close(); showTab('observar'); setMode('video'); setVideoTime(o.t); };
-document.addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) openViewer(+b.dataset.view); });
+$('#viewJump').onclick = () => { const i = viewIdx; $('#viewer').close(); showTab('observar'); goToObs(i); };
+document.addEventListener('click', e => {
+  const x = e.target.closest('[data-norep]'), all = e.target.closest('[data-repall]');
+  if (x){ S.obs[+x.dataset.norep].noRep = true; changed(); clearTimeout(refreshTimer); renderResults(); renderList(); return; }
+  if (all){ S.obs.forEach(o => { delete o.noRep; }); changed(); clearTimeout(refreshTimer); renderResults(); renderList(); return; }
+  const b = e.target.closest('[data-view]'); if (b) openViewer(+b.dataset.view);
+});
 
 // ---- Detección automática de postura con MediaPipe Pose ----
 // MediaPipe (Apache 2.0, © Google LLC) va incrustado en base64 al final del archivo; build.py lo inserta.
@@ -1949,7 +2127,7 @@ function loadPose(){
 }
 
 // Umbrales ajustables (se recuerdan en este navegador)
-const STYLE_DEFAULT = {skelColor: '#7fd1ff', skelWidth: 3, angColor: '#ffd54a', angSize: 12, arcColor: '#4cd964', arcSize: 15,
+const STYLE_DEFAULT = {skelColor: '#ff0000', skelWidth: 1, angColor: '#ffd54a', angSize: 8, arcColor: '#4cd964', arcSize: 8,
   // Partes del cuerpo que se dibujan (esqueleto y ángulos); por defecto, todas
   // sk: esqueleto, an: compás del ángulo, tx: texto del ángulo
   skNeck: true, anNeck: true, txNeck: true, skTrunk: true, anTrunk: true, txTrunk: true, skArms: true, anArms: true, txArms: true,
@@ -1961,6 +2139,8 @@ let CFG = {...CFG_DEFAULT};
 try{ Object.assign(CFG, JSON.parse(localStorage.getItem('winowas.detect') || '{}')); }catch(e){}
 const showCfg = () => $$('[data-cfg]').forEach(el => { const k = el.dataset.cfg; if (el.type === 'checkbox') el.checked = !!CFG[k]; else el.value = CFG[k]; });
 const saveCfg = () => { try{ localStorage.setItem('winowas.detect', JSON.stringify(CFG)); }catch(err){} };
+// Versión 4.33: nuevo aspecto predeterminado del esqueleto (también para quien ya tenía ajustes guardados)
+if (CFG.styleV !== 2){ Object.assign(CFG, {skelColor: STYLE_DEFAULT.skelColor, skelWidth: STYLE_DEFAULT.skelWidth, angSize: STYLE_DEFAULT.angSize, arcSize: STYLE_DEFAULT.arcSize}); CFG.styleV = 2; saveCfg(); }
 // Un cambio de color o tamaño se ve al instante en el esqueleto de la pantalla
 const redrawSkeleton = () => { if (lastDet && lastDet.key === mediaKey()) renderOverlay(lastDet); };
 showCfg();
@@ -2466,16 +2646,22 @@ function agreementHTML(list){
 }
 // Imágenes de las observaciones, de la categoría más grave a la menos grave
 // big: una imagen por fila, del tamaño del visor y con la descripción de la postura (para imprimir)
+// Imágenes que se muestran y van al informe: las de las categorías marcadas en «Ajustes de resultados», salvo las
+// quitadas una por una (× sobre la imagen o columna «Informe» de la lista de observaciones)
+const repImg = o => !!o.img && !o.noRep && shown('imgCat' + catOf(o));
 function galleryHTML(list, lazy = true, big = false){
-  const items = list.map(o => [o, S.obs.indexOf(o)]).filter(([o]) => o.img).sort((x, y) => catOf(y[0]) - catOf(x[0]) || x[1] - y[1]);
-  if (!items.length) return '';
-  return `<div class="card"><h2>${ico('image')}Imágenes de las observaciones</h2><p class="small muted" style="margin-top:-6px">${items.length === 1 ? "1 imagen." : items.length + " imágenes, ordenadas de mayor a menor riesgo."}</p><div class="gallery${big ? ' big' : ''}">` +
-    items.map(([o, i]) => `<figure><button data-view="${i}" aria-label="Ampliar la imagen de la observación ${i+1}"><img src="${o.img}" alt=""${lazy ? ' loading="lazy"' : ''}></button>
+  const items = list.map(o => [o, S.obs.indexOf(o)]).filter(([o]) => repImg(o)).sort((x, y) => catOf(y[0]) - catOf(x[0]) || x[1] - y[1]);
+  // En la pantalla (lazy) se avisa de las imágenes que no se muestran y se pueden quitar con ×
+  const hid = list.filter(o => o.img && !repImg(o)).length, quit = list.filter(o => o.img && o.noRep).length;
+  const note = lazy && hid ? `<p class="small muted">${hid === 1 ? '1 imagen no se muestra' : hid + ' imágenes no se muestran'} (filtro por categoría en «Ajustes de resultados» o quitadas una por una).${quit ? ` <button class="btn" data-repall>${ico('undo')}Volver a incluir las ${quit} quitadas</button>` : ''}</p>` : '';
+  if (!items.length) return note ? `<div class="card"><h2>${ico('image')}Imágenes de las observaciones</h2>${note}</div>` : '';
+  return `<div class="card"><h2>${ico('image')}Imágenes de las observaciones</h2><p class="small muted" style="margin-top:-6px">${items.length === 1 ? "1 imagen." : items.length + " imágenes, ordenadas de mayor a menor riesgo."}</p>${note}<div class="gallery${big ? ' big' : ''}">` +
+    items.map(([o, i]) => `<figure>${lazy ? `<button class="img-x" data-norep="${i}" title="Quitar esta imagen de los resultados y del informe" aria-label="Quitar la imagen de la observación ${i+1} del informe">${ico('close')}</button>` : ''}<button data-view="${i}" aria-label="Ampliar la imagen de la observación ${i+1}"><img src="${o.img}" alt=""${lazy ? ' loading="lazy"' : ''}></button>
       <figcaption>${catBadge(catOf(o), false)}<b>${codeStr(o)}</b><span class="muted">Obs. ${i+1} · ${esc(phaseName(o.p))}${o.t != null ? ' · ' + fmtTime(o.t) : ''}</span>${big ? `<span class="big-desc">${esc(describe(codeStr(o)))}</span>` : ''}${o.det && o.dm ? `<span class="det-cap">Detección automática: ${esc(detLines(o.det, o.dm).join(' · '))}${detTag(o)}</span>` : ''}</figcaption></figure>`).join('') + '</div></div>';
 }
 function describe(k){ return PARTS.map((p,i) => `${p.name}: ${p.opts[k[i]-1]}`).join(' · '); }
 // Aviso cuando hay resultados ocultos (las tablas de la detección automática ya vienen ocultas)
-const hiddenNote = () => ['showCat', 'printGuide', 'showTasks', 'showCodes', 'showBody', 'printImg', 'printApa'].some(id => !shown(id))
+const hiddenNote = () => ['showCat', 'printGuide', 'showTasks', 'showCodes', 'showBody', 'printImg', 'printApa', 'imgCat1', 'imgCat2', 'imgCat3', 'imgCat4'].some(id => !shown(id))
   ? '<p class="small muted">Hay resultados ocultos: se eligen en «Ajustes de resultados».</p>' : '';
 function renderResults(){ fillPhaseFilters(); $('#results').innerHTML = hiddenNote() + resultsHTML() + (shown('printApa') ? apaCard('cat') : ''); }
 
@@ -2721,22 +2907,23 @@ function renderList(){
   $('#expSelN').textContent = nSel ? `(${nSel})` : '(ninguna)';
   if (!S.obs.length){ $('#obsTable').innerHTML = '<div class="empty">No hay observaciones.</div>'; return; }
   const withImg = S.obs.some(o => o.img);
-  $('#obsTable').innerHTML = `<table><tr><th><input type="checkbox" id="selAll" aria-label="Seleccionar todas las observaciones"${S.obs.every(o => o.sel) ? ' checked' : ''}></th><th class="n">#</th>${withImg ? '<th>Imagen</th>' : ''}<th>Código</th><th>Postura</th><th>Tarea</th><th>Categoría</th><th></th></tr>` +
-    S.obs.map((o,i) => [o,i]).reverse().map(([o,i]) => `<tr><td><input type="checkbox" data-sel="${i}"${o.sel ? ' checked' : ''} aria-label="Seleccionar la observación ${i+1}"></td><td class="n">${i+1}</td>${withImg ? `<td>${o.img ? `<button class="thumb" data-view="${i}" aria-label="Ver imagen de la observación ${i+1}"><img src="${o.img}" alt="" loading="lazy"></button>` : '<span class="muted">—</span>'}</td>` : ''}<td><b>${codeStr(o)}</b>${detTag(o)}</td><td class="postura" title="${esc(describe(codeStr(o)))}">${PARTS.map(p => pict(p.key, o[p.key])).join('')}<span class="sr">${esc(describe(codeStr(o)))}</span></td><td class="small">${esc(phaseName(o.p))}${o.t != null ? `<br><span class="muted">${fmtTime(o.t)}</span>` : ''}</td><td>${catBadge(catOf(o),false)}</td><td><button class="btn danger icon-only" data-del="${i}" title="Eliminar observación" aria-label="Eliminar observación ${i+1}">${ico('trash')}</button></td></tr>`).join('') + '</table>';
+  $('#obsTable').innerHTML = `<table><tr><th><input type="checkbox" id="selAll" aria-label="Seleccionar todas las observaciones"${S.obs.every(o => o.sel) ? ' checked' : ''}></th><th class="n">#</th>${withImg ? '<th>Imagen</th>' : ''}${withImg ? '<th title="Incluir la imagen en los resultados y el informe">Informe</th>' : ''}<th>Código</th><th>Postura</th><th>Tarea</th><th>Categoría</th><th></th></tr>` +
+    S.obs.map((o,i) => [o,i]).reverse().map(([o,i]) => `<tr><td><input type="checkbox" data-sel="${i}"${o.sel ? ' checked' : ''} aria-label="Seleccionar la observación ${i+1}"></td><td class="n">${i+1}</td>${withImg ? `<td>${o.img ? `<button class="thumb" data-view="${i}" aria-label="Ver imagen de la observación ${i+1}"><img src="${o.img}" alt="" loading="lazy"></button>` : '<span class="muted">—</span>'}</td><td>${o.img ? `<input type="checkbox" data-rep="${i}"${o.noRep ? '' : ' checked'} aria-label="Incluir la imagen de la observación ${i+1} en el informe">` : ''}</td>` : ''}<td><b>${codeStr(o)}</b>${detTag(o)}</td><td class="postura" title="${esc(describe(codeStr(o)))}">${PARTS.map(p => pict(p.key, o[p.key])).join('')}<span class="sr">${esc(describe(codeStr(o)))}</span></td><td class="small">${esc(phaseName(o.p))}${o.t != null ? `<br><span class="muted">${fmtTime(o.t)}</span>` : ''}</td><td>${catBadge(catOf(o),false)}</td><td><button class="btn danger icon-only" data-del="${i}" title="Eliminar observación" aria-label="Eliminar observación ${i+1}">${ico('trash')}</button></td></tr>`).join('') + '</table>';
 }
 // Selección de observaciones (para exportar solo algunas a OpenSim y 3DSSPP)
 $('#obsTable').addEventListener('change', e => {
   const c = e.target;
   if (c.id === 'selAll') S.obs.forEach(o => { o.sel = c.checked; });
   else if (c.dataset.sel != null) S.obs[+c.dataset.sel].sel = c.checked;
+  else if (c.dataset.rep != null){ if (c.checked) delete S.obs[+c.dataset.rep].noRep; else S.obs[+c.dataset.rep].noRep = true; changed(); clearTimeout(refreshTimer); renderResults(); renderList(); return; }
   else return;
   changed(); renderList();
 });
 $('#obsTable').addEventListener('click', e => {
   const b = e.target.closest('[data-del]'); if (!b) return;
-  S.obs.splice(+b.dataset.del, 1); changed(); renderList(); renderObserve();
+  removeObs(+b.dataset.del);
 });
-$('#clearAll').onclick = () => { if (S.obs.length && confirm(`¿Eliminar las ${S.obs.length} observaciones?`)){ S.obs = []; changed(); renderList(); renderObserve(); } };
+$('#clearAll').onclick = () => { if (S.obs.length && confirm(`¿Eliminar las ${S.obs.length} observaciones?`)){ S.obs = []; editing = -1; obsChanged(); } };
 
 // ---- Imprimir y copiar ----
 async function doPrint(){
@@ -3377,7 +3564,7 @@ async function exportWord(){
       svg.replaceWith(img);
     }
     if ($('#printImg').checked){
-      const items = list.map(o => [o, S.obs.indexOf(o)]).filter(([o]) => o.img).sort((x, y) => catOf(y[0]) - catOf(x[0]) || x[1] - y[1]);
+      const items = list.map(o => [o, S.obs.indexOf(o)]).filter(([o]) => repImg(o)).sort((x, y) => catOf(y[0]) - catOf(x[0]) || x[1] - y[1]);
       if (items.length){
         let g = '<h2>Imágenes de las observaciones</h2>';
         for (const [o, i] of items){
@@ -3407,7 +3594,7 @@ async function exportWord(){
   }finally{ btn.disabled = false; }
 }
 // Ajustes de resultados: qué se muestra y se incluye en el informe; se recuerdan en este navegador
-const RES_IDS = ['printBg', 'showCat', 'printGuide', 'showTasks', 'showCodes', 'showBody', 'showAgree', 'printImg', 'printApa'];
+const RES_IDS = ['printBg', 'showCat', 'printGuide', 'showTasks', 'showCodes', 'showBody', 'showAgree', 'printImg', 'printApa', 'imgCat1', 'imgCat2', 'imgCat3', 'imgCat4'];
 try{
   const r = JSON.parse(localStorage.getItem('owasweb.results') || '{}');
   RES_IDS.forEach(id => { if (typeof r[id] === 'boolean') $('#' + id).checked = r[id]; });
@@ -3427,11 +3614,12 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <ol><li>En <b>1 · Proyecto</b>, rellene la información del estudio, el intervalo de observación y las tareas. El intervalo se puede indicar en segundos o como <b>número total de observaciones</b>: en ese caso se calcula a partir de la duración del video (por ejemplo, 400 observaciones en 10 minutos: una cada 1,5 s), y «Muestra siguiente» recorre exactamente ese número de muestras. En «Resultados», la tabla de frecuencias por tarea muestra cuántas observaciones hubo de cada tarea, su porcentaje del total y su tiempo estimado.</li>
 <li>En <b>2 · Observación</b>, elija el modo:
   <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar postura</b>.</li>
-  <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado. Con <b>Unir videos</b> se juntan varios videos cortos en uno, en orden de nombre de archivo: si tienen el mismo formato (lo normal si son de la misma cámara) se unen al instante y sin perder calidad; si no, se vuelven a codificar. El video unido no tiene sonido y se guarda con «Guardar el video unido», para volver a abrir el proyecto con él.</li>
+  <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado. Para revisar varios videos en el mismo estudio sin unirlos, elíjalos todos en <b>Cargar video</b> (se ordenan por nombre de archivo) o añádalos con <b>Añadir video</b>: se reproducen uno tras otro, «Muestra siguiente» pasa al video siguiente cuando hace falta y el intervalo por número de observaciones usa la duración total. Con <b>Unir videos</b> se juntan varios videos cortos en uno, en orden de nombre de archivo: si tienen el mismo formato (lo normal si son de la misma cámara) se unen al instante y sin perder calidad; si no, se vuelven a codificar. El video unido no tiene sonido y se guarda con «Guardar el video unido», para volver a abrir el proyecto con él.</li>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
 <li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. Si no se detecta a nadie, se propone el código 1111 en la tarea «N/A» (se crea la primera vez y se puede renombrar): revíselo y pulse <b>Aceptar postura</b> si es correcto; al volver a detectar a una persona se recupera la tarea anterior. Si se detecta una postura falsa en una imagen sin personas, <b>No detectar</b> (tecla <span class="kbd">X</span>) la quita y hace la misma propuesta. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
-<li>Consulte <b>3 · Resultados</b>: categorías de acción, partes del cuerpo y tablas APA, que se actualizan solos al guardar cada postura. Puede filtrar por tarea. En <b>Ajustes de resultados</b> se desmarcan los resultados que no se quieren mostrar ni incluir en el informe (impresión, PDF y Word).</li>
-<li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original, e <b>Imprimir</b> para imprimir o guardar en PDF.</li>
+<li>Al volver a un fotograma o una foto ya registrados, sus códigos quedan bloqueados. El lápiz (tecla <span class="kbd">E</span>) los desbloquea para corregirlos: cámbielos y pulse <b>Guardar cambios</b>. La papelera (tecla <span class="kbd">Supr</span>) elimina la observación de ese fotograma o, si no hay ninguna, deshace la última. Los cambios se ven al momento en la barra de tiempo, la lista de observaciones y los resultados.</li>
+<li>Consulte <b>3 · Resultados</b>: categorías de acción, partes del cuerpo y tablas APA, que se actualizan solos al guardar cada postura. Puede filtrar por tarea. En <b>Ajustes de resultados</b> se desmarcan los resultados que no se quieren mostrar ni incluir en el informe (impresión, PDF y Word), y se eligen las categorías cuyas imágenes se muestran. Una imagen concreta se quita con la × que tiene encima o con la columna «Informe» de la lista de observaciones.</li>
+<li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original (o un proyecto .owsp con las imágenes), e <b>Imprimir</b> para imprimir o guardar en PDF. La primera vez, <b>Guardar</b> abre el explorador para elegir el nombre y la carpeta; después sobrescribe ese mismo archivo, con un aviso, sin volver a preguntar. <b>Guardar como</b> siempre abre el explorador. Las tareas no se pueden repetir: si dos tienen el mismo nombre, se avisa.</li>
 <li>En <b>Exportar resultados</b>, las posturas detectadas también se pueden llevar a OpenSim (.trc y .mot) y a 3DSSPP, el programa de análisis biomecánico de la Universidad de Míchigan: como archivo de ubicaciones <b>.sloc</b> (<i>Animation → Import LOC File</i>), como <b>archivo de lote</b> que analiza cada observación con la persona y la carga indicadas (<i>Task Input → Run Batch File</i>) o como <b>.c3d</b> con los 21 centros articulares que pide 3DSSPP (<i>Animation → Import C3D File</i>), que también abren OpenSim y otros programas. La carga de cada observación puede tomarse de su código OWAS. Se pueden exportar todas las observaciones, solo las marcadas con las casillas de la lista de observaciones o solo las de ciertas categorías de riesgo. La cabeza, C7/T1, el esternón, L5/S1 y el centro de agarre se estiman a partir de los puntos detectados: revise las posturas en 3DSSPP antes de usar sus resultados. 3DSSPP es software de la University of Michigan. OWAS Web no está afiliada a ella ni incluye 3DSSPP: los archivos siguen el formato de importación descrito en el manual de 3DSSPP 7.1, y su uso requiere la licencia correspondiente de 3DSSPP. C3D es un formato abierto (c3d.org).</li></ol>
 <h3>Categorías de acción</h3>
 <div class="legend" style="margin-bottom:14px">${CATS.map((k,i) => `<div>${catBadge(i+1,false)}<div><b>${k.t}</b><p>${k.d}</p></div></div>`).join('')}</div>
@@ -3466,7 +3654,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.32 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.33 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
