@@ -1069,41 +1069,70 @@ async function joinFile(){
 const studyBytes = name => isProject(name)
   ? new TextEncoder().encode(JSON.stringify({format:'winowas-proyecto', version:2, S}))
   : encode1252(serializeOWS(S));
+// Datos del estudio que el formato .OWS del WinOWAS original no puede guardar (si hay alguno, se usa el proyecto .owsp)
+function owsLoses(){
+  const r = [];
+  if (S.obs.some(o => o.img)) r.push('las imágenes de las observaciones');
+  if (S.obs.some(o => o.src || o.t != null)) r.push('el video o la fotografía y el momento de cada observación');
+  if (S.obs.some(o => o.det || o.dm || o.w3)) r.push('los datos de la detección automática y las posturas 3D');
+  if (S.obs.some(o => o.sel || o.noRep || o.force != null)) r.push('la selección de observaciones y de imágenes');
+  if (S.ivMode === 'count' || Math.round(S.interval) !== S.interval) r.push('el intervalo exacto y el número de observaciones previsto');
+  return r;
+}
+// Escribe en el archivo elegido. OneDrive u otro programa pueden tenerlo ocupado un momento: se reintenta varias veces y,
+// si no se puede, se avisa (sin descargar otra copia por sorpresa, que obligaría a elegir el nombre otra vez)
+async function writeHandle(h, bytes){
+  let err = null;
+  for (let k = 0; k < 6; k++){
+    try{ const w = await h.createWritable(); await w.write(bytes); await w.close(); return null; }
+    catch(e){ err = e; if (e.name === 'NotAllowedError' || e.name === 'SecurityError') break; await new Promise(r => setTimeout(r, 500 + k * 300)); }
+  }
+  console.error(err);
+  return err || new Error('error desconocido');
+}
+const writeFailMsg = (name, err) => `No se pudo escribir en «${name}» (${err.message || err.name}). Suele deberse a que OneDrive u otro programa está sincronizando o usando el archivo, o a que la carpeta no permite escribir.\n\nEl nombre y la carpeta quedan elegidos: pulse «Guardar» de nuevo en unos segundos. Si sigue fallando, use «Guardar como» y elija otra carpeta.\n\n¿Descargar ahora una copia del archivo, por seguridad?`;
+function downloadStudy(n){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([studyBytes(n)], {type:'application/octet-stream'}));
+  a.download = n; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
 async function saveFile(as){
-  const hasImg = S.obs.some(o => o.img);
-  // Un .OWS no guarda imágenes: ofrecer el formato de proyecto para no perderlas
-  if (!as && fileName && !isProject(fileName) && hasImg &&
-      confirm('Este estudio tiene imágenes y el formato .OWS no las guarda.\n\nAceptar: guardar como proyecto .owsp con las imágenes.\nCancelar: guardar solo los datos en ' + fileName + '.')) as = true;
+  // Formato según los datos: .OWS (compatible con el WinOWAS original) si basta; si no, proyecto .owsp, que lo guarda todo
+  const loses = owsLoses(), needP = loses.length > 0, lost = loses.join(', ');
+  if (!as && fileName && !isProject(fileName) && needP &&
+      confirm(`El formato .OWS no guarda ${lost}.\n\nAceptar: guardar como proyecto .owsp, con todo.\nCancelar: guardar solo los códigos en ${fileName}.`)) as = true;
   const base = (fileName || 'OWAS').replace(/\.(ows|owsp)$/i, '');
-  const name = as || !fileName ? base + (hasImg ? '.owsp' : '.OWS') : fileName;
-  try{
-    if (!as && fileHandle){
-      // Ya guardado en este equipo: se sobrescribe el mismo archivo, sin volver a pedir la ubicación. Si el navegador
-      // aún no tiene permiso para escribir en él, su propio aviso hace de advertencia; si no, se avisa aquí
+  const name = as || !fileName ? base + (needP ? '.owsp' : '.OWS') : fileName;
+  // Ya guardado en este equipo: se sobrescribe el mismo archivo, sin volver a pedir el nombre ni la carpeta
+  if (!as && fileHandle){
+    try{
       const perm = fileHandle.queryPermission ? await fileHandle.queryPermission({mode: 'readwrite'}) : 'granted';
       if (perm === 'granted'){ if (!confirm(`Se sobrescribirá el archivo «${fileName}» con los cambios actuales. ¿Continuar?`)) return; }
       else if ((await fileHandle.requestPermission({mode: 'readwrite'})) !== 'granted') return;
-      const w = await fileHandle.createWritable(); await w.write(studyBytes(fileName)); await w.close();
-    } else if (window.showSaveFilePicker){
-      // Primera vez o «Guardar como»: el explorador para elegir el nombre y la carpeta (empieza en la del archivo actual)
-      const opts = {suggestedName:name, types: hasImg ? [FILE_TYPES.owsp, FILE_TYPES.ows] : [FILE_TYPES.ows, FILE_TYPES.owsp]};
-      if (fileHandle) opts.startIn = fileHandle;
-      const h = await showSaveFilePicker(opts);
-      const w = await h.createWritable(); await w.write(studyBytes(h.name)); await w.close();
-      fileHandle = h; fileName = h.name;
-    } else throw new Error('no fs api');
-  }catch(e){
-    if (e.name === 'AbortError') return;
-    // Sin el explorador de archivos del navegador (o si falla): se descarga con el nombre propuesto, y el navegador
-    // pregunta dónde guardarlo si está configurado así. No se pide el nombre antes en un cuadro de texto
-    console.warn('Se guarda como descarga:', e);
-    const n = name;
-    const bytes = studyBytes(n);
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([bytes], {type:'application/octet-stream'}));
-    a.download = n; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    fileName = n;
+    }catch(e){ console.error(e); }
+    const err = await writeHandle(fileHandle, studyBytes(fileName));
+    if (err){ if (confirm(writeFailMsg(fileName, err))) downloadStudy(fileName); return; }
+  } else if (window.showSaveFilePicker){
+    // Primera vez o «Guardar como»: el explorador para elegir el nombre, la carpeta y el formato
+    const opts = {suggestedName: name, types: needP ? [FILE_TYPES.owsp, FILE_TYPES.ows] : [FILE_TYPES.ows, FILE_TYPES.owsp]};
+    if (fileHandle) opts.startIn = fileHandle;
+    let h;
+    try{ h = await showSaveFilePicker(opts); }
+    catch(e){
+      if (e.name === 'AbortError') return;
+      // El navegador no deja usar su explorador: se descarga con el nombre propuesto
+      console.warn('Se guarda como descarga:', e);
+      downloadStudy(name); fileName = name; dirty = false; persist(); renderHeader(); return;
+    }
+    if (!isProject(h.name) && needP && !confirm(`Eligió el formato .OWS, que no guarda ${lost}. ¿Guardar solo los códigos en «${h.name}»?\n\nPara guardarlo todo, cancele y elija «.owsp» en el tipo de archivo.`)) return;
+    // El nombre elegido se ve al momento y «Guardar» ya no lo vuelve a pedir
+    fileHandle = h; fileName = h.name; renderHeader();
+    const err = await writeHandle(h, studyBytes(h.name));
+    if (err){ persist(); if (confirm(writeFailMsg(h.name, err))) downloadStudy(h.name); return; }
+  } else {
+    // Navegador sin explorador de archivos (por ejemplo, Firefox): se descarga y el navegador pregunta dónde, si está configurado así
+    downloadStudy(name); fileName = name;
   }
   dirty = false; persist(); renderHeader();
 }
@@ -3543,7 +3572,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.34 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.35 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
