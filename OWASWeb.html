@@ -210,6 +210,10 @@ main{max-width:1440px}
 label.field{display:block;margin-bottom:10px}
 label.field span{display:block;font-size:13px;color:var(--ink-2);margin-bottom:3px}
 input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--field)}
+.iv-field > span{display:block;font-size:13px;color:var(--ink-2);margin-bottom:3px}
+.iv-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-bottom:6px}
+.iv-row label{display:inline-flex;align-items:center;gap:6px}
+.iv-row input[type=number]{width:110px}
 .phase-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .phase-row .num{width:28px;color:var(--ink-3);text-align:right}
 .phase-row input{flex:1}
@@ -303,6 +307,10 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .scale .ph{min-width:130px}
 .filter{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
 .filter select{width:auto;min-width:220px}
+.res-cfg summary{cursor:pointer;font-weight:600;font-size:15px}
+.res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:8px 18px;margin:6px 0 2px}
+.res-grid label{display:flex;align-items:center;gap:8px}
+.res-grid select{width:auto;max-width:100%}
 .empty{padding:30px;text-align:center;color:var(--ink-2)}
 .notice{background:var(--accent-soft);border:1px solid var(--notice-line);border-radius:8px;padding:10px 12px;margin-bottom:16px;display:flex;justify-content:space-between;gap:10px;align-items:center}
 .kbd{display:inline-block;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;background:var(--chip);color:var(--ink)}
@@ -453,7 +461,11 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
       <div class="card">
         <h2 data-icon="info">Información general</h2>
         <div id="bgFields"></div>
-        <label class="field"><span>Intervalo de tiempo (segundos)</span><input type="number" min="1" id="interval"></label>
+        <div class="field iv-field"><span>Intervalo entre observaciones</span>
+          <div class="iv-row"><label><input type="radio" name="ivMode" value="sec"> Cada</label> <input type="number" min="0.1" step="0.1" id="interval" aria-label="Intervalo en segundos"> <span>segundos</span></div>
+          <div class="iv-row"><label><input type="radio" name="ivMode" value="count"> Número total de observaciones</label> <input type="number" min="1" step="1" id="nObs" aria-label="Número total de observaciones"></div>
+          <p class="small muted" id="ivInfo" style="margin:4px 0 0"></p>
+        </div>
       </div>
       <div class="card">
         <h2 data-icon="layers">Tareas</h2>
@@ -605,13 +617,22 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   <section class="tab on" id="tab-resultados">
     <h1 class="sec-title"><span>3</span>Resultados</h1>
     <div class="filter"><label>Material: <select class="phaseFilter"></select></label>
-      <label><input type="checkbox" id="printBg" checked> Incluir información general al imprimir</label>
-      <label><input type="checkbox" id="printImg" checked> Incluir imágenes al imprimir</label>
-      <label>Tamaño de las imágenes <select id="printImgSize"><option value="small">Pequeñas (cuadrícula)</option><option value="big">Grandes (una por fila, como en el visor)</option></select></label>
-      <label><input type="checkbox" id="printGuide" checked> Incluir la guía de interpretación de las categorías al imprimir</label>
-      <label><input type="checkbox" id="printApa" checked> Incluir tablas y figuras APA al imprimir</label>
-      <label><input type="checkbox" id="showAgree" autocomplete="off"> Mostrar tablas de la detección automática (concordancia y mediciones)</label>
       <button class="btn" id="copyBtn" data-icon="copy">Copiar resultados</button></div>
+    <details class="card res-cfg small"><summary>Ajustes de resultados</summary>
+      <p class="muted" style="margin:8px 0 6px">Desmarque los resultados que no quiera mostrar ni incluir en el informe (impresión, PDF y Word). Cada uno incluye su tabla o figura en formato APA. La elección se recuerda en este navegador.</p>
+      <div class="res-grid">
+        <label><input type="checkbox" id="printBg" checked autocomplete="off"> Información general (en el informe)</label>
+        <label><input type="checkbox" id="showCat" checked autocomplete="off"> Categorías de acción</label>
+        <label><input type="checkbox" id="printGuide" checked autocomplete="off"> Guía de interpretación de las categorías</label>
+        <label><input type="checkbox" id="showTasks" checked autocomplete="off"> Frecuencia de observaciones por tarea</label>
+        <label><input type="checkbox" id="showCodes" checked autocomplete="off"> Posturas por categoría (frecuencia de los códigos)</label>
+        <label><input type="checkbox" id="showBody" checked autocomplete="off"> Por parte del cuerpo</label>
+        <label><input type="checkbox" id="showAgree" autocomplete="off"> Tablas de la detección automática (concordancia y mediciones)</label>
+        <label><input type="checkbox" id="printImg" checked autocomplete="off"> Imágenes de las observaciones</label>
+        <label>Tamaño de las imágenes en el informe <select id="printImgSize"><option value="small">Pequeñas (cuadrícula)</option><option value="big">Grandes (una por fila, como en el visor)</option></select></label>
+        <label><input type="checkbox" id="printApa" checked autocomplete="off"> Tablas y figuras en formato APA</label>
+      </div>
+    </details>
     <div id="results"></div>
   </section>
 
@@ -855,7 +876,7 @@ function pad(n){ return String(n).padStart(2,'0'); }
 function blank(){
   const d = new Date();
   return {bg:['','','','',`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`,`${pad(d.getHours())}:${pad(d.getMinutes())}`],
-          phases:[''], interval:30, obs:[]};
+          phases:[''], interval:30, ivMode:'sec', nObs:100, obs:[]};
 }
 let S = blank(), fileName = '', fileHandle = null, dirty = false, phaseFilter = -1;
 const phaseName = i => (S.phases[i] && S.phases[i].trim()) || `Tarea ${i+1}`;
@@ -918,7 +939,7 @@ function parseOWS(text){
 }
 function serializeOWS(st){
   const q = s => '"' + String(s).replace(/"/g, "'") + '"';
-  const L = ['!OWAS!', ...st.bg.map(q), ` ${st.phases.length} `, ...st.phases.map(q), String(st.interval), String(st.obs.length), ...st.obs.map(o => codeStr(o) + o.p)];
+  const L = ['!OWAS!', ...st.bg.map(q), ` ${st.phases.length} `, ...st.phases.map(q), String(Math.max(1, Math.round(st.interval))), String(st.obs.length), ...st.obs.map(o => codeStr(o) + o.p)];
   return L.join('\r\n') + '\r\n';
 }
 // Los archivos originales usan la codificación de Windows (cp1252)
@@ -1030,7 +1051,7 @@ function showTab(t){
 function renderData(){
   $('#bgFields').innerHTML = BG_LABELS.map((l,i) =>
     `<label class="field"><span>${l}</span><input type="text" data-bg="${i}" value="${esc(S.bg[i]||'')}"${i===4?' placeholder="dd/mm/aaaa"':i===5?' placeholder="hh:mm"':''}></label>`).join('');
-  $('#interval').value = S.interval;
+  renderInterval();
   renderPhases();
 }
 function renderPhases(){
@@ -1044,13 +1065,43 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset.bg !== undefined){ S.bg[+t.dataset.bg] = t.value; changed(); }
   else if (t.dataset.phase !== undefined){ S.phases[+t.dataset.phase] = t.value; changed(); }
-  else if (t.id === 'interval'){ const v = parseInt(t.value); if (v > 0){ S.interval = v; changed(); } }
+  else if (t.id === 'interval'){ const v = parseFloat(t.value); if (v > 0){ S.interval = Math.round(v * 1000) / 1000; changed(); renderInterval(); } }
+  else if (t.id === 'nObs'){ const v = parseInt(t.value); if (v > 0){ S.nObs = v; changed(); applyIntervalPlan(); } }
 });
+// Intervalo entre observaciones: en segundos o a partir del número total de observaciones y la duración del video
+const fmtNum = (v, d = 2) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('es', {maximumFractionDigits: d});
+const fmtDur = s => { if (s < 59.95) return `${fmtNum(s, 1)} s`; s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), q = s % 60; return h ? `${h} h ${pad(m)} min` : m ? `${m} min ${pad(q)} s` : `${q} s`; };
+function applyIntervalPlan(){
+  if (S.ivMode === 'count' && vid.src && vid.duration && S.nObs > 0){
+    const iv = Math.round(vid.duration / S.nObs * 1000) / 1000;
+    if (iv > 0 && iv !== S.interval){ S.interval = iv; changed(); }
+  }
+  renderInterval();
+}
+function renderInterval(){
+  const count = S.ivMode === 'count', d = vid.src && vid.duration;
+  $$('input[name="ivMode"]').forEach(r => { r.checked = r.value === (count ? 'count' : 'sec'); });
+  if (document.activeElement !== $('#interval')) $('#interval').value = S.interval;
+  if (document.activeElement !== $('#nObs')) $('#nObs').value = S.nObs || '';
+  $('#interval').disabled = count; $('#nObs').disabled = !count;
+  $('#ivInfo').textContent = count
+    ? (d ? `Video de ${fmtTime(d)}: una observación cada ${fmtNum(S.interval)} s.` : 'Cargue el video para calcular el intervalo a partir de su duración.')
+    : (d ? `En el video de ${fmtTime(d)} caben ${Math.floor(d / S.interval + 1e-6) + 1} observaciones con este intervalo.` : '');
+}
+document.addEventListener('change', e => {
+  if (e.target.name !== 'ivMode') return;
+  S.ivMode = e.target.value; changed(); applyIntervalPlan();
+});
+// Texto del plan de muestreo, para la tabla de frecuencias
+const planText = () => S.ivMode === 'count' && S.nObs
+  ? `Plan de muestreo: ${S.nObs} observaciones, una cada ${fmtNum(S.interval)} s; se registraron ${S.obs.length} (${pctFmt(S.obs.length / S.nObs * 100)} del plan).`
+  : `Una observación cada ${fmtNum(S.interval)} s.`;
 $('#addPhase').onclick = () => { S.phases.push(''); changed(); renderPhases(); fillPhaseFilters(); };
 $('#phases').addEventListener('click', e => {
   const b = e.target.closest('[data-delphase]'); if (!b) return;
   const k = +b.dataset.delphase;
   S.phases.splice(k, 1); S.obs.forEach(o => { if (o.p > k) o.p--; });
+  if (S.naTask === k) S.naTask = null; else if (S.naTask > k) S.naTask--;
   changed(); renderPhases(); fillPhaseFilters();
 });
 
@@ -1095,12 +1146,42 @@ function renderObserve(){
   renderMarks(); renderThumbs();
 }
 // Partes elegidas a mano en el fotograma actual: la detección automática ya no las cambia
+// Sin persona en la imagen: se propone 1111 (todo en 1 y la carga mínima) en la tarea «N/A», que se crea la primera vez
+// (se puede renombrar). Al volver a detectar a una persona se recupera la tarea anterior
+let autoNA = null;   // {task, prev, w}: tarea N/A puesta automáticamente, la tarea anterior y si la carga la puso la aplicación
+function naTaskIndex(){
+  if (!(S.naTask >= 0 && S.naTask < S.phases.length)){
+    const k = S.phases.findIndex(q => q.trim() === 'N/A');
+    if (k >= 0) S.naTask = k;
+    else { S.phases.push('N/A'); S.naTask = S.phases.length - 1; changed(); renderPhases(); fillPhaseFilters(); }
+  }
+  return S.naTask;
+}
+function proposeNA(){
+  if (regIndex() >= 0) return false;
+  const task = naTaskIndex();
+  if (!manual.b) sel.b = 1;
+  if (!manual.a) sel.a = 1;
+  if (!manual.l) sel.l = 1;
+  if (!autoNA) autoNA = {task, prev: sel.p, w: !sel.w};
+  if (!sel.w) sel.w = 1;
+  sel.p = task;
+  renderObserve();
+  return true;
+}
+function undoNA(){
+  if (!autoNA) return;
+  if (sel.p === autoNA.task) sel.p = autoNA.prev;
+  if (autoNA.w) sel.w = 0;
+  autoNA = null;
+}
 let manual = {b:false, a:false, l:false};
 const resetManual = () => { manual = {b:false, a:false, l:false}; };
 $('#parts').addEventListener('click', e => {
   const b = e.target.closest('.opt'); if (!b || locked) return;
   const k = b.dataset.k;
   sel[k] = +b.dataset.v; if (k in manual) manual[k] = true;
+  if (k === 'p' || k === 'w') autoNA = null;   // la tarea o la carga elegidas a mano se respetan
   renderObserve();
 });
 // Observación ya registrada en el fotograma o la foto actual (-1 si no hay)
@@ -1123,7 +1204,9 @@ function addObs(code){
 }
 function accept(){
   if (locked || nextField() || sel.p < 0) return;
-  addObs(sel); sel = {b:0, a:0, l:0, w:0, p:sel.p};   // la carga no se arrastra: se elige en cada observación
+  // Tras aceptar una observación «N/A» propuesta por la aplicación, la siguiente vuelve a la tarea anterior
+  const nextP = autoNA && sel.p === autoNA.task ? autoNA.prev : sel.p; autoNA = null;
+  addObs(sel); sel = {b:0, a:0, l:0, w:0, p:nextP};   // la carga no se arrastra: se elige en cada observación
   resetManual(); renderObserve(); flashSaved();
 }
 function repeatLast(){ if (!S.obs.length || locked) return; addObs(S.obs[S.obs.length-1]); renderObserve(); flashSaved(); }
@@ -1180,6 +1263,7 @@ document.addEventListener('keydown', e => {
   if (locked && /^([1-9]|Enter|Backspace|Escape|r|R)$/.test(k)){ e.preventDefault(); return; }
   if (/^[1-9]$/.test(k)){
     const nf = nextField();
+    if (nf === 'w' || !nf) autoNA = null;
     if (nf){
       const max = PARTS.find(p => p.key === nf).opts.length;
       if (+k <= max){ sel[nf] = +k; if (nf in manual) manual[nf] = true; phaseDigitPending = needPhase() && !nextField(); renderObserve(); }
@@ -1214,7 +1298,7 @@ $('#clockBtn').onclick = () => {
   if (timer){ clearInterval(timer); timer = null; $('#clockBtn').innerHTML = ico('play') + 'Iniciar reloj'; $('#clock').textContent = '--'; $('#clockInfo').textContent = ''; return; }
   beep(); nextAt = Date.now() + S.interval*1000; timer = setInterval(tick, 200); tick();
   $('#clockBtn').innerHTML = ico('stop') + 'Detener reloj';
-  $('#clockInfo').textContent = `Aviso cada ${S.interval} s`;
+  $('#clockInfo').textContent = `Aviso cada ${fmtNum(S.interval)} s`;
 };
 function stopClock(){ if (timer) $('#clockBtn').click(); }
 
@@ -1337,7 +1421,7 @@ function gotoSample(dir){
   if (!vid.src) return;
   const iv = S.interval || 30, n = Math.round(vid.currentTime / iv * 1000) / 1000;
   const k = dir > 0 ? Math.floor(n) + 1 : Math.ceil(n) - 1;
-  if (k * iv > (vid.duration || 0) + 1e-3){ alert('No hay más muestras en este video.'); return; }
+  if (k * iv > (vid.duration || 0) + 1e-3 || (S.ivMode === 'count' && k >= S.nObs)){ alert('No hay más muestras en este video.'); return; }
   autoPending = true;
   setVideoTime(k * iv);
 }
@@ -1398,7 +1482,7 @@ $('#fileJoinVideos').onchange = async e => {
   }catch(err){ console.error(err); note.hidden = true; alert(`No se pudieron unir los videos: ${err.message}.`); }
   finally{ btn.disabled = false; }
 };
-vid.addEventListener('loadedmetadata', () => { videoOk = true; renderVideoUI(); renderMarks(); });
+vid.addEventListener('loadedmetadata', () => { videoOk = true; renderVideoUI(); renderMarks(); applyIntervalPlan(); });
 ['timeupdate', 'seeked', 'play', 'pause'].forEach(ev => vid.addEventListener(ev, renderVideoUI));
 // Momento del video al que volver si hay que reabrirlo (no cuentan los saltos internos de la detección)
 ['timeupdate', 'seeked'].forEach(ev => vid.addEventListener(ev, () => { if (!vid.error && !detecting) videoT = vid.currentTime; }));
@@ -2195,7 +2279,10 @@ async function detectPose(){
     }
     if (!N){
       lastDet = null; clearOverlay();
-      setDetectStatus('<span class="warn">No se detectó ninguna persona en esta imagen.</span>'); return;
+      const na = proposeNA();
+      setDetectStatus(na ? `<span class="warn">No se detectó ninguna persona: se propone 1111 en la tarea «${esc(phaseName(S.naTask))}». Revíselo y pulse «Aceptar postura» si es correcto.</span>`
+        : '<span class="warn">No se detectó ninguna persona en esta imagen.</span>');
+      return;
     }
     const r = classifyOWAS(W, N);
     // Caminando: compara la posición de la cadera con el fotograma de 0,5 s después
@@ -2227,6 +2314,7 @@ async function detectPose(){
       if (!manual.b) sel.b = r.b;
       if (!manual.a) sel.a = r.a;
       if (r.l && !manual.l) sel.l = r.l;
+      undoNA();
     }
     renderObserve();
     renderOverlay(lastDet);
@@ -2291,9 +2379,11 @@ function stackBar(counts, thin){
 function bgBlock(){
   return `<div class="card"><h2>${ico('info')}Información general</h2><table>` +
     BG_LABELS.map((l,i) => `<tr><th style="width:200px">${l}</th><td>${esc(S.bg[i]||'')}</td></tr>`).join('') +
-    `<tr><th>Intervalo de tiempo</th><td>${S.interval} s</td></tr></table></div>`;
+    `<tr><th>Intervalo de tiempo</th><td>${fmtNum(S.interval)} s</td></tr></table></div>`;
 }
-function resultsHTML(withGallery = true, withGuide = withGallery){
+// ¿Se muestra este resultado? (casillas de «Ajustes de resultados»)
+const shown = id => { const el = document.getElementById(id); return !el || el.checked; };
+function resultsHTML(withGallery = true, withGuide = withGallery && shown('printGuide')){
   const list = filtered(), n = list.length;
   if (!n) return `<div class="card empty">No hay observaciones${phaseFilter >= 0 ? ' en esta tarea' : ''}. Regístrelas en la sección «Observación» o abra un archivo .OWS.</div>` + (withGuide ? guideHTML() : '');
   const c = catCounts(list);
@@ -2301,22 +2391,26 @@ function resultsHTML(withGallery = true, withGuide = withGallery){
     <p class="muted" style="margin-top:-6px">${n} observaciones${S.interval ? ` · tiempo observado aprox. ${Math.round(n*S.interval/60)} min` : ''}</p>
     ${stackBar(c)}
     <div class="legend">${CATS.map((k,i) => `<div>${catBadge(i+1,false)}<div><b>${k.t}</b> — ${c[i]} obs. (${pctFmt(c[i]/n*100)})<p>${k.d}</p></div></div>`).join('')}</div></div>`;
+  if (!shown('showCat')) h = '';
   if (withGuide) h += guideHTML();
-  if (phaseFilter < 0 && S.phases.length > 1){
-    h += `<div class="card"><h2>${ico('layers')}Porcentaje por tareas</h2><div class="tbl-wrap"><table><tr><th>Tarea</th><th class="n">Obs.</th><th class="n">% del total</th>${[1,2,3,4].map(k => `<th class="n">Cat. ${k}</th>`).join('')}<th class="bar-col"></th></tr>` +
+  // Frecuencia de observaciones por tarea: cuántas hubo de cada tarea, qué parte del total son y su tiempo estimado
+  if (phaseFilter < 0 && shown('showTasks')){
+    const N = S.obs.length;
+    h += `<div class="card"><h2>${ico('layers')}Frecuencia de observaciones por tarea</h2><p class="small muted" style="margin-top:-6px">${esc(planText())} El tiempo estimado es la frecuencia por el intervalo.</p>
+      <div class="tbl-wrap"><table><tr><th>Tarea</th><th class="n">Frecuencia</th><th class="n">% del total</th><th class="n">Tiempo estimado</th>${[1,2,3,4].map(k => `<th class="n">Cat. ${k}</th>`).join('')}<th class="bar-col"></th></tr>` +
       S.phases.map((p,i) => { const l = S.obs.filter(o => o.p === i), m = l.length, cc = catCounts(l);
-        return `<tr><td>${esc(phaseName(i))}</td><td class="n">${m}</td><td class="n">${pctFmt(m/S.obs.length*100)}</td>${cc.map(x => `<td class="n">${m ? pctFmt(x/m*100) : '–'}</td>`).join('')}<td>${stackBar(cc, true)}</td></tr>`; }).join('') +
-      `</table></div></div>`;
+        return `<tr><td>${esc(phaseName(i))}</td><td class="n">${m}</td><td class="n">${pctFmt(m/N*100)}</td><td class="n">${fmtDur(m * S.interval)}</td>${cc.map(x => `<td class="n">${m ? pctFmt(x/m*100) : '–'}</td>`).join('')}<td>${stackBar(cc, true)}</td></tr>`; }).join('') +
+      `<tr><td><b>Total</b></td><td class="n"><b>${N}</b></td><td class="n"><b>${pctFmt(100)}</b></td><td class="n"><b>${fmtDur(N * S.interval)}</b></td><td colspan="5"></td></tr></table></div></div>`;
   }
   const freq = new Map(); list.forEach(o => { const k = codeStr(o); freq.set(k, (freq.get(k)||0) + 1); });
   const byCat = [[],[],[],[]];
   [...freq.entries()].sort((a,b) => b[1]-a[1]).forEach(([k,f]) => byCat[catOf({b:+k[0], a:+k[1], l:+k[2], w:+k[3]})-1].push([k,f]));
-  h += `<div class="card"><h2>${ico('list')}Posturas por categoría</h2><div class="cats4">` + byCat.map((rows,i) =>
+  if (shown('showCodes')) h += `<div class="card"><h2>${ico('list')}Posturas por categoría</h2><div class="cats4">` + byCat.map((rows,i) =>
     `<div class="col"><h3>${catBadge(i+1)}</h3><div class="scroll"><table><tr><th>Postura</th><th class="n">Frec.</th><th class="n">%</th></tr>` +
     (rows.length ? rows.map(([k,f]) => `<tr><td title="${esc(describe(k))}">${k}</td><td class="n">${f}</td><td class="n">${pctFmt(f/n*100)}</td></tr>`).join('') : `<tr><td colspan="3" class="muted small">Ninguna</td></tr>`) +
     `</table></div></div>`).join('') + `</div><p class="small muted">Pase el puntero sobre un código para ver su descripción.</p></div>`;
   if ($('#showAgree').checked) h += agreementHTML(list);
-  if (withGallery) h += galleryHTML(list);
+  if (withGallery && shown('printImg')) h += galleryHTML(list);
   return h;
 }
 // Marca si el código aceptado coincide con la propuesta automática o si se corrigió
@@ -2347,7 +2441,10 @@ function galleryHTML(list, lazy = true, big = false){
       <figcaption>${catBadge(catOf(o), false)}<b>${codeStr(o)}</b><span class="muted">Obs. ${i+1} · ${esc(phaseName(o.p))}${o.t != null ? ' · ' + fmtTime(o.t) : ''}</span>${big ? `<span class="big-desc">${esc(describe(codeStr(o)))}</span>` : ''}${o.det && o.dm ? `<span class="det-cap">Detección automática: ${esc(detLines(o.det, o.dm).join(' · '))}${detTag(o)}</span>` : ''}</figcaption></figure>`).join('') + '</div></div>';
 }
 function describe(k){ return PARTS.map((p,i) => `${p.name}: ${p.opts[k[i]-1]}`).join(' · '); }
-function renderResults(){ fillPhaseFilters(); $('#results').innerHTML = resultsHTML() + apaCard('cat'); }
+// Aviso cuando hay resultados ocultos (las tablas de la detección automática ya vienen ocultas)
+const hiddenNote = () => ['showCat', 'printGuide', 'showTasks', 'showCodes', 'showBody', 'printImg', 'printApa'].some(id => !shown(id))
+  ? '<p class="small muted">Hay resultados ocultos: se eligen en «Ajustes de resultados».</p>' : '';
+function renderResults(){ fillPhaseFilters(); $('#results').innerHTML = hiddenNote() + resultsHTML() + (shown('printApa') ? apaCard('cat') : ''); }
 
 function bodyHTML(){
   const list = filtered(), n = list.length;
@@ -2372,7 +2469,7 @@ function bodyHTML(){
   h += `<div class="card"><h3>Cómo leer esta gráfica</h3><p class="small muted" style="margin:0">La barra oscura indica el porcentaje del tiempo observado en cada postura. Las franjas de fondo muestran qué categoría de acción corresponde según la proporción del tiempo (verde 1, amarillo 2, naranja 3, rojo 4). La carga no tiene clasificación por tiempo.</p></div>`;
   return h;
 }
-function renderBodyParts(){ fillPhaseFilters(); $('#bodyparts').innerHTML = bodyHTML() + apaCard('body'); }
+function renderBodyParts(){ fillPhaseFilters(); $('#bodyparts').innerHTML = (shown('showBody') ? bodyHTML() : '') + (shown('printApa') ? apaCard('body') : ''); }
 
 // ---- Tablas y figuras en formato APA (7.ª edición) ----
 // La numeración es correlativa en todo el informe: primero las de categorías y luego las de partes del cuerpo
@@ -2507,18 +2604,27 @@ function apaSections(){
   const list = filtered(), n = list.length;
   if (!n) return {cat: '', body: ''};
   const mat = phaseFilter < 0 ? 'todo el material' : `la tarea «${esc(phaseName(phaseFilter))}»`;
-  const base = `<i>N</i> = ${n} observaciones de ${mat}, registradas con un intervalo de ${S.interval} s`;
+  const base = `<i>N</i> = ${n} observaciones de ${mat}, registradas con un intervalo de ${fmtNum(S.interval)} s`;
   let t = 0, f = 0, cat = '', body = '';
   const c = catCounts(list);
 
+  if (shown('showCat')){
   cat += apaTable(++t, 'Distribución de las observaciones según la categoría de acción OWAS',
     [{t: 'Categoría'}, {t: 'Significado'}, {t: '<i>n</i>', n: 1}, {t: '%', n: 1}],
     [...CATS.map((k, i) => ({c: [`${i + 1}. ${k.t}`, k.d, c[i], fmtP(c[i] / n * 100)]})), {total: 1, c: ['Total', '', n, fmtP(100)]}],
     `${base}. Categorías según el método OWAS (Karhu et al., 1977).`);
   cat += apaFigure(++f, 'Porcentaje de observaciones en cada categoría de acción', figCategories(c, n),
     `${base}. El color indica la categoría de acción.`);
+  }
 
-  if (phaseFilter < 0 && S.phases.length > 1){
+  if (phaseFilter < 0 && shown('showTasks')){
+    cat += apaTable(++t, 'Frecuencia de observaciones por tarea',
+      [{t: 'Tarea'}, {t: 'Frecuencia (<i>n</i>)', n: 1}, {t: '% del total', n: 1}, {t: 'Tiempo estimado', n: 1}],
+      [...S.phases.map((p, i) => { const f = S.obs.filter(o => o.p === i).length; return {c: [esc(phaseName(i)), f, fmtP(f / n * 100), fmtDur(f * S.interval)]}; }),
+        {total: 1, c: ['Total', n, fmtP(100), fmtDur(n * S.interval)]}],
+      `${esc(planText())} El tiempo estimado es la frecuencia por el intervalo entre observaciones.`);
+  }
+  if (phaseFilter < 0 && S.phases.length > 1 && shown('showTasks')){
     cat += apaTable(++t, 'Distribución de las categorías de acción por tarea',
       [{t: 'Tarea'}, {t: '<i>n</i>', n: 1}, {t: '% del total', n: 1}, ...[1, 2, 3, 4].map(k => ({t: `Cat. ${k} (%)`, n: 1}))],
       S.phases.map((p, i) => { const l = S.obs.filter(o => o.p === i), m = l.length, cc = catCounts(l);
@@ -2531,7 +2637,7 @@ function apaSections(){
   const freq = new Map(); list.forEach(o => { const k = codeStr(o); freq.set(k, (freq.get(k) || 0) + 1); });
   const codes = [...freq.entries()].map(([k, m]) => ({k, m, cat: catOf({b: +k[0], a: +k[1], l: +k[2], w: +k[3]})}))
     .sort((x, y) => y.cat - x.cat || y.m - x.m || x.k.localeCompare(y.k));
-  cat += apaTable(++t, 'Frecuencia de los códigos de postura observados',
+  if (shown('showCodes')) cat += apaTable(++t, 'Frecuencia de los códigos de postura observados',
     [{t: 'Código'}, {t: 'Espalda'}, {t: 'Brazos'}, {t: 'Piernas'}, {t: 'Carga'}, {t: 'Categoría', n: 1}, {t: '<i>n</i>', n: 1}, {t: '%', n: 1}],
     codes.map(r => ({c: [r.k, ...PARTS.map((p, i) => p.opts[+r.k[i] - 1]), r.cat, r.m, fmtP(r.m / n * 100)]})),
     `${base}. Cada código combina los dígitos de espalda, brazos, piernas y carga. Ordenado de mayor a menor categoría y frecuencia.`);
@@ -2541,10 +2647,10 @@ function apaSections(){
     const m = list.filter(o => o[p.key] === i + 1).length, pc = m / n * 100;
     rows.push({c: [i ? '' : p.name, i + 1, name, m, fmtP(pc), BODY[p.key] ? (m ? bodyCat(p.key, i, pc) : '—') : '—']});
   }));
-  body += apaTable(++t, 'Frecuencia de cada postura por parte del cuerpo y categoría de acción correspondiente',
+  if (shown('showBody')) body += apaTable(++t, 'Frecuencia de cada postura por parte del cuerpo y categoría de acción correspondiente',
     [{t: 'Parte del cuerpo'}, {t: 'Código', n: 1}, {t: 'Postura'}, {t: '<i>n</i>', n: 1}, {t: '%', n: 1}, {t: 'Categoría', n: 1}],
     rows, `${base}. La categoría de cada postura depende del porcentaje del tiempo que se mantiene (Karhu et al., 1977). La carga no tiene clasificación por tiempo. — = no aplica o sin observaciones.`);
-  body += apaFigure(++f, 'Porcentaje del tiempo en cada postura de espalda, brazos, piernas y carga', figBody(list),
+  if (shown('showBody')) body += apaFigure(++f, 'Porcentaje del tiempo en cada postura de espalda, brazos, piernas y carga', figBody(list),
     `${base}. El color y la etiqueta indican la categoría de acción según el tiempo en la postura. Las barras grises corresponden a la carga, que no tiene esa clasificación.`);
 
   const d = list.filter(o => o.det);
@@ -2572,7 +2678,7 @@ function apaCard(part){
   const html = apaSections()[part];
   if (!html) return '';
   return `<div class="card"><h2>${ico('list')}Tablas y figuras en formato APA</h2>
-    <p class="small muted" style="margin-top:-6px">Según la 7.ª edición de las normas APA. Se incluyen en la impresión con la casilla «Incluir tablas y figuras APA al imprimir».</p>
+    <p class="small muted" style="margin-top:-6px">Según la 7.ª edición de las normas APA. Se muestran y se incluyen en el informe según «Ajustes de resultados».</p>
     ${html}${apaRefs()}</div>`;
 }
 
@@ -2603,7 +2709,7 @@ $('#clearAll').onclick = () => { if (S.obs.length && confirm(`¿Eliminar las ${S
 async function doPrint(){
   const title = `<h1>OWAS Web — ${esc(fileName || 'Estudio OWAS')}</h1><p class="muted" style="margin-top:0">${esc(S.bg[2]||'')}</p>`;
   const apa = $('#printApa').checked ? apaSections() : null;
-  $('#print').innerHTML = title + ($('#printBg').checked ? bgBlock() : '') + resultsHTML(false, $('#printGuide').checked) + bodyHTML() +
+  $('#print').innerHTML = title + ($('#printBg').checked ? bgBlock() : '') + resultsHTML(false, $('#printGuide').checked) + (shown('showBody') ? bodyHTML() : '') +
     (apa && (apa.cat || apa.body) ? `<div class="card"><h2>Tablas y figuras</h2>${apa.cat}${apa.body}${apaRefs()}</div>` : '') +
     ($('#printImg').checked ? galleryHTML(filtered(), false, $('#printImgSize').value === 'big') : '');
   // Las imágenes deben estar cargadas y decodificadas antes de abrir el diálogo de impresión
@@ -2613,7 +2719,7 @@ async function doPrint(){
 }
 function copyResults(){
   const list = filtered(), n = list.length, c = catCounts(list);
-  const lines = ['OWAS Web — ' + (fileName || 'Estudio OWAS'), ...BG_LABELS.map((l,i) => `${l}: ${S.bg[i]||''}`), `Intervalo: ${S.interval} s`,
+  const lines = ['OWAS Web — ' + (fileName || 'Estudio OWAS'), ...BG_LABELS.map((l,i) => `${l}: ${S.bg[i]||''}`), `Intervalo: ${fmtNum(S.interval)} s`,
     `Material: ${phaseFilter < 0 ? 'Todo el material' : phaseName(phaseFilter)}`, `Observaciones: ${n}`, '',
     'Categoría\tObs.\t%', ...c.map((x,i) => `${i+1} ${CATS[i].t}\t${x}\t${n ? (x/n*100).toFixed(1) : 0}`), '',
     'Parte\tPostura\tObs.\t%\tCategoría'];
@@ -3222,12 +3328,12 @@ async function exportWord(){
     const addPart = (type, b64) => { const loc = `file:///C:/owasweb/img${parts.length + 1}.${type === 'image/png' ? 'png' : 'jpg'}`; parts.push({loc, type, b64}); return loc; };
     const list = filtered(), apa = apaSections();
     let html = `<h1>OWAS Web — ${esc(fileName || 'Estudio OWAS')}</h1><p>${esc(S.bg[2] || '')}</p>`;
-    if ($('#printBg').checked) html += `<h2>Información general</h2><table class="bg">` + BG_LABELS.map((l, i) => `<tr><th>${l}</th><td>${esc(S.bg[i] || '')}</td></tr>`).join('') + `<tr><th>Intervalo de tiempo</th><td>${S.interval} s</td></tr></table>`;
+    if ($('#printBg').checked) html += `<h2>Información general</h2><table class="bg">` + BG_LABELS.map((l, i) => `<tr><th>${l}</th><td>${esc(S.bg[i] || '')}</td></tr>`).join('') + `<tr><th>Intervalo de tiempo</th><td>${fmtNum(S.interval)} s</td></tr></table>`;
     if ($('#printGuide').checked){
       const g = document.createElement('div'); g.innerHTML = guideHTML();
       html += `<h2>Cómo interpretar las categorías de acción OWAS</h2>${figGuide()}<ul>${g.querySelector('.guide-list').innerHTML}</ul><p>${g.querySelector('p').innerHTML}</p>`;
     }
-    if (apa.cat || apa.body) html += `<h2>Tablas y figuras</h2>${apa.cat}${apa.body}${apaRefs()}`;
+    if (shown('printApa') && (apa.cat || apa.body)) html += `<h2>Tablas y figuras</h2>${apa.cat}${apa.body}${apaRefs()}`;
     // Documento inerte: el navegador no intenta cargar las rutas de imagen del .doc
     const inert = document.implementation.createHTMLDocument(''), box = inert.createElement('div'); box.innerHTML = html;
     // Bordes que Word no aplica con :last-child
@@ -3267,19 +3373,31 @@ async function exportWord(){
     console.error(e); $('#expStatus').innerHTML = '<span class="warn-box">No se pudo crear el documento de Word.</span>';
   }finally{ btn.disabled = false; }
 }
-$('#showAgree').addEventListener('change', () => { renderResults(); renderBodyParts(); });
+// Ajustes de resultados: qué se muestra y se incluye en el informe; se recuerdan en este navegador
+const RES_IDS = ['printBg', 'showCat', 'printGuide', 'showTasks', 'showCodes', 'showBody', 'showAgree', 'printImg', 'printApa'];
+try{
+  const r = JSON.parse(localStorage.getItem('owasweb.results') || '{}');
+  RES_IDS.forEach(id => { if (typeof r[id] === 'boolean') $('#' + id).checked = r[id]; });
+  if (r.printImgSize) $('#printImgSize').value = r.printImgSize;
+}catch(e){}
+document.addEventListener('change', e => {
+  const id = e.target.id;
+  if (!RES_IDS.includes(id) && id !== 'printImgSize') return;
+  try{ const r = {printImgSize: $('#printImgSize').value}; RES_IDS.forEach(k => { r[k] = $('#' + k).checked; }); localStorage.setItem('owasweb.results', JSON.stringify(r)); }catch(err){}
+  renderResults(); renderBodyParts();
+});
 
 // ---- Ayuda ----
 $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <p>OWAS (<i>Ovako Working posture Analysing System</i>) clasifica las posturas de trabajo mediante un código de cuatro dígitos: espalda, brazos, piernas y carga. Cada combinación tiene una categoría de acción del 1 al 4.</p>
 <h3>Pasos</h3>
-<ol><li>En <b>1 · Proyecto</b>, rellene la información del estudio, el intervalo de observación y las tareas.</li>
+<ol><li>En <b>1 · Proyecto</b>, rellene la información del estudio, el intervalo de observación y las tareas. El intervalo se puede indicar en segundos o como <b>número total de observaciones</b>: en ese caso se calcula a partir de la duración del video (por ejemplo, 400 observaciones en 10 minutos: una cada 1,5 s), y «Muestra siguiente» recorre exactamente ese número de muestras. En «Resultados», la tabla de frecuencias por tarea muestra cuántas observaciones hubo de cada tarea, su porcentaje del total y su tiempo estimado.</li>
 <li>En <b>2 · Observación</b>, elija el modo:
   <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar postura</b>.</li>
   <li><b>Video</b>: cargue un video MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado. Con <b>Unir videos</b> se juntan varios videos cortos en uno, en orden de nombre de archivo: si tienen el mismo formato (lo normal si son de la misma cámara) se unen al instante y sin perder calidad; si no, se vuelven a codificar. El video unido no tiene sonido y se guarda con «Guardar el video unido», para volver a abrir el proyecto con él.</li>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
-<li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
-<li>Consulte <b>3 · Resultados</b>: categorías de acción, partes del cuerpo y tablas APA, que se actualizan solos al guardar cada postura. Puede filtrar por tarea.</li>
+<li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. Si no se detecta a nadie, se propone el código 1111 en la tarea «N/A» (se crea la primera vez y se puede renombrar): revíselo y pulse <b>Aceptar postura</b> si es correcto; al volver a detectar a una persona se recupera la tarea anterior. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
+<li>Consulte <b>3 · Resultados</b>: categorías de acción, partes del cuerpo y tablas APA, que se actualizan solos al guardar cada postura. Puede filtrar por tarea. En <b>Ajustes de resultados</b> se desmarcan los resultados que no se quieren mostrar ni incluir en el informe (impresión, PDF y Word).</li>
 <li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original, e <b>Imprimir</b> para imprimir o guardar en PDF.</li>
 <li>En <b>Exportar resultados</b>, las posturas detectadas también se pueden llevar a OpenSim (.trc y .mot) y a 3DSSPP, el programa de análisis biomecánico de la Universidad de Míchigan: como archivo de ubicaciones <b>.sloc</b> (<i>Animation → Import LOC File</i>), como <b>archivo de lote</b> que analiza cada observación con la persona y la carga indicadas (<i>Task Input → Run Batch File</i>) o como <b>.c3d</b> con los 21 centros articulares que pide 3DSSPP (<i>Animation → Import C3D File</i>), que también abren OpenSim y otros programas. La carga de cada observación puede tomarse de su código OWAS. Se pueden exportar todas las observaciones, solo las marcadas con las casillas de la lista de observaciones o solo las de ciertas categorías de riesgo. La cabeza, C7/T1, el esternón, L5/S1 y el centro de agarre se estiman a partir de los puntos detectados: revise las posturas en 3DSSPP antes de usar sus resultados. 3DSSPP es software de la University of Michigan. OWAS Web no está afiliada a ella ni incluye 3DSSPP: los archivos siguen el formato de importación descrito en el manual de 3DSSPP 7.1, y su uso requiere la licencia correspondiente de 3DSSPP. C3D es un formato abierto (c3d.org).</li></ol>
 <h3>Categorías de acción</h3>
@@ -3315,7 +3433,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.28 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.30 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
