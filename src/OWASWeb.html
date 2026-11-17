@@ -2056,12 +2056,49 @@ function openViewer(i){
 }
 $('#viewClose').onclick = () => $('#viewer').close();
 const dataUrlBlob = u => { const [h, b64s] = u.split(','), bin = atob(b64s), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], {type: (h.match(/:(.*?);/) || [])[1] || 'image/jpeg'}); };
-$('#viewSave').onclick = () => { const o = S.obs[viewIdx]; if (o && o.img) downloadBlob(dataUrlBlob(o.img), `Observación ${viewIdx + 1} - ${codeStr(o)}.jpg`); };
-// Copiar: el portapapeles admite PNG, así que la imagen se convierte antes
+// Imagen para copiar o guardar: la de la observación con una franja debajo con su número, su código, su categoría de
+// riesgo, la postura y la tarea (los datos del visor, sin los de la detección automática)
+async function obsCard(i){
+  const o = S.obs[i], im = new Image(); im.src = o.img; await im.decode();
+  const w = Math.max(480, im.naturalWidth), k = catOf(o), code = codeStr(o);
+  const fs = Math.max(13, Math.round(w / 48)), pad = Math.round(fs * 0.9), lh = Math.round(fs * 1.35), font = (b, s = fs) => `${b ? '700 ' : ''}${s}px Arial, Helvetica, sans-serif`;
+  const m = document.createElement('canvas').getContext('2d');
+  const wrap = (text, f) => { m.font = f; const out = []; let cur = ''; for (const word of text.split(' ')){ const s = cur ? cur + ' ' + word : word; if (m.measureText(s).width > w - pad * 2 && cur){ out.push(cur); cur = word; } else cur = s; } if (cur) out.push(cur); return out; };
+  const desc = wrap(describe(code), font(false, Math.round(fs * 0.9)));
+  const task = wrap(`Tarea: ${phaseName(o.p)}` + (o.src ? ` · ${o.src}` : '') + (o.t != null ? ` · ${fmtTime(o.t)}` : ''), font(false, Math.round(fs * 0.9)));
+  const badge = Math.round(fs * 1.7), head = Math.max(badge, lh);
+  const H = pad + head + Math.round(fs * 0.5) + (desc.length + task.length) * Math.round(lh * 0.9) + pad;
+  const c = document.createElement('canvas'); c.width = w; c.height = im.naturalHeight + H;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, c.height);
+  g.drawImage(im, Math.round((w - im.naturalWidth) / 2), 0);
+  let y = im.naturalHeight + pad;
+  // Recuadro de color con el número de la categoría, como en el visor
+  g.fillStyle = CAT_HEX[k - 1]; g.fillRect(pad, y, badge, badge);
+  g.fillStyle = k === 1 || k === 4 ? '#ffffff' : '#000000'; g.font = font(true, Math.round(fs * 1.1)); g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(String(k), pad + badge / 2, y + badge / 2);
+  g.textAlign = 'left'; g.fillStyle = '#111111'; g.font = font(true);
+  const title = `Observación ${i + 1} · ${code} · Categoría ${k}: ${CATS[k - 1].t}`;
+  g.fillText(title, pad + badge + Math.round(fs * 0.6), y + badge / 2);
+  y += head + Math.round(fs * 0.5);
+  g.textBaseline = 'top';
+  g.font = font(false, Math.round(fs * 0.9)); g.fillStyle = '#333333';
+  for (const line of desc){ g.fillText(line, pad, y); y += Math.round(lh * 0.9); }
+  g.fillStyle = '#555555';
+  for (const line of task){ g.fillText(line, pad, y); y += Math.round(lh * 0.9); }
+  return c;
+}
+const obsFileName = (i, ext) => { const o = S.obs[i]; return `Observación ${i + 1} - ${codeStr(o)} - Categoría ${catOf(o)} - ${phaseName(o.p)}`.replace(/[\/:*?"<>|]+/g, '-') + ext; };
+$('#viewSave').onclick = async () => {
+  const i = viewIdx, o = S.obs[i]; if (!o || !o.img) return;
+  try{ const c = await obsCard(i); downloadBlob(await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92)), obsFileName(i, '.jpg')); $('#viewMsg').textContent = 'Imagen guardada con su código, su categoría y su tarea.'; }
+  catch(e){ console.error(e); downloadBlob(dataUrlBlob(o.img), obsFileName(i, '.jpg')); }
+};
+// Copiar: el portapapeles admite PNG
 $('#viewCopy').onclick = async () => {
-  const o = S.obs[viewIdx]; if (!o || !o.img) return;
-  const png = (async () => { const im = new Image(); im.src = o.img; await im.decode(); const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); return new Promise(r => c.toBlob(r, 'image/png')); })();
-  try{ await navigator.clipboard.write([new ClipboardItem({'image/png': png})]); $('#viewMsg').textContent = 'Imagen copiada: péguela en Word, PowerPoint u otro programa.'; }
+  const i = viewIdx, o = S.obs[i]; if (!o || !o.img) return;
+  const png = obsCard(i).then(c => new Promise(r => c.toBlob(r, 'image/png')));
+  try{ await navigator.clipboard.write([new ClipboardItem({'image/png': png})]); $('#viewMsg').textContent = 'Imagen copiada con su código, su categoría y su tarea: péguela en Word, PowerPoint u otro programa.'; }
   catch(e){ console.error(e); $('#viewMsg').textContent = 'Este navegador no deja copiar imágenes: use «Guardar imagen».'; }
 };
 $('#viewer').addEventListener('click', e => { if (e.target === $('#viewer')) $('#viewer').close(); });
@@ -3660,7 +3697,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
 <li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. Si no se detecta a nadie, se propone el código 1111 en la tarea «N/A» (se crea la primera vez y se puede renombrar): revíselo y pulse <b>Aceptar postura</b> si es correcto; al volver a detectar a una persona se recupera la tarea anterior. Si se detecta una postura falsa en una imagen sin personas, <b>No detectar</b> (tecla <span class="kbd">X</span>) la quita y hace la misma propuesta. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
 <li>Al volver a un fotograma o una foto ya registrados, sus códigos quedan bloqueados. El lápiz (tecla <span class="kbd">E</span>) los desbloquea para corregirlos: cámbielos y pulse <b>Guardar cambios</b>. La papelera (tecla <span class="kbd">Supr</span>) elimina la observación de ese fotograma o, si no hay ninguna, deshace la última. Los cambios se ven al momento en la barra de tiempo, la lista de observaciones y los resultados.</li>
-<li>Cada observación guarda cómo se detectó la postura (qué persona, de izquierda a derecha, si había varias; o si se marcó «No detectar»). <b>Actualizar imágenes</b>, en «Imágenes de las observaciones», vuelve a detectar y dibujar todas las imágenes con los ajustes actuales de detección, analizando a la misma persona; los códigos no cambian. Necesita los videos o las fotografías cargados. Al ampliar una imagen, <b>Copiar imagen</b> y <b>Guardar imagen</b> la llevan a otro programa o a un archivo .jpg.</li>
+<li>Cada observación guarda cómo se detectó la postura (qué persona, de izquierda a derecha, si había varias; o si se marcó «No detectar»). <b>Actualizar imágenes</b>, en «Imágenes de las observaciones», vuelve a detectar y dibujar todas las imágenes con los ajustes actuales de detección, analizando a la misma persona; los códigos no cambian. Necesita los videos o las fotografías cargados. Al ampliar una imagen, <b>Copiar imagen</b> y <b>Guardar imagen</b> la llevan a otro programa o a un archivo .jpg, con una franja debajo con el número de la observación, su código, su categoría de riesgo, la postura y la tarea.</li>
 <li>Consulte <b>3 · Resultados</b>: categorías de acción, partes del cuerpo y tablas APA, que se actualizan solos al guardar cada postura. Puede filtrar por tarea. En <b>Ajustes de resultados</b> se desmarcan los resultados que no se quieren mostrar ni incluir en el informe (impresión, PDF y Word), y se eligen las categorías cuyas imágenes se muestran. Una imagen concreta se quita con la × que tiene encima o con la columna «Informe» de la lista de observaciones.</li>
 <li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original (o un proyecto .owsp con las imágenes), e <b>Imprimir</b> para imprimir o guardar en PDF. La primera vez, <b>Guardar</b> abre el explorador para elegir el nombre y la carpeta; después sobrescribe ese mismo archivo, con un aviso, sin volver a preguntar. <b>Guardar como</b> siempre abre el explorador. Las tareas no se pueden repetir: si dos tienen el mismo nombre, se avisa.</li>
 <li>En <b>Exportar resultados</b>, las posturas detectadas también se pueden llevar a OpenSim (.trc y .mot) y a 3DSSPP, el programa de análisis biomecánico de la Universidad de Míchigan: como archivo de ubicaciones <b>.sloc</b> (<i>Animation → Import LOC File</i>), como <b>archivo de lote</b> que analiza cada observación con la persona y la carga indicadas (<i>Task Input → Run Batch File</i>) o como <b>.c3d</b> con los 21 centros articulares que pide 3DSSPP (<i>Animation → Import C3D File</i>), que también abren OpenSim y otros programas. La carga de cada observación puede tomarse de su código OWAS. Se pueden exportar todas las observaciones, solo las marcadas con las casillas de la lista de observaciones o solo las de ciertas categorías de riesgo. La cabeza, C7/T1, el esternón, L5/S1 y el centro de agarre se estiman a partir de los puntos detectados: revise las posturas en 3DSSPP antes de usar sus resultados. 3DSSPP es software de la University of Michigan. OWAS Web no está afiliada a ella ni incluye 3DSSPP: los archivos siguen el formato de importación descrito en el manual de 3DSSPP 7.1, y su uso requiere la licencia correspondiente de 3DSSPP. C3D es un formato abierto (c3d.org).</li></ol>
@@ -3697,7 +3734,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.37 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.38 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
