@@ -235,6 +235,9 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .pl-x .ico{width:14px;height:14px}
 /* Quitar una imagen de los resultados y del informe */
 .gallery figure{position:relative}
+.refresh-box{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:10px 14px;max-width:min(560px,94vw)}
+.refresh-box[hidden]{display:none}
+.refresh-box progress{width:160px}
 .gallery .img-x{position:absolute;top:4px;right:4px;min-height:0;padding:2px;border-radius:6px;background:rgba(0,0,0,.55);color:#fff;border:0;cursor:pointer;display:flex}
 .gallery .img-x:hover{background:var(--danger)}
 .img-cats{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
@@ -467,8 +470,13 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   #print table{width:100%}
   #print table{font-size:13px}
   #print th,#print td{padding:4px 6px}
-  #print th,#print td.n{white-space:nowrap}
-  #print td .stack{min-width:70px}
+  /* Las cabeceras pueden ocupar dos líneas para que las tablas anchas (frecuencia por tarea) quepan en la hoja */
+  #print th{white-space:normal}
+  #print td.n{white-space:nowrap}
+  #print table{table-layout:auto;max-width:100%}
+  #print td .stack{min-width:40px}
+  #print .bar-col{min-width:50px;width:auto}
+  .refresh-box{display:none !important}
   .cats4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
   .bp-row,.scale{grid-template-columns:minmax(120px,1.2fr) 2fr auto;gap:8px}
   .bp-out,.scale .ph{min-width:90px}
@@ -790,10 +798,11 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   <p class="small" id="expStatus" role="status"></p>
   <div class="vctrl"><button class="btn" id="expClose" data-icon="close">Cerrar</button></div>
 </dialog>
+<div class="refresh-box" id="refreshBox" role="status" hidden><span id="refreshText"></span><progress id="refreshBar" max="1" value="0"></progress><button class="btn" id="refreshCancel" data-icon="close">Cancelar</button></div>
 <dialog id="viewer" aria-label="Imagen de la observación">
   <img id="viewImg" alt="">
   <div id="viewInfo"></div>
-  <div class="vctrl"><button class="btn" id="viewJump" data-icon="video">Ir a este momento del video</button><button class="btn" id="viewClose" data-icon="close">Cerrar</button></div>
+  <div class="vctrl"><button class="btn" id="viewCopy" data-icon="copy">Copiar imagen</button><button class="btn" id="viewSave" data-icon="download">Guardar imagen</button><button class="btn" id="viewJump" data-icon="video">Ir a este momento del video</button><button class="btn" id="viewClose" data-icon="close">Cerrar</button><span class="small muted" id="viewMsg" role="status"></span></div>
 </dialog>
 
 <script>
@@ -1350,12 +1359,29 @@ function renderDup(i){
   else if (i >= 0) $('#dupWarn').innerHTML = `<span class="warn-soft">${ico('lock')}${mode === 'video' ? 'Este fotograma ya está registrado' : 'Esta fotografía ya está registrada'} (observación ${i + 1}). Sus códigos están bloqueados. <button class="btn icon-only" data-editobs title="Editar esta observación (E)" aria-label="Editar la observación ${i + 1}">${ico('pencil')}</button></span>`;
 }
 // Añade una observación; en modo video o fotografías guarda también la imagen y su origen
-function addObs(code){
-  const {b, a, l, w, p} = code;
-  S.obs.push({b, a, l, w, p, ...captureMedia()});
-  obsChanged();
-  if (mode === 'video' && $('#vAuto').checked) gotoSample(1);
-  if (mode === 'photo' && $('#pAuto').checked) nextPendingPhoto();
+// Antes de guardar la imagen se buscan las caras de todas las personas, aunque no se haya detectado la postura
+let capturing = false;
+async function addObs(code){
+  if (capturing) return;
+  capturing = true;
+  try{
+    const {b, a, l, w, p} = code;
+    const faces = await facesForCapture();
+    S.obs.push({b, a, l, w, p, ...captureMedia(faces)});
+    obsChanged();
+    if (mode === 'video' && $('#vAuto').checked) gotoSample(1);
+    if (mode === 'photo' && $('#pAuto').checked) nextPendingPhoto();
+  }finally{ capturing = false; }
+}
+async function facesForCapture(){
+  if (mode === 'live' || !$('#blurFace').checked) return null;
+  const det = lastDet && lastDet.key === mediaKey() ? lastDet : null;
+  if (det && det.others) return [det.N, ...det.others];
+  try{
+    const lm = await loadPose();
+    if (mode === 'video' && !frameReady()) return [];
+    return detectPeople(lm, mediaEl()).map(q => q.N);
+  }catch(e){ console.error(e); return []; }
 }
 function accept(){
   if (locked || nextField() || sel.p < 0) return;
@@ -1545,7 +1571,7 @@ function grabFrame(src, det, faceDet){
   c.width = w; c.height = h + (sub ? sub.height : 0);
   const g = c.getContext('2d');
   g.drawImage(src, 0, 0, w, h);
-  if (faceDet) [faceDet.N, ...(faceDet.others || [])].forEach(N => pixelateFace(g, N, w, h));
+  if (faceDet) faceDet.forEach(N => pixelateFace(g, N, w, h));
   if (det){
     drawSkeleton(g, det.N, w, h, w / 640);
     if ($('#showAngles').checked) drawAngles(g, det, w, h, w / 640);
@@ -1587,11 +1613,15 @@ function drawSubtitles(g, sub, w, top){
   });
   g.restore();
 }
-function captureMedia(){
-  const det = lastDet && lastDet.key === mediaKey() ? lastDet : null;
+// faces: puntos de la cara de todas las personas de la imagen, para difuminarlas (null si el difuminado está desactivado)
+function captureMedia(faces = null){
+  const key = mediaKey(), det = lastDet && lastDet.key === key ? lastDet : null;
   const mm = v => Math.round(v * 1000) / 1000;
-  const extra = det ? {det: det.code, dm: det.m, w3: det.W.map(q => [mm(q.x), mm(q.y), mm(q.z)])} : {}, bake = det && $('#bakeSkel').checked ? det : null;
-  const face = det && $('#blurFace').checked ? det : null;
+  // Cómo se detectó: persona k de n (de izquierda a derecha) y su centro, para repetirlo igual al actualizar la imagen
+  const dinfo = det ? {how: 'auto', n: det.pn || 1, k: det.pk || 0, c: det.pc ? [mm(det.pc.x), mm(det.pc.y)] : null}
+    : {how: detUser === key ? 'user' : detNone === key ? 'none' : 'off'};
+  const extra = det ? {det: det.code, dm: det.m, w3: det.W.map(q => [mm(q.x), mm(q.y), mm(q.z)]), dinfo} : {dinfo}, bake = det && $('#bakeSkel').checked ? det : null;
+  const face = faces;
   if (mode === 'video' && vid.src && vid.readyState >= 2){
     const img = grabFrame(vid, bake, face);
     return img ? {img, t: Math.round(vid.currentTime * 1000) / 1000, src: videoName, ...extra} : {};
@@ -2017,13 +2047,27 @@ function openViewer(i){
   $('#viewImg').src = o.img; $('#viewImg').alt = `Observación ${i+1}`;
   $('#viewInfo').innerHTML = `<p style="margin:0 0 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>Observación ${i+1} · ${codeStr(o)}</b>${catBadge(catOf(o))}</p>
     <p class="small muted" style="margin:0">${esc(describe(codeStr(o)))}<br>${esc(phaseName(o.p))}${o.src ? ' · ' + esc(o.src) : ''}${o.t != null ? ' · ' + fmtTime(o.t) : ''}</p>${o.det ? `<p class="small" style="margin:6px 0 0">Propuesta automática: <b>${o.det.split('').join(' ')}</b>${detTag(o)}</p>` : ''}${o.det && o.dm ? `<p class="small muted" style="margin:2px 0 0">${detLines(o.det, o.dm).map(esc).join('<br>')}</p>` : ''}`;
+  $('#viewMsg').textContent = '';
+  const di = o.dinfo, how = !di ? '' : di.how === 'auto' ? (di.n > 1 ? `Detección automática: persona ${di.k + 1} de ${di.n}, de izquierda a derecha.` : 'Detección automática: una persona.')
+    : di.how === 'user' ? 'Marcada sin persona («No detectar»).' : di.how === 'none' ? 'La detección no encontró a ninguna persona.' : 'Sin detección automática.';
+  if (how) $('#viewInfo').insertAdjacentHTML('beforeend', `<p class="small muted" style="margin:4px 0 0">${how}</p>`);
   $('#viewJump').hidden = !(o.t != null && (o.src === videoName && vid.src || playlist.some(q => q.file.name === o.src)));
   $('#viewer').showModal();
 }
 $('#viewClose').onclick = () => $('#viewer').close();
+const dataUrlBlob = u => { const [h, b64s] = u.split(','), bin = atob(b64s), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], {type: (h.match(/:(.*?);/) || [])[1] || 'image/jpeg'}); };
+$('#viewSave').onclick = () => { const o = S.obs[viewIdx]; if (o && o.img) downloadBlob(dataUrlBlob(o.img), `Observación ${viewIdx + 1} - ${codeStr(o)}.jpg`); };
+// Copiar: el portapapeles admite PNG, así que la imagen se convierte antes
+$('#viewCopy').onclick = async () => {
+  const o = S.obs[viewIdx]; if (!o || !o.img) return;
+  const png = (async () => { const im = new Image(); im.src = o.img; await im.decode(); const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); return new Promise(r => c.toBlob(r, 'image/png')); })();
+  try{ await navigator.clipboard.write([new ClipboardItem({'image/png': png})]); $('#viewMsg').textContent = 'Imagen copiada: péguela en Word, PowerPoint u otro programa.'; }
+  catch(e){ console.error(e); $('#viewMsg').textContent = 'Este navegador no deja copiar imágenes: use «Guardar imagen».'; }
+};
 $('#viewer').addEventListener('click', e => { if (e.target === $('#viewer')) $('#viewer').close(); });
 $('#viewJump').onclick = () => { const i = viewIdx; $('#viewer').close(); showTab('observar'); goToObs(i); };
 document.addEventListener('click', e => {
+  if (e.target.closest('[data-refreshimgs]')){ refreshObsImages(); return; }
   const x = e.target.closest('[data-norep]'), all = e.target.closest('[data-repall]');
   if (x){ S.obs[+x.dataset.norep].noRep = true; changed(); clearTimeout(refreshTimer); renderResults(); renderList(); return; }
   if (all){ S.obs.forEach(o => { delete o.noRep; }); changed(); clearTimeout(refreshTimer); renderResults(); renderList(); return; }
@@ -2059,7 +2103,7 @@ function loadPose(){
 }
 
 // Umbrales ajustables (se recuerdan en este navegador)
-const STYLE_DEFAULT = {skelColor: '#ff0000', skelWidth: 1, angColor: '#ffd54a', angSize: 8, arcColor: '#4cd964', arcSize: 8,
+const STYLE_DEFAULT = {skelColor: '#7fd1ff', skelWidth: 3, angColor: '#ffd54a', angSize: 10, arcColor: '#4cd964', arcSize: 8,
   // Partes del cuerpo que se dibujan (esqueleto y ángulos); por defecto, todas
   // sk: esqueleto, an: compás del ángulo, tx: texto del ángulo
   skNeck: true, anNeck: true, txNeck: true, skTrunk: true, anTrunk: true, txTrunk: true, skArms: true, anArms: true, txArms: true,
@@ -2071,8 +2115,8 @@ let CFG = {...CFG_DEFAULT};
 try{ Object.assign(CFG, JSON.parse(localStorage.getItem('winowas.detect') || '{}')); }catch(e){}
 const showCfg = () => $$('[data-cfg]').forEach(el => { const k = el.dataset.cfg; if (el.type === 'checkbox') el.checked = !!CFG[k]; else el.value = CFG[k]; });
 const saveCfg = () => { try{ localStorage.setItem('winowas.detect', JSON.stringify(CFG)); }catch(err){} };
-// Versión 4.33: nuevo aspecto predeterminado del esqueleto (también para quien ya tenía ajustes guardados)
-if (CFG.styleV !== 2){ Object.assign(CFG, {skelColor: STYLE_DEFAULT.skelColor, skelWidth: STYLE_DEFAULT.skelWidth, angSize: STYLE_DEFAULT.angSize, arcSize: STYLE_DEFAULT.arcSize}); CFG.styleV = 2; saveCfg(); }
+// Versión 4.37: aspecto predeterminado del esqueleto (también para quien ya tenía ajustes guardados)
+if (CFG.styleV !== 3){ Object.assign(CFG, {skelColor: STYLE_DEFAULT.skelColor, skelWidth: STYLE_DEFAULT.skelWidth, angSize: STYLE_DEFAULT.angSize, arcSize: STYLE_DEFAULT.arcSize}); CFG.styleV = 3; saveCfg(); }
 // Un cambio de color o tamaño se ve al instante en el esqueleto de la pantalla
 const redrawSkeleton = () => { if (lastDet && lastDet.key === mediaKey()) renderOverlay(lastDet); };
 showCfg();
@@ -2415,7 +2459,7 @@ async function detectPose(){
       if (sets.length){ N = averageLandmarks(sets.map(x => x[0])); W = averageLandmarks(sets.map(x => x[1])); used = sets.length; }
     }
     if (!N){
-      lastDet = null; clearOverlay();
+      lastDet = null; clearOverlay(); detNone = key;
       const na = proposeNA();
       setDetectStatus(na ? `<span class="warn">No se detectó ninguna persona: se propone 1111 en la tarea «${esc(phaseName(S.naTask))}». Revíselo y pulse «Aceptar postura» si es correcto.</span>`
         : '<span class="warn">No se detectó ninguna persona en esta imagen.</span>');
@@ -2443,7 +2487,9 @@ async function detectPose(){
     if (r.m.ankleL != null){ dm.ankleL = rd(r.m.ankleL); dm.ankleR = rd(r.m.ankleR); }
     if (r.m.neck != null) dm.neck = rd(r.m.neck);
     if (r.m.walk != null) dm.walk = rd(r.m.walk);
-    lastDet = {key, N: drawN || N, W, code: `${r.b}${r.a}${r.l || 0}`, m: dm, others};
+    // Persona analizada: su número de izquierda a derecha entre todas las detectadas, y su centro
+    const pc = poseCenter(drawN || N), xs = people.map(q => poseCenter(q.N).x).sort((x, y) => x - y);
+    lastDet = {key, N: drawN || N, W, code: `${r.b}${r.a}${r.l || 0}`, m: dm, others, pn: Math.max(1, people.length), pk: Math.max(0, xs.indexOf(people[k0] ? poseCenter(people[k0].N).x : pc.x)), pc};
     follow = poseCenter(drawN || N);
     // No se sobrescriben las partes que el usuario ya eligió a mano ni las de un fotograma registrado
     // (se mira el fotograma actual, porque «locked» puede ser aún el del fotograma anterior)
@@ -2478,9 +2524,11 @@ function renderDetWarn(){
 $('#detectBtn').onclick = detectPose;
 $('#detectOther').onclick = detectOther;
 // «No detectar»: la postura detectada es falsa (no hay nadie). Se quita el esqueleto y se propone 1111 en la tarea N/A
+// Fotograma o foto en que la detección no encontró a nadie, o que se marcó con «No detectar»
+let detNone = '', detUser = '';
 function noDetect(){
   if (mode === 'live') return;
-  lastDet = null; clearOverlay();
+  lastDet = null; clearOverlay(); detUser = mediaKey();
   if (proposeNA()) setDetectStatus(`<span class="warn">Sin persona: se propone 1111 en la tarea «${esc(phaseName(S.naTask))}». Revíselo y pulse «Aceptar postura» si es correcto.</span>`);
   else setDetectStatus('Este fotograma ya está registrado.');
 }
@@ -2493,7 +2541,7 @@ vid.addEventListener('play', () => { clearOverlay(); setDetectStatus(''); });
 // espera un instante para no detectar en cada paso cuando se avanza rápido
 let autoPending = false, autoTimer = null;
 function scheduleAutoDetect(){
-  if (!$('#autoDetect').checked || mode !== 'video' || !vid.src || detecting) return;
+  if (!$('#autoDetect').checked || mode !== 'video' || !vid.src || detecting || refreshing) return;
   clearTimeout(autoTimer);
   autoTimer = setTimeout(() => { if (vid.paused && !vid.seeking && !detecting) detectPose(); }, 250);
 }
@@ -2501,8 +2549,69 @@ vid.addEventListener('seeked', () => { autoPending = false; if (vid.paused && !d
 vid.addEventListener('pause', () => { if (!detecting && !vid.seeking) scheduleAutoDetect(); });
 // En un fotograma o una foto ya registrados también se detecta, para ver el esqueleto y los ángulos al revisarlos
 // (sus códigos siguen bloqueados). Primera muestra: al terminar de cargar un video nuevo
-vid.addEventListener('loadeddata', () => { if ($('#autoDetect').checked && mode === 'video' && !detecting) detectPose(); });
-$('#photo').addEventListener('load', () => { clearOverlay(); setDetectStatus(''); if ($('#autoDetect').checked && mode === 'photo') detectPose(); });
+vid.addEventListener('loadeddata', () => { if ($('#autoDetect').checked && mode === 'video' && !detecting && !refreshing) detectPose(); });
+$('#photo').addEventListener('load', () => { clearOverlay(); setDetectStatus(''); if ($('#autoDetect').checked && mode === 'photo' && !refreshing) detectPose(); });
+
+// ---- Actualizar las imágenes de todas las observaciones ----
+// Vuelve a cada fotograma o fotografía, detecta la postura como se hizo al registrarla (la misma persona, o ninguna si se
+// marcó «No detectar») y vuelve a dibujar la imagen con los ajustes actuales. Los códigos OWAS no cambian
+let refreshing = false, refreshCancel = false;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const obsMediaOk = o => o.src && (o.t != null ? (o.src === videoName && vid.src) || playlist.some(q => q.file.name === o.src) : photos.some(ph => ph.name === o.src));
+async function showObsMedia(o){
+  if (o.t != null){
+    if (mode !== 'video') setMode('video');
+    if (o.src !== videoName){
+      const k = playlist.findIndex(q => q.file.name === o.src); if (k < 0) return false;
+      const ready = new Promise(r => vid.addEventListener('loadeddata', r, {once: true}));
+      switchVideo(k, o.t); await Promise.race([ready, sleep(8000)]);
+    }
+    await seekTo(o.t);
+    for (let j = 0; j < 40 && !frameReady(); j++) await sleep(100);
+    return frameReady();
+  }
+  const k = photos.findIndex(ph => ph.name === o.src); if (k < 0) return false;
+  if (mode !== 'photo') setMode('photo');
+  const im = $('#photo');
+  if (pi !== k || !im.complete || !im.naturalWidth){ const ready = new Promise(r => im.addEventListener('load', r, {once: true})); showPhoto(k); await Promise.race([ready, sleep(8000)]); }
+  return im.complete && im.naturalWidth > 0;
+}
+async function refreshObsImages(){
+  if (refreshing || detecting) return;
+  const all = S.obs.filter(o => o.src), list = all.filter(obsMediaOk), missing = all.length - list.length;
+  if (!list.length){ alert(all.length ? 'Cargue los videos o las fotografías de las observaciones para poder actualizar sus imágenes.' : 'No hay observaciones con imagen de un video o una fotografía.'); return; }
+  if (!confirm(`Se volverá a detectar la postura y a dibujar la imagen de ${list.length === 1 ? '1 observación' : list.length + ' observaciones'} con los ajustes actuales de detección (esqueleto, ángulos, subtítulos y difuminado de los rostros). Se analiza la misma persona que al registrarla. Los códigos OWAS no cambian.` +
+    (missing ? `\n\n${missing === 1 ? '1 observación no se actualizará' : missing + ' observaciones no se actualizarán'} porque su video o su fotografía no están cargados.` : '') + '\n\n¿Continuar?')) return;
+  const back = {mode, vi, t: vid.currentTime, pi, follow};
+  refreshing = true; refreshCancel = false; vid.pause();
+  const box = $('#refreshBox'); box.hidden = false;
+  let done = 0, failed = 0;
+  try{
+    for (const o of list){
+      if (refreshCancel) break;
+      $('#refreshText').textContent = `Actualizando las imágenes: ${done + 1} de ${list.length}…`; $('#refreshBar').value = done / list.length;
+      if (!(await showObsMedia(o))){ failed++; done++; continue; }
+      const di = o.dinfo || {};
+      if (di.how === 'user'){ lastDet = null; clearOverlay(); detUser = mediaKey(); }
+      else { follow = di.c ? {x: di.c[0], y: di.c[1]} : null; await detectPose(); }
+      const cap = captureMedia(await facesForCapture());
+      if (!cap.img){ failed++; done++; continue; }
+      o.img = cap.img; o.dinfo = cap.dinfo;
+      if (cap.det){ o.det = cap.det; o.dm = cap.dm; o.w3 = cap.w3; } else { delete o.det; delete o.dm; delete o.w3; }
+      done++;
+    }
+  }catch(e){ console.error(e); }
+  finally{
+    refreshing = false; box.hidden = true; follow = back.follow;
+    setMode(back.mode);
+    if (back.mode === 'video' && playlist.length){ if (vi !== back.vi) switchVideo(back.vi, back.t); else setVideoTime(back.t); }
+    if (back.mode === 'photo' && photos.length) showPhoto(back.pi);
+    obsChanged();
+    setDetectStatus('');
+    alert((refreshCancel ? 'Actualización cancelada. ' : '') + `Se actualizaron ${done - failed} imágenes.` + (failed ? ` ${failed} no se pudieron actualizar.` : '') + (missing ? ` ${missing} no se actualizaron porque su video o su fotografía no están cargados.` : ''));
+  }
+}
+$('#refreshCancel').onclick = () => { refreshCancel = true; };
 window.addEventListener('resize', () => { if (lastDet && lastDet.key === mediaKey()) renderOverlay(lastDet); renderMarks(); });
 for (const id of ['#showSubs', '#showAngles']) $(id).addEventListener('change', () => { if (lastDet && lastDet.key === mediaKey()) renderOverlay(lastDet); });
 
@@ -2587,7 +2696,8 @@ function galleryHTML(list, lazy = true, big = false){
   const hid = list.filter(o => o.img && !repImg(o)).length, quit = list.filter(o => o.img && o.noRep).length;
   const note = lazy && hid ? `<p class="small muted">${hid === 1 ? '1 imagen no se muestra' : hid + ' imágenes no se muestran'} (filtro por categoría en «Ajustes de resultados» o quitadas una por una).${quit ? ` <button class="btn" data-repall>${ico('undo')}Volver a incluir las ${quit} quitadas</button>` : ''}</p>` : '';
   if (!items.length) return note ? `<div class="card"><h2>${ico('image')}Imágenes de las observaciones</h2>${note}</div>` : '';
-  return `<div class="card"><h2>${ico('image')}Imágenes de las observaciones</h2><p class="small muted" style="margin-top:-6px">${items.length === 1 ? "1 imagen." : items.length + " imágenes, ordenadas de mayor a menor riesgo."}</p>${note}<div class="gallery${big ? ' big' : ''}">` +
+  const upd = lazy ? `<div class="vctrl" style="margin:-4px 0 8px"><button class="btn" data-refreshimgs title="Volver a detectar y dibujar todas las imágenes con los ajustes actuales de detección">${ico('repeat')}Actualizar imágenes</button></div>` : '';
+  return `<div class="card"><h2>${ico('image')}Imágenes de las observaciones</h2>${upd}<p class="small muted" style="margin-top:-6px">${items.length === 1 ? "1 imagen." : items.length + " imágenes, ordenadas de mayor a menor riesgo."}</p>${note}<div class="gallery${big ? ' big' : ''}">` +
     items.map(([o, i]) => `<figure>${lazy ? `<button class="img-x" data-norep="${i}" title="Quitar esta imagen de los resultados y del informe" aria-label="Quitar la imagen de la observación ${i+1} del informe">${ico('close')}</button>` : ''}<button data-view="${i}" aria-label="Ampliar la imagen de la observación ${i+1}"><img src="${o.img}" alt=""${lazy ? ' loading="lazy"' : ''}></button>
       <figcaption>${catBadge(catOf(o), false)}<b>${codeStr(o)}</b><span class="muted">Obs. ${i+1} · ${esc(phaseName(o.p))}${o.t != null ? ' · ' + fmtTime(o.t) : ''}</span>${big ? `<span class="big-desc">${esc(describe(codeStr(o)))}</span>` : ''}${o.det && o.dm ? `<span class="det-cap">Detección automática: ${esc(detLines(o.det, o.dm).join(' · '))}${detTag(o)}</span>` : ''}</figcaption></figure>`).join('') + '</div></div>';
 }
@@ -3550,6 +3660,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
 <li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. Si no se detecta a nadie, se propone el código 1111 en la tarea «N/A» (se crea la primera vez y se puede renombrar): revíselo y pulse <b>Aceptar postura</b> si es correcto; al volver a detectar a una persona se recupera la tarea anterior. Si se detecta una postura falsa en una imagen sin personas, <b>No detectar</b> (tecla <span class="kbd">X</span>) la quita y hace la misma propuesta. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
 <li>Al volver a un fotograma o una foto ya registrados, sus códigos quedan bloqueados. El lápiz (tecla <span class="kbd">E</span>) los desbloquea para corregirlos: cámbielos y pulse <b>Guardar cambios</b>. La papelera (tecla <span class="kbd">Supr</span>) elimina la observación de ese fotograma o, si no hay ninguna, deshace la última. Los cambios se ven al momento en la barra de tiempo, la lista de observaciones y los resultados.</li>
+<li>Cada observación guarda cómo se detectó la postura (qué persona, de izquierda a derecha, si había varias; o si se marcó «No detectar»). <b>Actualizar imágenes</b>, en «Imágenes de las observaciones», vuelve a detectar y dibujar todas las imágenes con los ajustes actuales de detección, analizando a la misma persona; los códigos no cambian. Necesita los videos o las fotografías cargados. Al ampliar una imagen, <b>Copiar imagen</b> y <b>Guardar imagen</b> la llevan a otro programa o a un archivo .jpg.</li>
 <li>Consulte <b>3 · Resultados</b>: categorías de acción, partes del cuerpo y tablas APA, que se actualizan solos al guardar cada postura. Puede filtrar por tarea. En <b>Ajustes de resultados</b> se desmarcan los resultados que no se quieren mostrar ni incluir en el informe (impresión, PDF y Word), y se eligen las categorías cuyas imágenes se muestran. Una imagen concreta se quita con la × que tiene encima o con la columna «Informe» de la lista de observaciones.</li>
 <li>Use <b>Guardar</b> para crear un archivo .OWS compatible con el WinOWAS original (o un proyecto .owsp con las imágenes), e <b>Imprimir</b> para imprimir o guardar en PDF. La primera vez, <b>Guardar</b> abre el explorador para elegir el nombre y la carpeta; después sobrescribe ese mismo archivo, con un aviso, sin volver a preguntar. <b>Guardar como</b> siempre abre el explorador. Las tareas no se pueden repetir: si dos tienen el mismo nombre, se avisa.</li>
 <li>En <b>Exportar resultados</b>, las posturas detectadas también se pueden llevar a OpenSim (.trc y .mot) y a 3DSSPP, el programa de análisis biomecánico de la Universidad de Míchigan: como archivo de ubicaciones <b>.sloc</b> (<i>Animation → Import LOC File</i>), como <b>archivo de lote</b> que analiza cada observación con la persona y la carga indicadas (<i>Task Input → Run Batch File</i>) o como <b>.c3d</b> con los 21 centros articulares que pide 3DSSPP (<i>Animation → Import C3D File</i>), que también abren OpenSim y otros programas. La carga de cada observación puede tomarse de su código OWAS. Se pueden exportar todas las observaciones, solo las marcadas con las casillas de la lista de observaciones o solo las de ciertas categorías de riesgo. La cabeza, C7/T1, el esternón, L5/S1 y el centro de agarre se estiman a partir de los puntos detectados: revise las posturas en 3DSSPP antes de usar sus resultados. 3DSSPP es software de la University of Michigan. OWAS Web no está afiliada a ella ni incluye 3DSSPP: los archivos siguen el formato de importación descrito en el manual de 3DSSPP 7.1, y su uso requiere la licencia correspondiente de 3DSSPP. C3D es un formato abierto (c3d.org).</li></ol>
@@ -3586,7 +3697,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.36 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.37 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
