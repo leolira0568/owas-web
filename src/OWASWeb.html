@@ -247,6 +247,9 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .refresh-box{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:10px 14px;max-width:min(560px,94vw)}
 .refresh-box[hidden]{display:none}
 .refresh-box progress{width:160px}
+dialog#pdfTip{max-width:min(520px,94vw)}
+.pdf-dest{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:6px 0 10px;font-size:14px;background:var(--surface-2)}
+.pdf-sel{display:inline-flex;gap:18px;align-items:center;border:2px solid var(--accent);border-radius:6px;padding:4px 10px;font-weight:600;background:var(--surface)}
 .gallery .img-x{position:absolute;top:4px;right:4px;min-height:0;padding:2px;border-radius:6px;background:rgba(0,0,0,.55);color:#fff;border:0;cursor:pointer;display:flex}
 .gallery .img-x:hover{background:var(--danger)}
 .img-cats{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
@@ -819,6 +822,14 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   <div class="vctrl"><button class="btn" id="expClose" data-icon="close">Cerrar</button></div>
 </dialog>
 <div class="mark-preview" id="markPreview" aria-hidden="true" hidden></div>
+<dialog id="pdfTip" aria-labelledby="pdfTipTitle">
+  <h2 id="pdfTipTitle">Guardar el informe como PDF</h2>
+  <p style="margin-top:0">En el diálogo de impresión que se abrirá, en <b>«Destino»</b>, elija <b>«Guardar como PDF»</b> y pulse <b>«Guardar»</b>.</p>
+  <div class="pdf-dest" aria-hidden="true"><span>Destino</span><span class="pdf-sel">Guardar como PDF<span>▾</span></span></div>
+  <p class="small muted">No elija «Microsoft Print to PDF»: convierte el texto en dibujos y, al alejar el zoom, algunas letras, como la «l», se ven más gruesas; además, el texto no se puede buscar ni copiar. La aplicación no puede elegir el destino por usted, pero Chrome y Edge recuerdan el último que se eligió: basta con elegirlo una vez.</p>
+  <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="pdfTipOff" autocomplete="off"> No volver a mostrar este aviso</label>
+  <div class="vctrl"><button class="btn primary" id="pdfTipGo" data-icon="print">Continuar</button><button class="btn" id="pdfTipCancel" data-icon="close">Cancelar</button></div>
+</dialog>
 <div class="refresh-box" id="refreshBox" role="status" hidden><span id="refreshText"></span><progress id="refreshBar" max="1" value="0"></progress><button class="btn" id="refreshCancel" data-icon="close">Cancelar</button></div>
 <dialog id="viewer" aria-label="Imagen de la observación">
   <img id="viewImg" alt="">
@@ -3162,7 +3173,9 @@ async function doPrint(){
   // Las imágenes deben estar cargadas y decodificadas antes de abrir el diálogo de impresión
   await Promise.all([...$('#print').querySelectorAll('img')].map(img =>
     (img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })).then(() => img.decode ? img.decode().catch(() => {}) : null)));
+  const pageTitle = document.title; document.title = 'Reporte OWAS - ' + exportBase();
   window.print();
+  document.title = pageTitle;
 }
 function copyResults(){
   const list = filtered(), n = list.length, c = catCounts(list);
@@ -3184,7 +3197,14 @@ $('#toTop').onclick = () => window.scrollTo({top: 0, behavior: matchMedia('(pref
 
 // ---- Exportar a Word: documento MHTML (.doc) con el HTML y sus imágenes ----
 $('#expClose').onclick = () => $('#exportDlg').close();
-$('#expPdf').onclick = () => { $('#exportDlg').close(); doPrint(); };
+// Antes de abrir el diálogo de impresión se recuerda elegir «Guardar como PDF» (salvo que se pidiera no volver a mostrarlo)
+$('#expPdf').onclick = () => {
+  $('#exportDlg').close();
+  let off = false; try{ off = localStorage.getItem('owasweb.pdftip') === 'off'; }catch(e){}
+  if (off) doPrint(); else { $('#pdfTipOff').checked = false; $('#pdfTip').showModal(); }
+};
+$('#pdfTipGo').onclick = () => { try{ if ($('#pdfTipOff').checked) localStorage.setItem('owasweb.pdftip', 'off'); }catch(e){} $('#pdfTip').close(); doPrint(); };
+$('#pdfTipCancel').onclick = () => $('#pdfTip').close();
 $('#expWord').onclick = () => exportWord();
 $('#expTrc').onclick = () => exportTRC();
 // ---- Exportar a OpenSim: marcadores 3D en formato TRC ----
@@ -3888,7 +3908,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.44 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.45 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
