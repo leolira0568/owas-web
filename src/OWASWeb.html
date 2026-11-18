@@ -486,6 +486,11 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   #print td .stack{min-width:40px}
   #print .bar-col{min-width:50px;width:auto}
   .refresh-box{display:none !important}
+  /* Imágenes grandes: cada una, con su pie, cabe en una hoja Carta o A4 (las verticales, de un video girado, también).
+     En bloque y no en rejilla, porque Chrome deja hojas en blanco al partir figuras altas dentro de una rejilla */
+  #print .gallery.big{display:block}
+  #print .gallery.big figure{margin:0 0 14px}
+  #print .gallery.big img{max-height:15cm}
   .cats4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
   .bp-row,.scale{grid-template-columns:minmax(120px,1.2fr) 2fr auto;gap:8px}
   .bp-out,.scale .ph{min-width:90px}
@@ -3883,7 +3888,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.43 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.44 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
