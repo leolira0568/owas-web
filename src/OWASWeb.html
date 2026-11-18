@@ -80,6 +80,13 @@ td.postura{white-space:nowrap}
 .marks button:hover,.marks button:focus-visible{border-color:var(--accent);z-index:2}
 .marks button::before{content:'';position:absolute;left:50%;top:-6px;height:5px;border-left:1px solid var(--ink-3)}
 .marks .cat i{width:16px;height:16px;font-size:11px;border-radius:4px}
+.marks button{touch-action:manipulation;-webkit-touch-callout:none;user-select:none}
+/* Vista previa de la observación al pasar el cursor por una marca (o al mantenerla pulsada en una pantalla táctil) */
+.mark-preview{position:fixed;z-index:70;width:240px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.28);padding:6px;pointer-events:none}
+.mark-preview[hidden]{display:none}
+.mark-preview img{display:block;width:100%;border-radius:5px;background:#141414}
+.mark-preview p{margin:5px 2px 0;font-size:12px;line-height:1.35;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.mark-preview .cat i{width:16px;height:16px;font-size:11px;border-radius:4px}
 .vctrl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
 .vctrl select,.vctrl input[type=number]{width:auto;padding:6px 8px}
 .vctrl input[type=number]{width:72px}
@@ -804,6 +811,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
   <p class="small" id="expStatus" role="status"></p>
   <div class="vctrl"><button class="btn" id="expClose" data-icon="close">Cerrar</button></div>
 </dialog>
+<div class="mark-preview" id="markPreview" aria-hidden="true" hidden></div>
 <div class="refresh-box" id="refreshBox" role="status" hidden><span id="refreshText"></span><progress id="refreshBar" max="1" value="0"></progress><button class="btn" id="refreshCancel" data-icon="close">Cancelar</button></div>
 <dialog id="viewer" aria-label="Imagen de la observación">
   <img id="viewImg" alt="">
@@ -1711,10 +1719,41 @@ function renderMarks(){
   const d = vid.duration, box = $('#marks');
   const items = !d ? [] : S.obs.map((o, i) => [o, i]).filter(([o]) => o.src === videoName && o.t != null).sort((x, y) => x[0].t - y[0].t);
   box.innerHTML = items.map(([o, i]) =>
-    `<button style="left:${o.t / d * 100}%" data-go="${i}" title="Obs. ${i+1}: ${codeStr(o)} · ${fmtTime(o.t)}" aria-label="Ir a la observación ${i+1}, categoría ${catOf(o)}"><b>${i+1}</b>${catBadge(catOf(o), false)}</button>`).join('');
+    `<button style="left:${o.t / d * 100}%" data-go="${i}" aria-label="Ir a la observación ${i+1}, categoría ${catOf(o)}"><b>${i+1}</b>${catBadge(catOf(o), false)}</button>`).join('');
   box.style.height = items.length ? '44px' : '0';
 }
-$('#marks').addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) goToObs(+b.dataset.go); });
+$('#marks').addEventListener('click', e => {
+  const b = e.target.closest('[data-go]'); if (!b) return;
+  // Después de mantener pulsada una marca para ver la vista previa, soltarla no salta a la observación
+  if (longPressed){ longPressed = false; e.preventDefault(); return; }
+  hideMarkPreview(); goToObs(+b.dataset.go);
+});
+// Vista previa: imagen de la observación, su número, su código, su categoría, su tarea y su momento
+let longPressed = false, pressTimer = null;
+function showMarkPreview(b){
+  const i = +b.dataset.go, o = S.obs[i], box = $('#markPreview'); if (!o) return;
+  box.innerHTML = (o.img ? `<img src="${o.img}" alt="">` : '') +
+    `<p>${catBadge(catOf(o), false)}<b>Obs. ${i + 1} · ${codeStr(o)}</b><span class="muted">${fmtTime(o.t)}</span></p><p class="muted" style="margin-top:2px">${esc(phaseName(o.p))}</p>`;
+  box.hidden = false;
+  const r = b.getBoundingClientRect(), bw = box.offsetWidth, bh = box.offsetHeight;
+  const x = Math.min(Math.max(8, r.left + r.width / 2 - bw / 2), window.innerWidth - bw - 8);
+  const y = r.top - bh - 14 >= 8 ? r.top - bh - 14 : Math.min(r.bottom + 8, window.innerHeight - bh - 8);
+  box.style.left = x + 'px'; box.style.top = y + 'px';
+}
+function hideMarkPreview(){ clearTimeout(pressTimer); $('#markPreview').hidden = true; }
+$('#marks').addEventListener('pointerover', e => { const b = e.target.closest('[data-go]'); if (b && e.pointerType === 'mouse') showMarkPreview(b); });
+$('#marks').addEventListener('pointerout', e => { if (e.pointerType === 'mouse' && !e.relatedTarget?.closest?.('[data-go]')) hideMarkPreview(); });
+$('#marks').addEventListener('focusin', e => { const b = e.target.closest('[data-go]'); if (b && b.matches(':focus-visible')) showMarkPreview(b); });
+$('#marks').addEventListener('focusout', hideMarkPreview);
+// Pantallas táctiles: mantener pulsada la marca medio segundo muestra la vista previa; al soltar, se oculta
+$('#marks').addEventListener('pointerdown', e => {
+  const b = e.target.closest('[data-go]'); if (!b || e.pointerType === 'mouse') return;
+  longPressed = false; clearTimeout(pressTimer);
+  pressTimer = setTimeout(() => { longPressed = true; showMarkPreview(b); }, 450);
+});
+['pointerup', 'pointercancel'].forEach(ev => $('#marks').addEventListener(ev, e => { if (e.pointerType !== 'mouse'){ clearTimeout(pressTimer); if (longPressed) setTimeout(() => { $('#markPreview').hidden = true; }, 1200); } }));
+$('#marks').addEventListener('contextmenu', e => { if (e.target.closest('[data-go]')) e.preventDefault(); });
+window.addEventListener('scroll', () => { if (!$('#markPreview').hidden) hideMarkPreview(); }, {passive: true});
 $('#loadVideo').onclick = () => { const f = $('#fileVideo'); f.value = ''; f.click(); };
 // Se conserva el archivo para poder volver a abrir el video si el navegador deja de reproducirlo
 let videoFile = null, videoOk = false, videoT = 0, reopen = {n: 0, at: 0}, videoMeta = null;
@@ -3795,7 +3834,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <ol><li>En <b>1 · Proyecto</b>, rellene la información del estudio, el intervalo de observación y las tareas. El intervalo se puede indicar en segundos o como <b>número total de observaciones</b>: en ese caso se calcula a partir de la duración del video (por ejemplo, 400 observaciones en 10 minutos: una cada 1,5 s), y «Muestra siguiente» recorre exactamente ese número de muestras. En «Resultados», la tabla de frecuencias por tarea muestra cuántas observaciones hubo de cada tarea, su porcentaje del total y su tiempo estimado.</li>
 <li>En <b>2 · Observación</b>, elija el modo:
   <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar postura</b>.</li>
-  <li><b>Video</b>: cargue uno o varios videos MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado. Para revisar varios videos en el mismo estudio, elíjalos todos en <b>Cargar videos</b> (se ordenan por nombre de archivo) o añádalos con <b>Añadir video</b>: se reproducen uno tras otro, «Muestra siguiente» pasa al video siguiente cuando hace falta y el intervalo por número de observaciones usa la duración total, que se muestra en «Intervalo». Si el celular o la cámara se giró durante la grabación, los botones de giro (junto a los controles de reproducción) giran la imagen 90° a la izquierda o a la derecha desde ese momento del video hasta el siguiente cambio de giro; la postura se vuelve a detectar con la imagen girada, las observaciones se guardan giradas y el giro queda guardado en el proyecto. Si el fotograma ya estaba registrado, al girarlo se desbloquea: revise los códigos (la detección los vuelve a proponer) y pulse «Guardar cambios» para guardarlo girado. El botón de actualizar, junto al de giro, vuelve a detectar y dibujar solo la imagen de la observación del fotograma (o la foto) que se está revisando. El botón «Video 1 de 3» indica el video actual; al pasar el cursor por encima aparece la lista con el nombre y la duración de cada uno.</li>
+  <li><b>Video</b>: cargue uno o varios videos MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado: al pasar el cursor por una marca (o al mantenerla pulsada en una pantalla táctil) aparece la vista previa de la observación, y al pulsarla se va a ella. Para revisar varios videos en el mismo estudio, elíjalos todos en <b>Cargar videos</b> (se ordenan por nombre de archivo) o añádalos con <b>Añadir video</b>: se reproducen uno tras otro, «Muestra siguiente» pasa al video siguiente cuando hace falta y el intervalo por número de observaciones usa la duración total, que se muestra en «Intervalo». Si el celular o la cámara se giró durante la grabación, los botones de giro (junto a los controles de reproducción) giran la imagen 90° a la izquierda o a la derecha desde ese momento del video hasta el siguiente cambio de giro; la postura se vuelve a detectar con la imagen girada, las observaciones se guardan giradas y el giro queda guardado en el proyecto. Si el fotograma ya estaba registrado, al girarlo se desbloquea: revise los códigos (la detección los vuelve a proponer) y pulse «Guardar cambios» para guardarlo girado. El botón de actualizar, junto al de giro, vuelve a detectar y dibujar solo la imagen de la observación del fotograma (o la foto) que se está revisando. El botón «Video 1 de 3» indica el video actual; al pasar el cursor por encima aparece la lista con el nombre y la duración de cada uno.</li>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
 <li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. Si no se detecta a nadie, se propone el código 1111 en la tarea «N/A» (se crea la primera vez y se puede renombrar): revíselo y pulse <b>Aceptar postura</b> si es correcto; al volver a detectar a una persona se recupera la tarea anterior. Si se detecta una postura falsa en una imagen sin personas, <b>No detectar</b> (tecla <span class="kbd">X</span>) la quita y hace la misma propuesta. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
 <li>Al volver a un fotograma o una foto ya registrados, sus códigos quedan bloqueados. El lápiz (tecla <span class="kbd">E</span>) los desbloquea para corregirlos: cámbielos y pulse <b>Guardar cambios</b>. La papelera (tecla <span class="kbd">Supr</span>) elimina la observación de ese fotograma o, si no hay ninguna, deshace la última. Los cambios se ven al momento en la barra de tiempo, la lista de observaciones y los resultados.</li>
@@ -3836,7 +3875,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.40 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.41 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
