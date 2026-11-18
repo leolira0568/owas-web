@@ -615,6 +615,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
           <button class="btn icon-only" id="vNextS" data-icon="skipF" title="Muestra siguiente (N)" aria-label="Muestra siguiente"></button>
           <button class="btn icon-only" id="vRotL" data-icon="rotCcw" title="Girar la imagen 90° en sentido contrario al reloj, desde este momento del video" aria-label="Girar 90 grados en sentido contrario al reloj"></button>
           <button class="btn icon-only" id="vRotR" data-icon="rotCw" title="Girar la imagen 90° en el sentido del reloj, desde este momento del video" aria-label="Girar 90 grados en el sentido del reloj"></button>
+          <button class="btn icon-only" id="vRefresh" data-icon="refresh" title="Actualizar la imagen de la observación de este fotograma con los ajustes actuales" aria-label="Actualizar la imagen de la observación de este fotograma"></button>
           <span class="small muted" id="rotInfo"></span>
           <span class="tc" id="vTime">00:00.00 / 00:00.00</span>
           <label class="small">Velocidad <select id="vRate"><option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
@@ -632,6 +633,7 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
         <div class="vctrl">
           <button class="btn icon-only" id="pPrev" data-icon="chevL" title="Fotografía anterior (←)" aria-label="Fotografía anterior"></button>
           <button class="btn icon-only" id="pNext" data-icon="chevR" title="Fotografía siguiente (→)" aria-label="Fotografía siguiente"></button>
+          <button class="btn icon-only" id="pRefresh" data-icon="refresh" title="Actualizar la imagen de la observación de esta fotografía con los ajustes actuales" aria-label="Actualizar la imagen de la observación de esta fotografía"></button>
           <label class="small"><input type="checkbox" id="pAuto" checked autocomplete="off"> Al aceptar, pasar a la siguiente pendiente</label>
         </div>
         <div class="thumbs" id="thumbs"></div>
@@ -888,6 +890,7 @@ const ICONS = {
   skipF:'<path d="m5 4 10 8-10 8z"/><path d="M19 5v14"/>',
   rotCw:'<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
   rotCcw:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  refresh:'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
   download:'<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
   fileText:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
   moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
@@ -1295,6 +1298,7 @@ function renderObserve(){
   const view = ri >= 0 && editing !== ri ? S.obs[ri] : sel;
   locked = ri >= 0 && editing !== ri;
   if (!$('#accept').classList.contains('saved')) $('#accept').innerHTML = acceptLabel();
+  $('#vRefresh').disabled = $('#pRefresh').disabled = ri < 0;
   const eb = $('#editObs');
   eb.disabled = ri < 0; eb.classList.toggle('on', editing >= 0);
   eb.innerHTML = ico(editing >= 0 ? 'close' : 'pencil');
@@ -1394,10 +1398,11 @@ function accept(){
   if (locked || nextField() || sel.p < 0) return;
   if (editing >= 0){
     if (editing !== regIndex()) return;
-    const o = S.obs[editing];
+    const o = S.obs[editing], recap = editRecapture;
     Object.assign(o, {b: sel.b, a: sel.a, l: sel.l, w: sel.w, p: sel.p});
-    editing = -1; sel = {b:0, a:0, l:0, w:0, p:o.p}; resetManual();
-    obsChanged(); flashSaved(); return;
+    editing = -1; editRecapture = false; sel = {b:0, a:0, l:0, w:0, p:o.p}; resetManual();
+    if (recap) recaptureObs(o).then(() => obsChanged()); else obsChanged();
+    flashSaved(); return;
   }
   // Tras aceptar una observación «N/A» propuesta por la aplicación, la siguiente vuelve a la tarea anterior
   const nextP = autoNA && sel.p === autoNA.task ? autoNA.prev : sel.p; autoNA = null;
@@ -1450,14 +1455,46 @@ function removeObs(i){
 }
 // Editar una observación ya registrada: se desbloquean sus códigos y «Guardar cambios» los sustituye (la imagen se conserva)
 let editing = -1;
-function toggleEdit(){
+// fresh: al girar la imagen, los códigos de espalda, brazos y piernas se pueden volver a proponer con la nueva detección
+// y, al guardar los cambios, también se vuelve a guardar la imagen
+let editRecapture = false;
+function toggleEdit(fresh = false){
   const ri = regIndex();
   if (ri < 0) return;
-  if (editing === ri){ editing = -1; sel = {b:0, a:0, l:0, w:0, p:sel.p}; resetManual(); renderObserve(); return; }
+  if (editing === ri && !fresh){ editing = -1; editRecapture = false; sel = {b:0, a:0, l:0, w:0, p:sel.p}; resetManual(); renderObserve(); return; }
   const o = S.obs[ri];
+  if (editing !== ri){ sel = {b:o.b, a:o.a, l:o.l, w:o.w, p:o.p}; manual = fresh ? {b:false, a:false, l:false} : {b:true, a:true, l:true}; }
   editing = ri; autoNA = null;
-  sel = {b:o.b, a:o.a, l:o.l, w:o.w, p:o.p}; manual = {b:true, a:true, l:true};
+  if (fresh) editRecapture = true;
   renderObserve();
+}
+// Vuelve a detectar la postura del fotograma o la foto actual como se hizo al registrarla y guarda de nuevo su imagen
+async function recaptureObs(o, detect = false){
+  if (detect){
+    const di = o.dinfo || {};
+    if (di.how === 'user'){ lastDet = null; clearOverlay(); detUser = mediaKey(); }
+    else { follow = di.c ? {x: di.c[0], y: di.c[1]} : null; await detectPose(); }
+  }
+  const cap = captureMedia(await facesForCapture());
+  if (!cap.img) return false;
+  o.img = cap.img; o.dinfo = cap.dinfo;
+  if (cap.rot) o.rot = cap.rot; else delete o.rot;
+  if (cap.det){ o.det = cap.det; o.dm = cap.dm; o.w3 = cap.w3; } else { delete o.det; delete o.dm; delete o.w3; }
+  return true;
+}
+// Botón junto a la reproducción: actualiza solo la observación del fotograma o la foto que se está revisando
+let refreshingOne = false;
+async function refreshCurrentObs(){
+  const ri = regIndex();
+  if (ri < 0){ setDetectStatus('Este fotograma no está registrado: no hay imagen que actualizar.'); return; }
+  if (refreshingOne || detecting || refreshing) return;
+  refreshingOne = true;
+  try{
+    vid.pause();
+    const ok = await recaptureObs(S.obs[ri], true);
+    obsChanged();
+    setDetectStatus(ok ? `Imagen de la observación ${ri + 1} actualizada con los ajustes actuales.` : '<span class="warn">No se pudo actualizar la imagen.</span>');
+  }finally{ refreshingOne = false; }
 }
 const acceptLabel = () => ico('check') + (editing >= 0 ? 'Guardar cambios' : 'Aceptar postura') + ' <span class="kbd">Enter</span>';
 function clearSel(){ sel = {b:0,a:0,l:0,w:0,p:sel.p}; resetManual(); renderObserve(); }
@@ -1765,6 +1802,8 @@ function rotateVideo(dir){
   let prev = 0; L = L.filter(k => { const keep = k.r !== prev; prev = k.r; return keep; });
   if (L.length) S.rot[videoName] = L; else delete S.rot[videoName];
   changed(); lastDet = null; clearOverlay(); applyRotation();
+  // Un fotograma ya registrado se desbloquea: sus códigos se pueden corregir y, con «Guardar cambios», se guarda girado
+  if (regIndex() >= 0) toggleEdit(true);
   // Con la imagen girada se vuelve a detectar la postura
   if (frameReady()) detectPose();
 }
@@ -1804,6 +1843,7 @@ function renderRotInfo(){
 ['timeupdate', 'seeked'].forEach(ev => vid.addEventListener(ev, () => { if (curRot() !== shownRot) applyRotation(); else renderRotInfo(); }));
 window.addEventListener('resize', () => { if (shownRot) applyRotation(); });
 $('#vRotL').onclick = () => rotateVideo(-1);
+$('#vRefresh').onclick = refreshCurrentObs; $('#pRefresh').onclick = refreshCurrentObs;
 $('#vRotR').onclick = () => rotateVideo(1);
 ['timeupdate', 'seeked', 'play', 'pause'].forEach(ev => vid.addEventListener(ev, renderVideoUI));
 // Momento del video al que volver si hay que reabrirlo (no cuentan los saltos internos de la detección)
@@ -2598,7 +2638,7 @@ async function detectPose(){
     follow = poseCenter(drawN || N);
     // No se sobrescriben las partes que el usuario ya eligió a mano ni las de un fotograma registrado
     // (se mira el fotograma actual, porque «locked» puede ser aún el del fotograma anterior)
-    if (regIndex() < 0){
+    if (regIndex() < 0 || editing === regIndex()){
       if (!manual.b) sel.b = r.b;
       if (!manual.a) sel.a = r.a;
       if (r.l && !manual.l) sel.l = r.l;
@@ -2696,13 +2736,7 @@ async function refreshObsImages(){
       if (refreshCancel) break;
       $('#refreshText').textContent = `Actualizando las imágenes: ${done + 1} de ${list.length}…`; $('#refreshBar').value = done / list.length;
       if (!(await showObsMedia(o))){ failed++; done++; continue; }
-      const di = o.dinfo || {};
-      if (di.how === 'user'){ lastDet = null; clearOverlay(); detUser = mediaKey(); }
-      else { follow = di.c ? {x: di.c[0], y: di.c[1]} : null; await detectPose(); }
-      const cap = captureMedia(await facesForCapture());
-      if (!cap.img){ failed++; done++; continue; }
-      o.img = cap.img; o.dinfo = cap.dinfo;
-      if (cap.det){ o.det = cap.det; o.dm = cap.dm; o.w3 = cap.w3; } else { delete o.det; delete o.dm; delete o.w3; }
+      if (!(await recaptureObs(o, true))) failed++;
       done++;
     }
   }catch(e){ console.error(e); }
@@ -3761,7 +3795,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <ol><li>En <b>1 · Proyecto</b>, rellene la información del estudio, el intervalo de observación y las tareas. El intervalo se puede indicar en segundos o como <b>número total de observaciones</b>: en ese caso se calcula a partir de la duración del video (por ejemplo, 400 observaciones en 10 minutos: una cada 1,5 s), y «Muestra siguiente» recorre exactamente ese número de muestras. En «Resultados», la tabla de frecuencias por tarea muestra cuántas observaciones hubo de cada tarea, su porcentaje del total y su tiempo estimado.</li>
 <li>En <b>2 · Observación</b>, elija el modo:
   <ul><li><b>En vivo</b>: inicie el reloj. En cada pitido, seleccione la postura observada (o escriba sus dígitos) y pulse <b>Aceptar postura</b>.</li>
-  <li><b>Video</b>: cargue uno o varios videos MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado. Para revisar varios videos en el mismo estudio, elíjalos todos en <b>Cargar videos</b> (se ordenan por nombre de archivo) o añádalos con <b>Añadir video</b>: se reproducen uno tras otro, «Muestra siguiente» pasa al video siguiente cuando hace falta y el intervalo por número de observaciones usa la duración total, que se muestra en «Intervalo». Si el celular o la cámara se giró durante la grabación, los botones de giro (junto a los controles de reproducción) giran la imagen 90° a la izquierda o a la derecha desde ese momento del video hasta el siguiente cambio de giro; la postura se vuelve a detectar con la imagen girada, las observaciones se guardan giradas y el giro queda guardado en el proyecto. El botón «Video 1 de 3» indica el video actual; al pasar el cursor por encima aparece la lista con el nombre y la duración de cada uno.</li>
+  <li><b>Video</b>: cargue uno o varios videos MP4 o WebM. Avance fotograma a fotograma o salte a la siguiente muestra según el intervalo, codifique la postura y pulse <b>Aceptar postura</b>. El fotograma se guarda como imagen de la observación, y las marcas de colores sobre la barra de tiempo muestran lo ya registrado. Para revisar varios videos en el mismo estudio, elíjalos todos en <b>Cargar videos</b> (se ordenan por nombre de archivo) o añádalos con <b>Añadir video</b>: se reproducen uno tras otro, «Muestra siguiente» pasa al video siguiente cuando hace falta y el intervalo por número de observaciones usa la duración total, que se muestra en «Intervalo». Si el celular o la cámara se giró durante la grabación, los botones de giro (junto a los controles de reproducción) giran la imagen 90° a la izquierda o a la derecha desde ese momento del video hasta el siguiente cambio de giro; la postura se vuelve a detectar con la imagen girada, las observaciones se guardan giradas y el giro queda guardado en el proyecto. Si el fotograma ya estaba registrado, al girarlo se desbloquea: revise los códigos (la detección los vuelve a proponer) y pulse «Guardar cambios» para guardarlo girado. El botón de actualizar, junto al de giro, vuelve a detectar y dibujar solo la imagen de la observación del fotograma (o la foto) que se está revisando. El botón «Video 1 de 3» indica el video actual; al pasar el cursor por encima aparece la lista con el nombre y la duración de cada uno.</li>
   <li><b>Fotografías</b>: cargue una o varias fotos, codifique la postura de cada una y pulse <b>Aceptar postura</b>. La foto queda asociada a la observación.</li></ul></li>
 <li>En video y fotografías, <b>Detectar postura</b> (tecla <span class="kbd">D</span>) localiza a la persona con MediaPipe Pose, dibuja su esqueleto y propone los dígitos de espalda, brazos y piernas. La carga siempre se elige a mano. Con «Detectar al llegar a cada muestra o fotografía», el análisis queda en: revisar la propuesta, corregirla si hace falta y pulsar <span class="kbd">Enter</span>. Funciona mejor con una sola persona, de cuerpo entero y vista lateral o en diagonal. Si hay varias personas, se analiza la más grande (esqueleto de color; las demás, en blanco discontinuo) y <b>Detectar otro</b> (tecla <span class="kbd">O</span>) pasa a la siguiente; la aplicación sigue a la persona elegida en los fotogramas siguientes. En las imágenes guardadas se difumina la cara de todas las personas detectadas. Si no se detecta a nadie, se propone el código 1111 en la tarea «N/A» (se crea la primera vez y se puede renombrar): revíselo y pulse <b>Aceptar postura</b> si es correcto; al volver a detectar a una persona se recupera la tarea anterior. Si se detecta una postura falsa en una imagen sin personas, <b>No detectar</b> (tecla <span class="kbd">X</span>) la quita y hace la misma propuesta. El giro de la espalda es la medida menos fiable. En la lista, «auto» indica que se aceptó la propuesta y «corregido» que se cambió.</li>
 <li>Al volver a un fotograma o una foto ya registrados, sus códigos quedan bloqueados. El lápiz (tecla <span class="kbd">E</span>) los desbloquea para corregirlos: cámbielos y pulse <b>Guardar cambios</b>. La papelera (tecla <span class="kbd">Supr</span>) elimina la observación de ese fotograma o, si no hay ninguna, deshace la última. Los cambios se ven al momento en la barra de tiempo, la lista de observaciones y los resultados.</li>
@@ -3802,7 +3836,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.39 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.40 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
