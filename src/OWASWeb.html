@@ -247,6 +247,9 @@ input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1p
 .refresh-box{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:10px 14px;max-width:min(560px,94vw)}
 .refresh-box[hidden]{display:none}
 .refresh-box progress{width:160px}
+.vis-scope{display:flex;flex-direction:column;gap:4px;margin:2px 0 8px}
+.vis-scope label{display:flex;gap:6px;align-items:center}
+.vis-scope .btn{min-height:26px;padding:2px 8px;margin-left:4px}
 dialog#pdfTip{max-width:min(520px,94vw)}
 .pdf-dest{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:6px 0 10px;font-size:14px;background:var(--surface-2)}
 .pdf-sel{display:inline-flex;gap:18px;align-items:center;border:2px solid var(--accent);border-radius:6px;padding:4px 10px;font-weight:600;background:var(--surface)}
@@ -586,6 +589,13 @@ input[type=text],input[type=number],select{border:0;border-bottom:1px solid var(
             <tr><td>Piernas (ángulos de caderas y rodillas)</td><td><input type="checkbox" data-cfg="skLegs" aria-label="Esqueleto de las piernas"></td><td><input type="checkbox" data-cfg="anLegs" aria-label="Compás de los ángulos de caderas y rodillas"></td><td><input type="checkbox" data-cfg="txLegs" aria-label="Texto de los ángulos de caderas y rodillas"></td></tr>
             <tr><td>Tobillos y pies</td><td><input type="checkbox" data-cfg="skFeet" aria-label="Esqueleto de los pies"></td><td><input type="checkbox" data-cfg="anFeet" aria-label="Compás de los ángulos de los tobillos"></td><td><input type="checkbox" data-cfg="txFeet" aria-label="Texto de los ángulos de los tobillos"></td></tr>
           </table>
+          <div class="vis-scope small">
+            <span>Al marcar o desmarcar estas casillas, aplicarlo a:</span>
+            <label><input type="radio" name="visScope" value="all" checked autocomplete="off"> Todas las observaciones</label>
+            <label><input type="radio" name="visScope" value="obs" autocomplete="off"> Solo la observación actual (la del fotograma o la foto que se está revisando)</label>
+            <span class="muted">Con «Todas», las imágenes ya guardadas cambian al actualizarlas: <button class="btn" type="button" id="visApplyAll" data-icon="refresh">Actualizar imágenes</button></span>
+            <span class="muted" id="visNote"></span>
+          </div>
           <p class="muted" style="margin:0 0 4px">«Compás» es el arco que marca dónde se mide el ángulo y «Texto», la etiqueta con los grados. Los subtítulos se ocultan aparte, con «Mostrar subtítulos».</p>
           <p class="cfg-head">Subtítulos</p>
           <div class="detect-cfg">
@@ -1325,6 +1335,7 @@ function renderObserve(){
   locked = ri >= 0 && editing !== ri;
   if (!$('#accept').classList.contains('saved')) $('#accept').innerHTML = acceptLabel();
   $('#vRefresh').disabled = $('#pRefresh').disabled = ri < 0;
+  showVisCfg();
   const eb = $('#editObs');
   eb.disabled = ri < 0; eb.classList.toggle('on', editing >= 0);
   eb.innerHTML = ico(editing >= 0 ? 'close' : 'pencil');
@@ -1410,15 +1421,48 @@ async function addObs(code){
     if (mode === 'photo' && $('#pAuto').checked) nextPendingPhoto();
   }finally{ capturing = false; }
 }
+// Caras que se difuminan: las de todas las personas que encuentra el detector de posturas (hasta 8) y, además, todas las
+// que encuentra el detector de caras, aunque no se vea el cuerpo (de espaldas, lejos o en el borde de la imagen)
 async function facesForCapture(){
   if (mode === 'live' || !$('#blurFace').checked) return null;
-  const det = lastDet && lastDet.key === mediaKey() ? lastDet : null;
-  if (det && det.others) return [det.N, ...det.others];
   try{
     const lm = await loadPose();
     if (mode === 'video' && !frameReady()) return [];
-    return detectPeople(lm, detSrc()).map(q => q.N);
+    const src = detSrc(), det = lastDet && lastDet.key === mediaKey() ? lastDet : null;
+    const poses = det && det.others ? [det.N, ...det.others] : detectPeople(lm, src, null, 8).map(q => q.N);
+    return [...poses, ...detectFaces(src)];
   }catch(e){ console.error(e); return []; }
+}
+// El detector de caras trabaja con imágenes pequeñas (128 px): para encontrar también las caras pequeñas o lejanas se
+// busca en la imagen completa y en recortes que se solapan, de la mitad y de un tercio del tamaño de la imagen
+function detectFaces(src){
+  if (!POSE.face) return [];
+  const w = src.videoWidth || src.naturalWidth || src.width, h = src.videoHeight || src.naturalHeight || src.height;
+  if (!w || !h) return [];
+  const out = [], c = document.createElement('canvas'), g = c.getContext('2d');
+  const run = (sx, sy, sw, sh) => {
+    const k = Math.min(1, 640 / Math.max(sw, sh)); c.width = Math.round(sw * k); c.height = Math.round(sh * k);
+    g.drawImage(src, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    for (const d of (POSE.face.detect(c).detections || [])){
+      const b = d.boundingBox; if (!b) continue;
+      out.push({box: [(sx + b.originX / k) / w, (sy + b.originY / k) / h, b.width / k / w, b.height / k / h]});
+    }
+  };
+  run(0, 0, w, h);
+  for (const n of [2, 3]){
+    const tw = w / n * 1.4, th = h / n * 1.4;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++)
+      run(Math.min(w - tw, Math.max(0, (i + 0.5) * w / n - tw / 2)), Math.min(h - th, Math.max(0, (j + 0.5) * h / n - th / 2)), Math.min(tw, w), Math.min(th, h));
+  }
+  // La misma cara encontrada en varios recortes se une en una sola caja
+  const faces = [];
+  for (const f of out){
+    const [x, y, bw, bh] = f.box, cx = x + bw / 2, cy = y + bh / 2;
+    const m = faces.find(q => { const [qx, qy, qw, qh] = q.box; return cx > qx && cx < qx + qw && cy > qy && cy < qy + qh || (qx + qw / 2 > x && qx + qw / 2 < x + bw && qy + qh / 2 > y && qy + qh / 2 < y + bh); });
+    if (m){ const [qx, qy, qw, qh] = m.box, x0 = Math.min(qx, x), y0 = Math.min(qy, y); m.box = [x0, y0, Math.max(qx + qw, x + bw) - x0, Math.max(qy + qh, y + bh) - y0]; }
+    else faces.push({box: [x, y, bw, bh]});
+  }
+  return faces;
 }
 function accept(){
   if (locked || nextField() || sel.p < 0) return;
@@ -1621,8 +1665,14 @@ function faceBox(N, w, h){
   const x0 = Math.max(0, Math.round(cx - u * 0.625)), y0 = Math.max(0, Math.round(cy - u * 0.725));
   return {x0, y0, bw: Math.min(w - x0, Math.round(u * 1.25)), bh: Math.min(h - y0, Math.round(u * 1.45))};
 }
-function pixelateFace(g, N, w, h){
-  const box = faceBox(N, w, h);
+// F: puntos del cuerpo de una persona (la cara se calcula con ellos) o {box: [x, y, ancho, alto]} del detector de caras
+function pixelateFace(g, F, w, h){
+  let box;
+  if (F && F.box){
+    // Se amplía la caja del detector para cubrir de la frente al mentón y las orejas
+    const [bx, by, bw0, bh0] = F.box, x0 = Math.max(0, Math.round((bx - bw0 * 0.15) * w)), y0 = Math.max(0, Math.round((by - bh0 * 0.25) * h));
+    box = {x0, y0, bw: Math.min(w - x0, Math.round(bw0 * 1.3 * w)), bh: Math.min(h - y0, Math.round(bh0 * 1.45 * h))};
+  } else box = faceBox(F, w, h);
   if (!box || box.bw < 4 || box.bh < 4) return;
   const {x0, y0, bw, bh} = box;
   // Bloques de ancho según la intensidad (suave 7, media 5, fuerte 3); cada uno toma el color medio de su zona
@@ -1685,6 +1735,7 @@ function drawSubtitles(g, sub, w, top){
 }
 // faces: puntos de la cara de todas las personas de la imagen, para difuminarlas (null si el difuminado está desactivado)
 function captureMedia(faces = null){
+  visOv = curVis();
   const key = mediaKey(), det = lastDet && lastDet.key === key ? lastDet : null;
   const mm = v => Math.round(v * 1000) / 1000;
   // Cómo se detectó: persona k de n (de izquierda a derecha) y su centro, para repetirlo igual al actualizar la imagen
@@ -2291,15 +2342,19 @@ async function embedded(id, file, dir = 'mediapipe'){
 }
 function loadPose(){
   return POSE.loading || (POSE.loading = (async () => {
-    const [bundle, loader, wasm, model] = await Promise.all([
+    const [bundle, loader, wasm, model, faceModel] = await Promise.all([
       embedded('mp-bundle', 'vision_bundle.mjs'), embedded('mp-loader', 'vision_wasm_internal.js'),
-      embedded('mp-wasm', 'vision_wasm_internal.wasm'), embedded('mp-model', 'pose_landmarker_full.task')]);
+      embedded('mp-wasm', 'vision_wasm_internal.wasm'), embedded('mp-model', 'pose_landmarker_full.task'),
+      embedded('mp-face', 'blaze_face_short_range.tflite')]);
     const blobUrl = (bytes, type) => URL.createObjectURL(new Blob([bytes], {type}));
     const vision = await import(blobUrl(bundle, 'text/javascript'));
     const fileset = {wasmLoaderPath: blobUrl(loader, 'text/javascript'), wasmBinaryPath: blobUrl(wasm, 'application/wasm')};
     POSE.lm = await vision.PoseLandmarker.createFromOptions(fileset, {
       baseOptions: {modelAssetBuffer: model, delegate: 'CPU'}, runningMode: 'IMAGE', numPoses: 2,
       minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5});
+    // Detector de caras (BlazeFace): encuentra caras aunque el detector de posturas no vea el cuerpo de la persona
+    try{ POSE.face = await vision.FaceDetector.createFromOptions(fileset, {baseOptions: {modelAssetBuffer: faceModel, delegate: 'CPU'}, runningMode: 'IMAGE', minDetectionConfidence: 0.5}); }
+    catch(e){ console.warn('Detector de caras no disponible', e); POSE.face = null; }
     return POSE.lm;
   })().catch(e => { POSE.loading = null; throw e; }));
 }
@@ -2324,6 +2379,19 @@ const redrawSkeleton = () => { if (lastDet && lastDet.key === mediaKey()) render
 showCfg();
 document.addEventListener('change', e => {
   const el = e.target, k = el.dataset && el.dataset.cfg; if (!k) return;
+  // Partes del cuerpo con «Solo la observación actual»: se guarda en esa observación y se vuelve a dibujar su imagen
+  if (VIS_KEYS.includes(k) && visScope() === 'obs'){
+    const ri = regIndex();
+    if (ri < 0){ el.checked = !el.checked; alert('«Solo la observación actual» se aplica en un fotograma o una fotografía ya registrados. Vaya a la observación (por ejemplo, con su marca en la barra de tiempo) o elija «Todas las observaciones».'); return; }
+    const o = S.obs[ri], v = {...(o.vis || {}), [k]: el.checked};
+    if (v[k] === !!CFG[k]) delete v[k];
+    if (Object.keys(v).length) o.vis = v; else delete o.vis;
+    changed(); redrawSkeleton(); showVisCfg();
+    recaptureObs(o, true).then(() => { obsChanged(); setDetectStatus(`Imagen de la observación ${ri + 1} actualizada.`); });
+    return;
+  }
+  // «Todas las observaciones»: cambia el ajuste general y quita la elección propia de cada observación para esa casilla
+  if (VIS_KEYS.includes(k)) S.obs.forEach(o => { if (o.vis && k in o.vis){ delete o.vis[k]; if (!Object.keys(o.vis).length) delete o.vis; } });
   if (el.type === 'checkbox') CFG[k] = el.checked;
   else if (el.type === 'color') CFG[k] = /^#[0-9a-f]{6}$/i.test(el.value) ? el.value : CFG_DEFAULT[k];
   else if (el.tagName === 'SELECT' && !Number.isFinite(parseFloat(el.value))) CFG[k] = el.value;
@@ -2335,7 +2403,21 @@ document.addEventListener('change', e => {
   saveCfg();
   if (k in STYLE_DEFAULT) redrawSkeleton();
 });
-$('#styleReset').onclick = () => { Object.assign(CFG, STYLE_DEFAULT); showCfg(); saveCfg(); redrawSkeleton(); };
+$('#styleReset').onclick = () => { Object.assign(CFG, STYLE_DEFAULT); showCfg(); saveCfg(); redrawSkeleton(); showVisCfg(); };
+const visScope = () => (document.querySelector('input[name="visScope"]:checked') || {}).value || 'all';
+$('#visApplyAll').onclick = () => refreshObsImages();
+// Qué se dibuja de cada parte del cuerpo: el ajuste general o, en una observación que lo cambió solo para ella, el suyo
+const VIS_KEYS = Object.keys(STYLE_DEFAULT).filter(k => /^(sk|an|tx)[A-Z]/.test(k));
+const curVis = () => { const ri = regIndex(); return ri >= 0 ? S.obs[ri].vis || null : null; };
+let visOv = null;
+const VIS = k => !!(visOv && k in visOv ? visOv[k] : CFG[k]);
+// Casillas: muestran lo que se dibuja en el fotograma actual
+function showVisCfg(){
+  const ov = curVis();
+  VIS_KEYS.forEach(k => { const el = document.querySelector(`[data-cfg="${k}"]`); if (el) el.checked = !!(ov && k in ov ? ov[k] : CFG[k]); });
+  const ri = regIndex(), n = S.obs.filter(o => o.vis).length;
+  $('#visNote').textContent = (ri >= 0 && S.obs[ri].vis ? `La observación ${ri + 1} tiene su propia elección. ` : '') + (n ? `${n === 1 ? '1 observación tiene' : n + ' observaciones tienen'} su propia elección.` : '');
+}
 const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; };
 
 // Geometría 3D sobre los puntos «world» de MediaPipe (metros, origen entre las caderas)
@@ -2426,15 +2508,15 @@ function drawSkeleton(g, N, w, h, scale = 1){
     g.strokeStyle = CFG.skelColor; g.lineWidth = CFG.skelWidth * scale; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
   };
   for (const [i, j] of BONES){
-    if ((N[i].visibility ?? 1) < 0.3 || (N[j].visibility ?? 1) < 0.3 || !CFG['sk' + boneRegion([i, j])]) continue;
+    if ((N[i].visibility ?? 1) < 0.3 || (N[j].visibility ?? 1) < 0.3 || !VIS('sk' + boneRegion([i, j]))) continue;
     line(pt(i), pt(j));
   }
   // Cuello: de la mitad de los hombros a la mitad de las orejas
-  if (CFG.skNeck && [7, 8, 11, 12].every(i => (N[i].visibility ?? 1) >= 0.5)){
+  if (VIS('skNeck') && [7, 8, 11, 12].every(i => (N[i].visibility ?? 1) >= 0.5)){
     const mid = (a, b) => [(pt(a)[0] + pt(b)[0]) / 2, (pt(a)[1] + pt(b)[1]) / 2];
     line(mid(11, 12), mid(7, 8));
   }
-  const dot = i => BONES.some(b => b.includes(i) && CFG['sk' + boneRegion(b)]) || (i >= 17 && i <= 22 && CFG.skArms);
+  const dot = i => BONES.some(b => b.includes(i) && VIS('sk' + boneRegion(b))) || (i >= 17 && i <= 22 && VIS('skArms'));
   for (let i = 11; i <= 32; i++){
     if ((N[i].visibility ?? 1) < 0.3 || !dot(i)) continue;
     const [x, y] = pt(i);
@@ -2454,7 +2536,7 @@ function drawAngles(g, det, w, h, scale = 1){
   const labels = [], arcs = [];
   const JOINT_REGION = ['Arms', 'Arms', 'Arms', 'Arms', 'Legs', 'Legs', 'Legs', 'Legs'];   // codos, hombros, caderas, rodillas
   // Cada compás y cada texto lleva su parte del cuerpo (R): se dibujan según «Qué se dibuja de cada parte del cuerpo»
-  const on = R => CFG['an' + R] || CFG['tx' + R];
+  const on = R => VIS('an' + R) || VIS('tx' + R);
   for (const [k, [a, j, c]] of JOINT_ANGLES.entries()){
     const R = JOINT_REGION[k];
     if (!on(R) || ![a, j, c].every(vis)) continue;
@@ -2485,7 +2567,7 @@ function drawAngles(g, det, w, h, scale = 1){
   g.save();
   // Compás: el arco va de un segmento al otro por el lado del ángulo medido
   const r = CFG.arcSize * scale;
-  for (const A of arcs.filter(A => CFG['an' + A.R])){
+  for (const A of arcs.filter(A => VIS('an' + A.R))){
     const d = Math.atan2(Math.sin(A.to - A.from), Math.cos(A.to - A.from)), [x, y] = A.p;
     if (A.ref){
       g.setLineDash([5 * scale, 4 * scale]); g.strokeStyle = CFG.arcColor; g.lineWidth = 2 * scale;
@@ -2499,7 +2581,7 @@ function drawAngles(g, det, w, h, scale = 1){
   }
   const fs = Math.round(CFG.angSize * scale), pad = Math.round(CFG.angSize / 4 * scale), gap = Math.round((CFG.arcSize + 4) * scale);
   g.font = `bold ${fs}px Arial, Helvetica, sans-serif`; g.textBaseline = 'middle';
-  for (const L of labels.filter(L => CFG['tx' + L.R])){
+  for (const L of labels.filter(L => VIS('tx' + L.R))){
     const tw = g.measureText(L.t).width, bw = tw + pad * 2, bh = fs + pad * 2;
     const x0 = L.side > 0 ? L.x + gap : L.side < 0 ? L.x - gap - bw : L.x - bw / 2, y0 = L.y - bh / 2;
     g.fillStyle = 'rgba(0,0,0,.72)'; g.fillRect(x0, y0, bw, bh);
@@ -2527,6 +2609,7 @@ function detLines(code, m){
   return rows;
 }
 function renderOverlay(det){
+  visOv = curVis();
   const el = mediaEl(), c = overlayEl(), stage = el.parentElement;
   const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   c.style.left = (r.left - sr.left) + 'px'; c.style.top = (r.top - sr.top) + 'px';
@@ -2576,13 +2659,13 @@ function pickPose(L, near){
 // Detecta a todas las personas de la imagen, hasta 4. El detector de MediaPipe suele devolver solo una aunque haya varias:
 // tras cada detección se tapa a esa persona con un rectángulo gris y se vuelve a detectar en el resto de la imagen
 const sameCenter = (a, b, d = 0.05) => Math.hypot(a.x - b.x, a.y - b.y) < d;
-function detectPeople(lm, el, first){
+function detectPeople(lm, el, first, max = 4){
   const w = el.videoWidth || el.naturalWidth, h = el.videoHeight || el.naturalHeight;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d'); g.drawImage(el, 0, 0, w, h); g.fillStyle = '#808080';
   const people = [];
   let res = first || lm.detect(c);
-  for (let n = 0; n < 4; n++){
+  for (let n = 0; n < max; n++){
     const found = (res.landmarks || []).map((N, k) => ({N, W: res.worldLandmarks[k]}))
       .filter(q => !people.some(o => sameCenter(poseCenter(o.N), poseCenter(q.N))));
     if (!found.length) break;
@@ -2594,7 +2677,7 @@ function detectPeople(lm, el, first){
       const y0 = Math.max(0, Math.min(...ys) - 0.08) * h, y1 = Math.min(1, Math.max(...ys) + 0.04) * h;
       g.fillRect(x0, y0, x1 - x0, y1 - y0);
     }
-    if (people.length >= 4) break;
+    if (people.length >= max) break;
     res = lm.detect(c);
   }
   return people;
@@ -3888,7 +3971,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <li><b>Sin conexiones de red.</b> Una política de seguridad de contenido (CSP) impide que la aplicación se conecte a servidores externos, envíe formularios o cargue código de otros sitios.</li>
 <li><b>Videos y fotografías.</b> Se abren desde su equipo y nunca se suben a internet. El video original no se copia en el proyecto. Las imágenes que se guardan se vuelven a codificar, por lo que no conservan metadatos como la ubicación GPS ni el modelo de la cámara.</li>
 <li><b>Fecha, hora y ubicación.</b> Los subtítulos pueden mostrar la fecha, la hora y la ubicación GPS que el celular o la cámara guardaron en el video o la foto, y quedan grabadas en las imágenes guardadas si se graban los subtítulos. La ubicación es un dato personal: está desactivada por defecto y se activa en «Ajustes de detección → Subtítulos».</li>
-<li><b>Rostros difuminados.</b> Con «Difuminar el rostro en las imágenes guardadas» (en «Ajustes de detección», activado por defecto), la cara de la persona detectada, de la frente al mentón, se pixela en las imágenes de las observaciones, los informes y los proyectos. Solo funciona cuando la detección encuentra a la persona: revise cada imagen antes de compartirla.</li>
+<li><b>Rostros difuminados.</b> Con «Difuminar el rostro en las imágenes guardadas» (en «Ajustes de detección», activado por defecto), se pixela la cara de todas las personas de la imagen, de la frente al mentón, en las imágenes de las observaciones, los informes y los proyectos: las de las personas que encuentra el detector de posturas y, además, las que encuentra un detector de caras (MediaPipe Face Detector), aunque no se vea el cuerpo. Una cara de perfil, muy pequeña o tapada puede no detectarse: revise cada imagen antes de compartirla.</li>
 <li><b>Dónde quedan los datos.</b> En el autoguardado de este navegador, hasta que lo borre, y en los archivos que usted guarda o exporta (.owsp, .OWS, .doc, PDF, .trc, .mot, .sloc, .c3d y archivos de lote de 3DSSPP). Los proyectos .owsp y los informes con imágenes contienen datos personales. Los proyectos y los archivos para OpenSim y 3DSSPP (.trc, .sloc, .c3d y archivos de lote) guardan además los puntos 3D del cuerpo detectados, sin imágenes.</li>
 <li><b>Versión en línea.</b> GitHub Pages sirve el archivo de la aplicación y puede registrar datos técnicos de la visita, como la dirección IP, según la política de privacidad de GitHub. Los datos del estudio no se envían. Para la máxima privacidad, use el archivo OWASWeb.html descargado y sin conexión.</li>
 </ul>
@@ -3908,7 +3991,7 @@ $('#helpBox').innerHTML = `<h2>${ico('help')}Ayuda</h2>
 <span id="privStatus" role="status" class="muted"></span>
 </div>
 <p class="small muted">Quien realiza el estudio es responsable de los datos que recoge. El autor de OWAS Web no recibe ningún dato de la aplicación. Dudas o sugerencias: <a href="https://github.com/leolira0568/owas-web/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<p class="small muted">OWAS Web 4.45 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
+<p class="small muted">OWAS Web 4.46 (antes WinOWAS Web), © 2026 Leonardo Lira, licencia MIT. Tablas de clasificación tomadas del WinOWAS original (Universidad Tecnológica de Tampere, 1996). Detección de posturas con MediaPipe Pose (© Google LLC, licencia Apache 2.0), incluido en este archivo.</p>`;
 // Los controles de privacidad se conectan una vez creada la ayuda, que los contiene
 // ---- Privacidad: enlace del pie, autoguardado y borrado de datos locales ----
 function showPrivacy(){ $('.help-details').open = true; $('#privacidad').scrollIntoView({behavior: 'smooth', block: 'start'}); }
@@ -3973,12 +4056,13 @@ renderVideoUI();
   setMode('video');   // modo de observación inicial
 })();
 </script>
-<!-- MediaPipe Tasks Vision 0.10.35 y modelo Pose Landmarker (full), © Google LLC, licencia Apache 2.0.
+<!-- MediaPipe Tasks Vision 0.10.35, modelo Pose Landmarker (full) y detector de caras BlazeFace (short range), © Google LLC, licencia Apache 2.0.
      build.py reemplaza cada marcador por el archivo de vendor/mediapipe en base64. -->
 <script type="application/octet-stream" id="mp-bundle">@@MP_BUNDLE@@</script>
 <script type="application/octet-stream" id="mp-loader">@@MP_LOADER@@</script>
 <script type="application/octet-stream" id="mp-wasm">@@MP_WASM@@</script>
 <script type="application/octet-stream" id="mp-model">@@MP_MODEL@@</script>
+<script type="application/octet-stream" id="mp-face">@@MP_FACE@@</script>
 <script type="application/octet-stream" id="os-model">@@OS_MODEL@@</script>
 <script type="application/octet-stream" id="os-osim">@@OS_OSIM@@</script>
 <script type="application/octet-stream" id="os-wilk">@@OS_WILK@@</script>
