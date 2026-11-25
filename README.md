@@ -152,7 +152,7 @@ Texto plano con codificación Windows-1252 y finales de línea CRLF:
 !OWAS!
 "Empresa"
 "Departamento"
-"Trabajo estudiado"
+"Estación de trabajo"
 "Observador"
 "dd/mm/aaaa"
 "hh:mm"
@@ -191,7 +191,8 @@ El script incrusta en base64 los archivos de [`vendor/mediapipe/`](vendor/mediap
 
 ## Versiones
 
-- **4.46**: difuminado de las caras de todas las personas con un detector de caras (MediaPipe Face Detector, BlazeFace), además del de posturas, también de quienes están de espaldas, lejos o en el borde de la imagen (se busca en la imagen completa y en recortes, para las caras pequeñas); en «Qué se dibuja de cada parte del cuerpo» se elige si las casillas se aplican a todas las observaciones o solo a la observación actual, cuya imagen se vuelve a dibujar al momento.
+- **4.47**: «Trabajo estudiado» pasa a llamarse «Estación de trabajo»; en «Material» se puede ver todo el material, una tarea o varias tareas a la vez; la categoría «Sin riesgo» se describe como postura neutral o cercana a la neutralidad, sin efectos dañinos en el sistema musculoesquelético.
+- **[4.46](https://github.com/leolira0568/owas-web/releases/tag/v4.46)**: difuminado de las caras de todas las personas con un detector de caras (MediaPipe Face Detector, BlazeFace), además del de posturas, también de quienes están de espaldas, lejos o en el borde de la imagen (se busca en la imagen completa y en recortes, para las caras pequeñas); en «Qué se dibuja de cada parte del cuerpo» se elige si las casillas se aplican a todas las observaciones o solo a la observación actual, cuya imagen se vuelve a dibujar al momento.
 - **[4.45](https://github.com/leolira0568/owas-web/releases/tag/v4.45)**: al exportar a PDF aparece un aviso que indica elegir «Guardar como PDF» en «Destino» del diálogo de impresión (y no «Microsoft Print to PDF»), con la opción de no volver a mostrarlo; el PDF propone como nombre «Reporte OWAS - » y el nombre del proyecto.
 - **[4.44](https://github.com/leolira0568/owas-web/releases/tag/v4.44)**: en el informe con imágenes grandes, cada imagen con su pie cabe en una hoja Carta o A4 (las verticales, de un video girado, se reducen a 15 cm de alto): el pie ya no se separa de su imagen y no quedan hojas en blanco.
 - **[4.43](https://github.com/leolira0568/owas-web/releases/tag/v4.43)**: la descripción del código antepone el número de cada parte («Espalda: 2 Inclinada»); «Exportar resultados» y la ayuda indican que el PDF se cree con el destino «Guardar como PDF» del navegador, no con la impresora «Microsoft Print to PDF», que convierte el texto en dibujos y hace que algunas letras, como la «l», se vean más gruesas.
